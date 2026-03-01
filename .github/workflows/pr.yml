@@ -44,7 +44,7 @@ jobs:
       - name: Setup Zig
         uses: goto-bus-stop/setup-zig@v2
         with:
-          version: 0.15.0
+          version: master
       
       - name: Build release binary
         run: zig build -Doptimize=ReleaseFast
@@ -113,7 +113,7 @@ jobs:
       - name: Setup Zig
         uses: goto-bus-stop/setup-zig@v2
         with:
-          version: 0.15.0
+          version: master
       
       - name: Run all tests
         run: zig build test --summary all
