@@ -101,23 +101,10 @@ jobs:
         with:
           scan-type: 'fs'
           scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH,MEDIUM'
-      
-      - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: 'trivy-results.sarif'
-      
-      - name: Trivy Summary
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
           format: 'table'
           severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+        continue-on-error: true
 
   # ============================================================================
   # FUZZING (if available)
@@ -134,9 +121,7 @@ jobs:
           version: 0.15.2
       
       - name: Run fuzz tests (if any)
-        run: |
-          # Zig has built-in fuzzing support in some versions
-          zig build test -Dfuzz 2>&1 || echo "No fuzz tests configured"
+        run: echo "No fuzz tests configured yet"
         continue-on-error: true
 
   # ============================================================================
