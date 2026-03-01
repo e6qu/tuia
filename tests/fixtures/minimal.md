@@ -1,0 +1,3 @@
+# Minimal
+
+Just one slide.

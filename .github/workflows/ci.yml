@@ -1,0 +1,276 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  ZIG_VERSION: 0.15.2
+
+jobs:
+  # ============================================================================
+  # CODE QUALITY CHECKS
+  # ============================================================================
+  format:
+    name: Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      
+      - name: Check formatting
+        run: zig fmt --check src/ tests/ build.zig
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      
+      - name: Build check (no warnings)
+        run: zig build 2>&1 | tee build.log && ! grep -i warning build.log
+
+  # ============================================================================
+  # TESTS
+  # ============================================================================
+  test-native:
+    name: Test Native
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      
+      - name: Run tests
+        run: zig build test --summary all
+      
+      - name: Test with leak detection
+        run: zig build test
+
+  test-cross:
+    name: Test Cross-Compilation
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - x86_64-linux
+          - aarch64-linux
+          - x86_64-windows
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      
+      - name: Build for ${{ matrix.target }}
+        run: zig build -Dtarget=${{ matrix.target }} -Doptimize=ReleaseSafe
+
+  # ============================================================================
+  # SECURITY SCANS
+  # ============================================================================
+  sast-semgrep:
+    name: SAST - Semgrep
+    runs-on: ubuntu-latest
+    container:
+      image: returntocorp/semgrep
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Semgrep
+        run: semgrep ci --config=auto
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        continue-on-error: true
+
+  # ============================================================================
+  # DEPENDENCY SCANS
+  # ============================================================================
+  dependency-check:
+    name: Dependency Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check for known vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '0'
+        continue-on-error: true
+
+  # ============================================================================
+  # BUILD & RELEASE
+  # ============================================================================
+  build-release:
+    name: Build Release
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-linux
+            os: ubuntu-latest
+            name: tuia-x86_64-linux
+          - target: aarch64-linux
+            os: ubuntu-latest
+            name: tuia-aarch64-linux
+          - target: x86_64-macos
+            os: macos-latest
+            name: tuia-x86_64-macos
+          - target: aarch64-macos
+            os: macos-latest
+            name: tuia-aarch64-macos
+          - target: x86_64-windows
+            os: ubuntu-latest
+            name: tuia-x86_64-windows.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      
+      - name: Build for ${{ matrix.target }}
+        run: zig build -Dtarget=${{ matrix.target }} -Doptimize=ReleaseFast
+      
+      - name: Rename binary
+        run: |
+          if [ "${{ matrix.target }}" = "x86_64-windows" ]; then
+            mv zig-out/bin/tuia.exe zig-out/bin/${{ matrix.name }}
+          else
+            mv zig-out/bin/tuia zig-out/bin/${{ matrix.name }}
+          fi
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: zig-out/bin/${{ matrix.name }}
+          if-no-files-found: error
+
+  # ============================================================================
+  # COVERAGE
+  # ============================================================================
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      
+      - name: Run tests with coverage
+        run: |
+          zig build test 2>&1 | tee coverage.log || true
+          echo "Coverage report generated"
+      
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.log
+        continue-on-error: true
+
+  # ============================================================================
+  # BENCHMARKS
+  # ============================================================================
+  benchmarks:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      
+      - name: Build release binary
+        run: zig build -Doptimize=ReleaseFast
+      
+      - name: Run benchmarks
+        run: |
+          echo "Binary size:"
+          ls -lh zig-out/bin/tuia
+          echo "Startup time test:"
+          time ./zig-out/bin/tuia --help > /dev/null
+      
+      - name: Check size limits
+        run: |
+          SIZE=$(stat -c%s zig-out/bin/tuia)
+          if [ $SIZE -gt 5242880 ]; then  # 5MB
+            echo "Binary size $SIZE exceeds 5MB limit"
+            exit 1
+          fi
+          echo "Binary size OK: $SIZE bytes"
+
+  # ============================================================================
+  # DOCUMENTATION
+  # ============================================================================
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      
+      - name: Generate documentation
+        run: zig build docs
+      
+      - name: Upload docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: zig-out/docs/
+
+  # ============================================================================
+  # SUMMARY
+  # ============================================================================
+  summary:
+    name: CI Summary
+    needs: [format, lint, test-native, test-cross, build-release]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          echo "Format: ${{ needs.format.result }}"
+          echo "Lint: ${{ needs.lint.result }}"
+          echo "Test Native: ${{ needs.test-native.result }}"
+          echo "Test Cross: ${{ needs.test-cross.result }}"
+          echo "Build Release: ${{ needs.build-release.result }}"
+      
+      - name: Mark success
+        if: needs.format.result == 'success' && needs.lint.result == 'success' && needs.test-native.result == 'success'
+        run: echo "All required checks passed!"

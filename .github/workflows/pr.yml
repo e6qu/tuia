@@ -1,0 +1,199 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  # ============================================================================
+  # PR VALIDATION
+  # ============================================================================
+  validate:
+    name: Validate PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check PR title
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            test
+            chore
+            ci
+            security
+          requireScope: false
+
+  # ============================================================================
+  # SIZE CHECKS
+  # ============================================================================
+  size-check:
+    name: Binary Size Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.15.2
+      
+      - name: Build release binary
+        run: zig build -Doptimize=ReleaseFast
+      
+      - name: Check binary size
+        run: |
+          SIZE=$(stat -c%s zig-out/bin/tuia)
+          MAX_SIZE=5242880  # 5MB
+          
+          echo "Binary size: $SIZE bytes ($(numfmt --to=iec $SIZE))"
+          echo "Max allowed: $(numfmt --to=iec $MAX_SIZE)"
+          
+          if [ $SIZE -gt $MAX_SIZE ]; then
+            echo "❌ Binary size exceeds 5MB limit!"
+            exit 1
+          fi
+          
+          echo "✅ Binary size OK"
+
+  # ============================================================================
+  # DOCUMENTATION CHECKS
+  # ============================================================================
+  docs-check:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check README exists
+        run: |
+          if [ ! -f README.md ]; then
+            echo "❌ README.md is missing!"
+            exit 1
+          fi
+          echo "✅ README.md exists"
+      
+      - name: Check LICENSE exists
+        run: |
+          if [ ! -f LICENSE ]; then
+            echo "❌ LICENSE file is missing!"
+            exit 1
+          fi
+          echo "✅ LICENSE exists"
+      
+      - name: Check specs are documented
+        run: |
+          if [ ! -d specs ]; then
+            echo "❌ specs/ directory is missing!"
+            exit 1
+          fi
+          SPEC_COUNT=$(find specs -name "*.md" | wc -l)
+          echo "Found $SPEC_COUNT specification files"
+          if [ $SPEC_COUNT -lt 5 ]; then
+            echo "⚠️ Low spec count - consider adding more documentation"
+          fi
+
+  # ============================================================================
+  # TEST COVERAGE
+  # ============================================================================
+  coverage:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.15.2
+      
+      - name: Run all tests
+        run: zig build test --summary all
+      
+      - name: Count tests
+        run: |
+          TEST_COUNT=$(zig build test 2>&1 | grep -c "test " || true)
+          echo "Running tests..."
+          echo "Test count: $TEST_COUNT"
+
+  # ============================================================================
+  # CHANGELOG CHECK
+  # ============================================================================
+  changelog:
+    name: Changelog Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check CHANGELOG.md or release notes
+        run: |
+          if [ -f CHANGELOG.md ]; then
+            echo "✅ CHANGELOG.md exists"
+          else
+            echo "ℹ️ No CHANGELOG.md - consider adding one"
+          fi
+
+  # ============================================================================
+  # MERGE CONFLICT CHECK
+  # ============================================================================
+  conflict-check:
+    name: Conflict Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check for merge conflicts
+        run: |
+          if grep -r "<<<<<<< HEAD" --include="*.zig" --include="*.md" .; then
+            echo "❌ Merge conflicts detected!"
+            exit 1
+          fi
+          echo "✅ No merge conflicts"
+
+  # ============================================================================
+  # PR SUMMARY
+  # ============================================================================
+  summary:
+    name: PR Summary
+    needs: [validate, size-check, docs-check, coverage, conflict-check]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## PR Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| PR Title | ${{ needs.validate.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Binary Size | ${{ needs.size-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Documentation | ${{ needs.docs-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests | ${{ needs.coverage.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Conflicts | ${{ needs.conflict-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          
+          # Count failures
+          FAILURES=0
+          for result in "${{ needs.validate.result }}" "${{ needs.size-check.result }}" "${{ needs.docs-check.result }}" "${{ needs.coverage.result }}" "${{ needs.conflict-check.result }}"; do
+            if [ "$result" != "success" ]; then
+              FAILURES=$((FAILURES + 1))
+            fi
+          done
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ $FAILURES -eq 0 ]; then
+            echo "✅ All checks passed!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ $FAILURES check(s) failed" >> $GITHUB_STEP_SUMMARY
+          fi

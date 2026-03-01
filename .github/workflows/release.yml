@@ -1,0 +1,160 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v0.1.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  # ============================================================================
+  # BUILD RELEASE ARTIFACTS
+  # ============================================================================
+  build:
+    name: Build ${{ matrix.name }}
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-linux
+            os: ubuntu-latest
+            name: tuia-x86_64-linux
+            archive: tar.gz
+          - target: aarch64-linux
+            os: ubuntu-latest
+            name: tuia-aarch64-linux
+            archive: tar.gz
+          - target: x86_64-macos
+            os: macos-latest
+            name: tuia-x86_64-macos
+            archive: tar.gz
+          - target: aarch64-macos
+            os: macos-latest
+            name: tuia-aarch64-macos
+            archive: tar.gz
+          - target: x86_64-windows
+            os: ubuntu-latest
+            name: tuia-x86_64-windows.exe
+            archive: zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.15.2
+      
+      - name: Build for ${{ matrix.target }}
+        run: zig build -Dtarget=${{ matrix.target }} -Doptimize=ReleaseFast
+      
+      - name: Prepare binary
+        run: |
+          if [ "${{ matrix.target }}" = "x86_64-windows" ]; then
+            mv zig-out/bin/tuia ${{ matrix.name }}
+          else
+            mv zig-out/bin/tuia ${{ matrix.name }}
+            chmod +x ${{ matrix.name }}
+          fi
+      
+      - name: Create archive
+        run: |
+          if [ "${{ matrix.archive }}" = "zip" ]; then
+            zip ${{ matrix.name }}.zip ${{ matrix.name }}
+          else
+            tar czf ${{ matrix.name }}.tar.gz ${{ matrix.name }}
+          fi
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: |
+            ${{ matrix.name }}.*
+          if-no-files-found: error
+
+  # ============================================================================
+  # CREATE RELEASE
+  # ============================================================================
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      
+      - name: Generate checksums
+        run: |
+          cd artifacts
+          sha256sum * > checksums.txt
+          cat checksums.txt
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/*
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ============================================================================
+  # UPDATE DOCUMENTATION
+  # ============================================================================
+  docs:
+    name: Update Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.15.2
+      
+      - name: Generate documentation
+        run: zig build docs
+      
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./zig-out/docs
+        continue-on-error: true
+
+  # ============================================================================
+  # PACKAGE MANAGERS (Future)
+  # ============================================================================
+  publish-homebrew:
+    name: Update Homebrew Formula
+    needs: release
+    runs-on: ubuntu-latest
+    if: false  # Disabled until we have a homebrew tap
+    steps:
+      - name: Update Homebrew formula
+        run: |
+          echo "Homebrew update would go here"
+          # This would update a homebrew-tap repository
+
+  publish-nix:
+    name: Update Nix Flake
+    needs: release
+    runs-on: ubuntu-latest
+    if: false  # Disabled until we have nix flake
+    steps:
+      - name: Update Nix flake
+        run: |
+          echo "Nix flake update would go here"

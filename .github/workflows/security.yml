@@ -1,0 +1,98 @@
+name: Security Scans
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run daily at 3 AM UTC
+    - cron: '0 3 * * *'
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  # ============================================================================
+  # SECRET SCANNING
+  # ============================================================================
+  secret-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better detection
+      
+      - name: Run GitLeaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+      
+      - name: Check for hardcoded secrets
+        run: |
+          # Simple patterns to check
+          if grep -r "password\|secret\|key\|token" --include="*.zig" --include="*.md" . | grep -v "\.git"; then
+            echo "Potential secrets found - review needed"
+            exit 0  # Don't fail, just warn
+          fi
+
+  # ============================================================================
+  # CONTAINER/FILESYSTEM SCAN
+  # ============================================================================
+  trivy:
+    name: Trivy Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+        continue-on-error: true
+
+  # ============================================================================
+  # FUZZING (if available)
+  # ============================================================================
+  fuzz:
+    name: Fuzz Testing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.15.2
+      
+      - name: Run fuzz tests (if any)
+        run: echo "No fuzz tests configured yet"
+        continue-on-error: true
+
+  # ============================================================================
+  # SECURITY SUMMARY
+  # ============================================================================
+  security-summary:
+    name: Security Summary
+    needs: [secret-scan, trivy]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Secret Scan: ${{ needs.secret-scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Trivy: ${{ needs.trivy.result }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.secret-scan.result }}" != "success" ] || \
+             [ "${{ needs.trivy.result }}" != "success" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ Some security checks need attention" >> $GITHUB_STEP_SUMMARY
+          fi
