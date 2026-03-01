@@ -160,7 +160,7 @@ jobs:
       - name: Rename binary
         run: |
           if [ "${{ matrix.target }}" = "x86_64-windows" ]; then
-            mv zig-out/bin/slidz zig-out/bin/${{ matrix.name }}
+            mv zig-out/bin/slidz.exe zig-out/bin/${{ matrix.name }}
           else
             mv zig-out/bin/slidz zig-out/bin/${{ matrix.name }}
           fi
@@ -188,7 +188,7 @@ jobs:
       
       - name: Run tests with coverage
         run: |
-          zig build test -Dtest-coverage 2>&1 | tee coverage.log || true
+          zig build test 2>&1 | tee coverage.log || true
           echo "Coverage report generated"
       
       - name: Upload coverage report

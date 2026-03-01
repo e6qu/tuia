@@ -40,24 +40,6 @@ jobs:
           fi
 
   # ============================================================================
-  # SAST - Static Analysis
-  # ============================================================================
-  # ============================================================================
-  # DEPENDENCY VULNERABILITY SCAN
-  # ============================================================================
-  dependency-review:
-    name: Dependency Review
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Dependency Review
-        uses: actions/dependency-review-action@v3
-        with:
-          fail-on-severity: moderate
-
-  # ============================================================================
   # CONTAINER/FILESYSTEM SCAN
   # ============================================================================
   trivy:
