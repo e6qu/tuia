@@ -4,61 +4,42 @@
 
 ---
 
-## Current Phase: 1.4 - Basic TUI Loop
+## Current Phase: 2.1 - Markdown Parser
 
-**Goal:** Initialize libvaxis and create a basic TUI event loop
+**Goal:** Parse presenterm-compatible Markdown into an AST
 
 ### Tasks
 
 | ID | Task | Description | Est. Hours |
 |----|------|-------------|------------|
-| 1.4.1 | Add libvaxis dependency | Update `build.zig.zon` with vaxis | 1 |
-| 1.4.2 | Initialize vaxis | Basic terminal initialization | 2 |
-| 1.4.3 | Event Loop | Input handling with vaxis events | 4 |
-| 1.4.4 | Signal Handling | SIGINT, SIGWINCH handling | 2 |
-| 1.4.5 | Cleanup | Proper terminal restoration | 2 |
+| 2.1.1 | Scanner | Tokenize markdown | 8 |
+| 2.1.2 | Block Parser | Parse blocks (paragraphs, lists, code) | 8 |
+| 2.1.3 | Inline Parser | Parse inline (emphasis, code, links) | 8 |
+| 2.1.4 | Front Matter Parser | YAML front matter | 4 |
+| 2.1.5 | Slide Splitter | Split by `<!-- end_slide -->` | 4 |
+
+### Deliverables
+
+- `src/parser/Parser.zig` - Main parser
+- `src/parser/Scanner.zig` - Tokenizer
+- `src/parser/Block.zig` - Block-level parsing
+- `src/parser/Inline.zig` - Inline parsing
+- `src/parser/FrontMatter.zig` - YAML front matter
+- Tests for all parser components
 
 ### Acceptance Criteria
-- [ ] App starts and exits cleanly
-- [ ] Ctrl+C exits gracefully
-- [ ] Terminal state restored on exit
-- [ ] Resize handled without crash
 
-### Implementation Notes
-
-1. **Dependency:** Add to `build.zig.zon`:
-```zig
-.dependencies = .{
-    .vaxis = .{
-        .url = "git+https://github.com/rockorager/libvaxis.git#<commit-hash>",
-        .hash = "...",
-    },
-}
-```
-
-2. **Main structure:**
-```zig
-const vaxis = @import("vaxis");
-
-// Initialize vaxis
-// Event loop
-// Cleanup on exit
-```
+- [ ] Can parse basic Markdown (headings, paragraphs, lists)
+- [ ] Can parse code blocks with language tags
+- [ ] Can parse inline formatting (bold, italic, code)
+- [ ] Can parse YAML front matter
+- [ ] Can split content by slide delimiters
+- [ ] All test cases in `tests/fixtures/markdown/` pass
+- [ ] Parser handles invalid input gracefully
 
 ---
 
 ## Upcoming Phases
-
-### Phase 1.x - Future Foundation Work
-- Benchmark harness
-- Property testing setup
-
-### Phase 2.1: Markdown Parser
-- Scanner/tokenizer
-- Block parser (paragraphs, lists, code)
-- Inline parser (emphasis, links)
-- Front matter parser
-- Slide splitter (`<!-- end_slide -->`)
 
 ### Phase 2.2: Slide Model
 - Element types (Text, Heading, CodeBlock, etc.)
@@ -66,19 +47,28 @@ const vaxis = @import("vaxis");
 - Presentation struct
 - Validation
 
+### Phase 2.3: Widget System
+- Widget interface
+- Slide widget
+- Text, Heading, Code widgets
+
+### Phase 2.4: Theme Engine
+- Theme data model
+- YAML parser for themes
+- Style application
+
 ---
 
 ## PR Workflow
 
-**Important:** All work from now on must be done via PRs:
+All work must be done via PRs:
 
-1. Create feature branch: `git checkout -b feature/phase-1.4-tui`
+1. Create feature branch: `git checkout -b feature/phase-2.1-parser`
 2. Make changes
-3. Push branch: `git push -u origin feature/phase-1.4-tui`
+3. Push branch: `git push -u origin feature/phase-2.1-parser`
 4. Create PR via GitHub
 5. Wait for CI checks
-6. Get review approval
-7. Merge via squash
+6. Merge via squash
 
 ---
 
