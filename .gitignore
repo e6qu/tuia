@@ -1,0 +1,34 @@
+# Zig artifacts
+zig-cache/
+zig-out/
+.build/
+
+# Build artifacts
+*.o
+*.obj
+*.a
+*.lib
+*.dll
+*.so
+*.dylib
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Test artifacts
+*.log
+/test-results/
+/coverage/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Local configuration
+/config.local.yaml

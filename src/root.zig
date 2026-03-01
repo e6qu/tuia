@@ -1,0 +1,23 @@
+//! ZIGPRESENTERM - Terminal presentation tool
+
+const std = @import("std");
+
+// Module imports
+pub const core = @import("core/root.zig");
+pub const parser = @import("parser/root.zig");
+pub const render = @import("render/root.zig");
+pub const widgets = @import("widgets/root.zig");
+pub const config = @import("config/root.zig");
+pub const features = @import("features/root.zig");
+pub const infra = @import("infra/root.zig");
+
+// Test utilities (only available in test mode)
+pub const test_utils = @import("test_utils.zig");
+
+/// Library version
+pub const version = "0.1.0";
+
+// Tests
+test {
+    std.testing.refAllDecls(@This());
+}
