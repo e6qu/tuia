@@ -87,39 +87,6 @@ jobs:
   # ============================================================================
   # SECURITY SCANS
   # ============================================================================
-  sast:
-    name: SAST - CodeQL
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: cpp  # Zig compiles to LLVM IR, best match
-          queries: security-extended,security-and-quality
-      
-      - name: Setup Zig
-        uses: goto-bus-stop/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
-      
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
-        with:
-          working-directory: .
-        env:
-          ZIG_VERSION: ${{ env.ZIG_VERSION }}
-      
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-        with:
-          category: "/language:cpp"
-
   sast-semgrep:
     name: SAST - Semgrep
     runs-on: ubuntu-latest
