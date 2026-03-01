@@ -7,6 +7,37 @@ const Event = union(enum) {
 };
 
 pub fn main() !void {
+    // Parse CLI args first (before allocating)
+    const args = try std.process.argsAlloc(std.heap.page_allocator);
+    defer std.process.argsFree(std.heap.page_allocator, args);
+
+    // Handle CLI options
+    if (args.len > 1) {
+        const arg = args[1];
+        if (std.mem.eql(u8, arg, "-h") or std.mem.eql(u8, arg, "--help")) {
+            std.debug.print(
+                \\tuia 0.1.0 - Terminal presentation tool
+                \\
+                \\USAGE:
+                \\  tuia [OPTIONS] <FILE>    Present a markdown file
+                \\  tuia [OPTIONS]           Start with welcome screen
+                \\
+                \\OPTIONS:
+                \\  -h, --help      Show this help message
+                \\  -V, --version   Show version information
+                \\
+                \\COMMANDS (in presentation):
+                \\  q, Ctrl+C       Quit
+                \\
+            , .{});
+            return;
+        }
+        if (std.mem.eql(u8, arg, "-V") or std.mem.eql(u8, arg, "--version")) {
+            std.debug.print("tuia 0.1.0\n", .{});
+            return;
+        }
+    }
+
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer {
         if (gpa.detectLeaks()) {
@@ -41,28 +72,20 @@ pub fn main() !void {
         const event = loop.nextEvent();
         switch (event) {
             .key => |key| {
-                // Quit on Ctrl+C or 'q'
-                if (key.codepoint == 'c' and key.mods.ctrl) {
-                    break;
-                }
-                if (key.codepoint == 'q') {
-                    break;
-                }
+                if (key.codepoint == 'c' and key.mods.ctrl) break;
+                if (key.codepoint == 'q') break;
             },
-            .winsize => {}, // Vaxis handles this internally
+            .winsize => {},
         }
 
-        // Render
         const win = vx.window();
         win.clear();
 
-        // Simple welcome message
         const msg = "Welcome to tuia! Press 'q' or Ctrl+C to quit.";
         const col = if (win.width > msg.len) @divTrunc(win.width - @as(u16, @intCast(msg.len)), 2) else 0;
         const row = @divTrunc(win.height, 2);
 
         win.writeCell(col, row, .{ .char = .{ .grapheme = msg } });
-
         try vx.render(tty.writer());
     }
 }
