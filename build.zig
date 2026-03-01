@@ -4,6 +4,12 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    // Get vaxis dependency
+    const vaxis_dep = b.dependency("vaxis", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     // Create library module (for tests and imports)
     const root_module = b.createModule(.{
         .root_source_file = b.path("src/root.zig"),
@@ -19,6 +25,8 @@ pub fn build(b: *std.Build) void {
     });
     // Add tuia module to executable so it can import other modules
     exe_module.addImport("tuia", root_module);
+    // Add vaxis for TUI
+    exe_module.addImport("vaxis", vaxis_dep.module("vaxis"));
 
     const exe = b.addExecutable(.{
         .name = "tuia",

@@ -1,90 +1,68 @@
 const std = @import("std");
+const vaxis = @import("vaxis");
 
-/// Application entry point
+const Event = union(enum) {
+    key: vaxis.Key,
+    winsize: vaxis.Winsize,
+};
+
 pub fn main() !void {
-    // Initialize allocator
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer {
-        const leaked = gpa.detectLeaks();
-        if (leaked) {
+        if (gpa.detectLeaks()) {
             std.log.err("Memory leaks detected!", .{});
         }
     }
-    const allocator = gpa.allocator();
+    const alloc = gpa.allocator();
 
-    // Parse command line arguments
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+    // Initialize vaxis
+    var tty_buffer: [4096]u8 = undefined;
+    var tty = try vaxis.Tty.init(&tty_buffer);
+    defer tty.deinit();
 
-    // For now, just show help or version
-    if (args.len < 2) {
-        try showHelp();
-        return;
-    }
+    var vx = try vaxis.init(alloc, .{});
+    defer vx.deinit(alloc, tty.writer());
 
-    const command = args[1];
+    try vx.enterAltScreen(tty.writer());
+    try vx.queryTerminal(tty.writer(), 1 * std.time.ns_per_s);
 
-    if (std.mem.eql(u8, command, "--help") or std.mem.eql(u8, command, "-h")) {
-        try showHelp();
-        return;
-    }
-
-    if (std.mem.eql(u8, command, "--version") or std.mem.eql(u8, command, "-V")) {
-        try showVersion();
-        return;
-    }
-
-    // Treat as file path and try to read
-    const file_path = command;
-    try readFile(allocator, file_path);
-}
-
-/// Show help message
-fn showHelp() !void {
-    const help =
-        \\tuia 0.1.0
-        \\Terminal presentation tool
-        \\
-        \\USAGE:
-        \\    tuia [OPTIONS] <FILE>
-        \\    tuia --help
-        \\    tuia --version
-        \\
-        \\ARGS:
-        \\    <FILE>    Presentation file to display
-        \\
-        \\OPTIONS:
-        \\    -h, --help       Print help information
-        \\    -V, --version    Print version information
-        \\
-    ;
-    try std.fs.File.stdout().writeAll(help);
-}
-
-/// Show version
-fn showVersion() !void {
-    try std.fs.File.stdout().writeAll("tuia 0.1.0\n");
-}
-
-/// Read and display file info
-fn readFile(allocator: std.mem.Allocator, file_path: []const u8) !void {
-    const file = std.fs.cwd().openFile(file_path, .{}) catch |err| {
-        std.log.err("Failed to open file '{s}': {s}", .{ file_path, @errorName(err) });
-        return err;
+    // Set up event loop
+    var loop: vaxis.Loop(Event) = .{
+        .tty = &tty,
+        .vaxis = &vx,
     };
-    defer file.close();
+    try loop.init();
 
-    const content = file.readToEndAlloc(allocator, 1024 * 1024) catch |err| {
-        std.log.err("Failed to read file: {s}", .{@errorName(err)});
-        return err;
-    };
-    defer allocator.free(content);
+    try loop.start();
+    defer loop.stop();
 
-    std.log.info("Loaded: {s} ({d} bytes)", .{ file_path, content.len });
-    std.log.info("Content preview:\n{s}", .{content[0..@min(content.len, 200)]});
-}
+    // Main event loop
+    while (true) {
+        const event = loop.nextEvent();
+        switch (event) {
+            .key => |key| {
+                // Quit on Ctrl+C or 'q'
+                if (key.codepoint == 'c' and key.mods.ctrl) {
+                    break;
+                }
+                if (key.codepoint == 'q') {
+                    break;
+                }
+            },
+            .winsize => {}, // Vaxis handles this internally
+        }
 
-// Tests for main module
-test "sanity check" {
-    try std.testing.expect(true);
+        // Render
+        const win = vx.window();
+        win.clear();
+
+        // Simple welcome message
+        const msg = "Welcome to tuia! Press 'q' or Ctrl+C to quit.";
+        const col = if (win.width > msg.len) @divTrunc(win.width - @as(u16, @intCast(msg.len)), 2) else 0;
+        const row = @divTrunc(win.height, 2);
+
+        win.writeCell(col, row, .{ .char = .{ .grapheme = msg } });
+
+        try vx.render(tty.writer());
+    }
 }
