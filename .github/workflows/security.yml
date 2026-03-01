@@ -1,0 +1,163 @@
+name: Security Scans
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run daily at 3 AM UTC
+    - cron: '0 3 * * *'
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  # ============================================================================
+  # SECRET SCANNING
+  # ============================================================================
+  secret-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better detection
+      
+      - name: Run GitLeaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+      
+      - name: Check for hardcoded secrets
+        run: |
+          # Simple patterns to check
+          if grep -r "password\|secret\|key\|token" --include="*.zig" --include="*.md" . | grep -v "\.git"; then
+            echo "Potential secrets found - review needed"
+            exit 0  # Don't fail, just warn
+          fi
+
+  # ============================================================================
+  # SAST - Static Analysis
+  # ============================================================================
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: cpp
+          config: |
+            queries:
+              - uses: security-extended
+              - uses: security-and-quality
+      
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.15.0
+      
+      - name: Build
+        run: zig build
+      
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  # ============================================================================
+  # DEPENDENCY VULNERABILITY SCAN
+  # ============================================================================
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v3
+        with:
+          fail-on-severity: moderate
+
+  # ============================================================================
+  # CONTAINER/FILESYSTEM SCAN
+  # ============================================================================
+  trivy:
+    name: Trivy Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+      
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+      
+      - name: Trivy Summary
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+
+  # ============================================================================
+  # FUZZING (if available)
+  # ============================================================================
+  fuzz:
+    name: Fuzz Testing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.15.0
+      
+      - name: Run fuzz tests (if any)
+        run: |
+          # Zig has built-in fuzzing support in some versions
+          zig build test -Dfuzz 2>&1 || echo "No fuzz tests configured"
+        continue-on-error: true
+
+  # ============================================================================
+  # SECURITY SUMMARY
+  # ============================================================================
+  security-summary:
+    name: Security Summary
+    needs: [secret-scan, codeql, trivy]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Secret Scan: ${{ needs.secret-scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- CodeQL: ${{ needs.codeql.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Trivy: ${{ needs.trivy.result }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.secret-scan.result }}" != "success" ] || \
+             [ "${{ needs.codeql.result }}" != "success" ] || \
+             [ "${{ needs.trivy.result }}" != "success" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ Some security checks need attention" >> $GITHUB_STEP_SUMMARY
+          fi

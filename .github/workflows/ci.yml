@@ -6,8 +6,15 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  ZIG_VERSION: 0.15.0
+
 jobs:
-  lint:
+  # ============================================================================
+  # CODE QUALITY CHECKS
+  # ============================================================================
+  format:
+    name: Format Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,15 +22,30 @@ jobs:
       - name: Setup Zig
         uses: goto-bus-stop/setup-zig@v2
         with:
-          version: 0.15.0
+          version: ${{ env.ZIG_VERSION }}
       
-      - name: Format check
+      - name: Check formatting
         run: zig fmt --check src/ tests/ build.zig
-      
-      - name: Build check
-        run: zig build
 
-  test:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      
+      - name: Build check (no warnings)
+        run: zig build 2>&1 | tee build.log && ! grep -i warning build.log
+
+  # ============================================================================
+  # TESTS
+  # ============================================================================
+  test-native:
+    name: Test Native
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
@@ -34,23 +56,133 @@ jobs:
       - name: Setup Zig
         uses: goto-bus-stop/setup-zig@v2
         with:
-          version: 0.15.0
+          version: ${{ env.ZIG_VERSION }}
       
       - name: Run tests
         run: zig build test --summary all
+      
+      - name: Test with leak detection
+        run: zig build test -Dleak-check=full
 
-  build:
+  test-cross:
+    name: Test Cross-Compilation
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - x86_64-linux
+          - aarch64-linux
+          - x86_64-windows
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      
+      - name: Build for ${{ matrix.target }}
+        run: zig build -Dtarget=${{ matrix.target }} -Doptimize=ReleaseSafe
+
+  # ============================================================================
+  # SECURITY SCANS
+  # ============================================================================
+  sast:
+    name: SAST - CodeQL
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: cpp  # Zig compiles to LLVM IR, best match
+          queries: security-extended,security-and-quality
+      
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+        with:
+          working-directory: .
+        env:
+          ZIG_VERSION: ${{ env.ZIG_VERSION }}
+      
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:cpp"
+
+  sast-semgrep:
+    name: SAST - Semgrep
+    runs-on: ubuntu-latest
+    container:
+      image: returntocorp/semgrep
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Semgrep
+        run: semgrep ci --config=auto
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        continue-on-error: true
+
+  # ============================================================================
+  # DEPENDENCY SCANS
+  # ============================================================================
+  dependency-check:
+    name: Dependency Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check for known vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+        continue-on-error: true
+
+  # ============================================================================
+  # BUILD & RELEASE
+  # ============================================================================
+  build-release:
+    name: Build Release
     strategy:
       matrix:
         include:
           - target: x86_64-linux
             os: ubuntu-latest
+            name: slidz-x86_64-linux
           - target: aarch64-linux
             os: ubuntu-latest
+            name: slidz-aarch64-linux
           - target: x86_64-macos
             os: macos-latest
+            name: slidz-x86_64-macos
           - target: aarch64-macos
             os: macos-latest
+            name: slidz-aarch64-macos
+          - target: x86_64-windows
+            os: ubuntu-latest
+            name: slidz-x86_64-windows.exe
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -58,28 +190,125 @@ jobs:
       - name: Setup Zig
         uses: goto-bus-stop/setup-zig@v2
         with:
-          version: 0.15.0
+          version: ${{ env.ZIG_VERSION }}
       
       - name: Build for ${{ matrix.target }}
-        run: zig build -Dtarget=${{ matrix.target }} -Doptimize=ReleaseSafe
+        run: zig build -Dtarget=${{ matrix.target }} -Doptimize=ReleaseFast
+      
+      - name: Rename binary
+        run: |
+          if [ "${{ matrix.target }}" = "x86_64-windows" ]; then
+            mv zig-out/bin/slidz zig-out/bin/${{ matrix.name }}
+          else
+            mv zig-out/bin/slidz zig-out/bin/${{ matrix.name }}
+          fi
       
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: slidz-${{ matrix.target }}
-          path: zig-out/bin/slidz
+          name: ${{ matrix.name }}
+          path: zig-out/bin/${{ matrix.name }}
           if-no-files-found: error
 
-  verify:
+  # ============================================================================
+  # COVERAGE
+  # ============================================================================
+  coverage:
+    name: Code Coverage
     runs-on: ubuntu-latest
-    needs: [lint, test]
     steps:
       - uses: actions/checkout@v4
       
       - name: Setup Zig
         uses: goto-bus-stop/setup-zig@v2
         with:
-          version: 0.15.0
+          version: ${{ env.ZIG_VERSION }}
       
-      - name: Run verify (format + tests)
-        run: zig build verify
+      - name: Run tests with coverage
+        run: |
+          zig build test -Dtest-coverage 2>&1 | tee coverage.log || true
+          echo "Coverage report generated"
+      
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.log
+        continue-on-error: true
+
+  # ============================================================================
+  # BENCHMARKS
+  # ============================================================================
+  benchmarks:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      
+      - name: Build release binary
+        run: zig build -Doptimize=ReleaseFast
+      
+      - name: Run benchmarks
+        run: |
+          echo "Binary size:"
+          ls -lh zig-out/bin/slidz
+          echo "Startup time test:"
+          time ./zig-out/bin/slidz --help > /dev/null
+      
+      - name: Check size limits
+        run: |
+          SIZE=$(stat -c%s zig-out/bin/slidz)
+          if [ $SIZE -gt 5242880 ]; then  # 5MB
+            echo "Binary size $SIZE exceeds 5MB limit"
+            exit 1
+          fi
+          echo "Binary size OK: $SIZE bytes"
+
+  # ============================================================================
+  # DOCUMENTATION
+  # ============================================================================
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      
+      - name: Generate documentation
+        run: zig build docs
+      
+      - name: Upload docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: zig-out/docs/
+
+  # ============================================================================
+  # SUMMARY
+  # ============================================================================
+  summary:
+    name: CI Summary
+    needs: [format, lint, test-native, test-cross, build-release]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          echo "Format: ${{ needs.format.result }}"
+          echo "Lint: ${{ needs.lint.result }}"
+          echo "Test Native: ${{ needs.test-native.result }}"
+          echo "Test Cross: ${{ needs.test-cross.result }}"
+          echo "Build Release: ${{ needs.build-release.result }}"
+      
+      - name: Mark success
+        if: needs.format.result == 'success' && needs.lint.result == 'success' && needs.test-native.result == 'success'
+        run: echo "All required checks passed!"

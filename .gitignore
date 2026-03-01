@@ -1,5 +1,5 @@
 # Zig artifacts
-zig-cache/
+.zig-cache/
 zig-out/
 .build/
 
@@ -11,6 +11,8 @@ zig-out/
 *.dll
 *.so
 *.dylib
+*.exe
+*.pdb
 
 # Editor files
 .vscode/
@@ -32,3 +34,6 @@ zig-out/
 
 # Local configuration
 /config.local.yaml
+
+# OS files
+Thumbs.db
