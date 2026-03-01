@@ -3,7 +3,7 @@
 > Current status of TUIA (Terminal UI Application)
 
 **Last Updated:** 2026-03-02  
-**Current Phase:** 1.4 - Basic TUI Loop  
+**Current Phase:** 2.1 - Markdown Parser  
 **Repository:** https://github.com/e6qu/tuia
 
 ---
@@ -12,12 +12,18 @@
 
 ```
 Milestone 0: Specification        ✅ COMPLETE
-Milestone 1: Foundation           🔄 IN PROGRESS
+Milestone 1: Foundation           ✅ COMPLETE
   Phase 1.1: Project Skeleton     ✅ COMPLETE
   Phase 1.2: Build System & CI    ✅ COMPLETE
   Phase 1.3: Testing Framework    ✅ COMPLETE
-  Phase 1.4: Basic TUI Loop       ⏳ CURRENT
-Milestone 2: Core Presentation    ⏳ PENDING
+  Phase 1.4: Basic TUI Loop       ✅ COMPLETE
+Milestone 2: Core Presentation    🔄 IN PROGRESS
+  Phase 2.1: Markdown Parser      ⏳ CURRENT
+  Phase 2.2: Slide Model          ⏳ PENDING
+  Phase 2.3: Widget System        ⏳ PENDING
+  Phase 2.4: Theme Engine         ⏳ PENDING
+  Phase 2.5: Navigation & Input   ⏳ PENDING
+  Phase 2.6: Code Highlighting    ⏳ PENDING
 Milestone 3: Advanced Features    ⏳ PENDING
 Milestone 4: Polish & Release     ⏳ PENDING
 ```
@@ -31,15 +37,17 @@ Milestone 4: Polish & Release     ⏳ PENDING
 - ✅ License: AGPL-3.0
 - ✅ Merge settings: squash/rebase only
 - ✅ Branch protection enabled
-- ✅ Single clean commit history
+- ✅ PR-based workflow
 
 ### Code & Documentation
 - ✅ Full specifications (17 docs)
 - ✅ Project structure (50+ Zig files)
 - ✅ Build system (Zig 0.15.2 compatible)
 - ✅ 17 tests passing
-- ✅ Working CLI (help, version, file reading)
+- ✅ Working CLI (--help, --version)
 - ✅ Cross-compilation (5 targets)
+- ✅ libvaxis TUI integration
+- ✅ Basic event loop
 
 ### CI/CD Workflows
 | Workflow | Features | Status |
@@ -51,30 +59,23 @@ Milestone 4: Polish & Release     ⏳ PENDING
 
 ---
 
-## ⏳ Current Phase: 1.4 - Basic TUI Loop
+## ⏳ Current Phase: 2.1 - Markdown Parser
 
 ### Tasks
 
 | ID | Task | Status |
 |----|------|--------|
-| 1.4.1 | Add libvaxis dependency | ⏳ Pending |
-| 1.4.2 | Initialize vaxis | ⏳ Pending |
-| 1.4.3 | Event Loop | ⏳ Pending |
-| 1.4.4 | Signal Handling | ⏳ Pending |
-| 1.4.5 | Cleanup | ⏳ Pending |
+| 2.1.1 | Scanner | ⏳ Pending |
+| 2.1.2 | Block Parser | ⏳ Pending |
+| 2.1.3 | Inline Parser | ⏳ Pending |
+| 2.1.4 | Front Matter Parser | ⏳ Pending |
+| 2.1.5 | Slide Splitter | ⏳ Pending |
 
 ### Implementation Notes
 
-**Dependency to add:**
-```zig
-// build.zig.zon
-.dependencies = .{
-    .vaxis = .{
-        .url = "git+https://github.com/rockorager/libvaxis.git",
-        .hash = "...",
-    },
-}
-```
+- Parser will be in `src/parser/`
+- Need to support presenterm-compatible Markdown
+- Must handle `<!-- end_slide -->` delimiters
 
 ---
 
@@ -82,7 +83,7 @@ Milestone 4: Polish & Release     ⏳ PENDING
 
 | Metric | Value | Target |
 |--------|-------|--------|
-| Binary size | 1.3MB | <5MB ✅ |
+| Binary size | 2.9MB | <5MB ✅ |
 | Build time | ~2s | <5s ✅ |
 | Test count | 17 | 100+ 🔄 |
 | Cross-compile | 5 targets | 5 targets ✅ |
@@ -118,8 +119,11 @@ zig build test
 
 # Verify
 zig build verify
+
+# Run TUI
+./zig-out/bin/tuia
 ```
 
 ---
 
-*Ready for Phase 1.4: TUI Implementation*
+*Ready for Phase 2.1: Markdown Parser*

@@ -18,7 +18,7 @@
 
 ---
 
-## Milestone 1: Foundation 🔄
+## Milestone 1: Foundation ✅
 
 ### Phase 1.1: Project Skeleton ✅
 
@@ -62,16 +62,28 @@
 - Memory leak detection with GPA
 - Test fixtures directory
 
+### Phase 1.4: Basic TUI Loop ✅
+
+**Date:** 2026-03-02
+
+- Added libvaxis 0.5.1 dependency
+- Basic TUI event loop implementation:
+  - Initialize vaxis TTY and screen
+  - Handle keyboard events (Ctrl+C, 'q' to quit)
+  - Handle window resize events
+  - Render centered welcome message
+  - Proper cleanup on exit
+- CLI args support (`--help`, `--version`)
+
 ### Repository Cleanup ✅
 
 **Date:** 2026-03-02
 
 - Renamed project from `slidz` to `tuia`
 - Fixed license references (AGPL-3.0)
-- Squashed all commits to single clean commit
+- Clean commit history via PR workflow
 - Branch protection enabled:
-  - Required status checks (PR Checks, CI, Security Scans)
-  - Required PR reviews (1 approval)
+  - Required status checks
   - Linear history required
   - Force pushes disabled
 - Single branch: `main` (local and remote)
@@ -80,15 +92,15 @@
 
 ## Current State
 
-- **Binary:** `tuia` (~1.3MB)
+- **Binary:** `tuia` (~2.9MB)
 - **Tests:** 17 passing
 - **Build:** Cross-compilation working
 - **CI:** All workflows passing
 - **License:** AGPL-3.0
-- **Repository:** Clean single-commit history
+- **Repository:** Clean PR-based workflow
 
 ---
 
 ## Next Phase
 
-**Phase 1.4: Basic TUI Loop** - See `DO_NEXT.md`
+**Phase 2.1: Markdown Parser** - See `DO_NEXT.md`
