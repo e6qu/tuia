@@ -252,8 +252,9 @@ pub const Parser = struct {
         if (self.current.type == .text or self.current.type == .paragraph) {
             const text = std.mem.trim(u8, self.current.text, " \t\n");
             if (text.len > 0) {
-                const copy = try self.allocator.dupe(u8, text);
-                try content.append(self.allocator, .{ .text = copy });
+                // Parse inline formatting within the text
+                const inlines = try parseInlineContent(self.allocator, text);
+                try content.appendSlice(self.allocator, inlines);
             }
             self.advance();
         }
@@ -330,6 +331,197 @@ fn isCodeBlockEnd(text: []const u8) bool {
         i += 1;
     }
     return true;
+}
+
+/// Parse inline markdown content (bold, italic, code, links)
+fn parseInlineContent(allocator: std.mem.Allocator, text: []const u8) ![]AST.Inline {
+    var result: std.ArrayList(AST.Inline) = .empty;
+    defer result.deinit(allocator);
+
+    var i: usize = 0;
+    var text_start: usize = 0;
+
+    while (i < text.len) {
+        // Check for inline code: `code`
+        if (text[i] == '`') {
+            // Flush pending text
+            if (i > text_start) {
+                const txt = try allocator.dupe(u8, text[text_start..i]);
+                try result.append(allocator, .{ .text = txt });
+            }
+
+            // Find closing backtick
+            i += 1;
+            const code_start = i;
+            while (i < text.len and text[i] != '`') {
+                i += 1;
+            }
+            const code = try allocator.dupe(u8, text[code_start..i]);
+            try result.append(allocator, .{ .code = code });
+
+            if (i < text.len) i += 1; // skip closing `
+            text_start = i;
+            continue;
+        }
+
+        // Check for strong: **text**
+        if (text[i] == '*' and i + 1 < text.len and text[i + 1] == '*') {
+            // Flush pending text
+            if (i > text_start) {
+                const txt = try allocator.dupe(u8, text[text_start..i]);
+                try result.append(allocator, .{ .text = txt });
+            }
+
+            // Find closing **
+            i += 2;
+            const strong_start = i;
+            while (i + 1 < text.len and !(text[i] == '*' and text[i + 1] == '*')) {
+                i += 1;
+            }
+
+            if (i + 1 < text.len) {
+                // Parse content recursively
+                const inner = try parseInlineContent(allocator, text[strong_start..i]);
+                try result.append(allocator, .{ .strong = inner });
+                i += 2; // skip closing **
+            } else {
+                // No closing **, treat as text
+                const txt = try allocator.dupe(u8, text[strong_start - 2..i]);
+                try result.append(allocator, .{ .text = txt });
+            }
+            text_start = i;
+            continue;
+        }
+
+        // Check for emphasis: *text*
+        if (text[i] == '*') {
+            // Flush pending text
+            if (i > text_start) {
+                const txt = try allocator.dupe(u8, text[text_start..i]);
+                try result.append(allocator, .{ .text = txt });
+            }
+
+            // Find closing *
+            i += 1;
+            const emph_start = i;
+            while (i < text.len and text[i] != '*') {
+                i += 1;
+            }
+
+            if (i < text.len) {
+                // Parse content recursively
+                const inner = try parseInlineContent(allocator, text[emph_start..i]);
+                try result.append(allocator, .{ .emphasis = inner });
+                i += 1; // skip closing *
+            } else {
+                // No closing *, treat as text
+                const txt = try allocator.dupe(u8, text[emph_start - 1..i]);
+                try result.append(allocator, .{ .text = txt });
+            }
+            text_start = i;
+            continue;
+        }
+
+        // Check for links: [text](url)
+        if (text[i] == '[') {
+            // Find closing ]
+            var j = i + 1;
+            while (j < text.len and text[j] != ']') {
+                j += 1;
+            }
+
+            // Check for ( following ]
+            if (j + 1 < text.len and text[j] == ']' and text[j + 1] == '(') {
+                // Flush pending text
+                if (i > text_start) {
+                    const txt = try allocator.dupe(u8, text[text_start..i]);
+                    try result.append(allocator, .{ .text = txt });
+                }
+
+                const link_text = text[i + 1 .. j];
+                j += 2; // skip ](
+
+                // Find closing )
+                const url_start = j;
+                while (j < text.len and text[j] != ')') {
+                    j += 1;
+                }
+                const url = try allocator.dupe(u8, text[url_start..j]);
+                errdefer allocator.free(url);
+
+                // Parse link text
+                const inner = try parseInlineContent(allocator, link_text);
+                errdefer {
+                    for (inner) |*inl| {
+                        inl.deinit(allocator);
+                    }
+                    allocator.free(inner);
+                }
+
+                try result.append(allocator, .{ .link = .{
+                    .text = inner,
+                    .url = url,
+                } });
+
+                if (j < text.len) j += 1; // skip )
+                i = j;
+                text_start = i;
+                continue;
+            }
+        }
+
+        // Check for images: ![alt](url)
+        if (text[i] == '!' and i + 1 < text.len and text[i + 1] == '[') {
+            // Find closing ]
+            var j = i + 2;
+            while (j < text.len and text[j] != ']') {
+                j += 1;
+            }
+
+            // Check for ( following ]
+            if (j + 1 < text.len and text[j] == ']' and text[j + 1] == '(') {
+                // Flush pending text
+                if (i > text_start) {
+                    const txt = try allocator.dupe(u8, text[text_start..i]);
+                    try result.append(allocator, .{ .text = txt });
+                }
+
+                const alt_text = text[i + 2 .. j];
+                j += 2; // skip ](
+
+                // Find closing )
+                const url_start = j;
+                while (j < text.len and text[j] != ')') {
+                    j += 1;
+                }
+                const url = try allocator.dupe(u8, text[url_start..j]);
+                errdefer allocator.free(url);
+
+                const alt = try allocator.dupe(u8, alt_text);
+                errdefer allocator.free(alt);
+
+                try result.append(allocator, .{ .image = .{
+                    .alt = alt,
+                    .url = url,
+                } });
+
+                if (j < text.len) j += 1; // skip )
+                i = j;
+                text_start = i;
+                continue;
+            }
+        }
+
+        i += 1;
+    }
+
+    // Flush remaining text
+    if (text_start < text.len) {
+        const txt = try allocator.dupe(u8, text[text_start..]);
+        try result.append(allocator, .{ .text = txt });
+    }
+
+    return try result.toOwnedSlice(allocator);
 }
 
 // Tests
@@ -456,4 +648,106 @@ test "isCodeBlockEnd helper" {
     try testing.expect(!isCodeBlockEnd("```zig"));
     try testing.expect(!isCodeBlockEnd("text"));
     try testing.expect(!isCodeBlockEnd(" ``"));
+}
+
+test "parseInlineContent bold" {
+    const testing = std.testing;
+    const allocator = testing.allocator;
+
+    const result = try parseInlineContent(allocator, "**bold text**");
+    defer {
+        for (result) |*r| {
+            r.deinit(allocator);
+        }
+        allocator.free(result);
+    }
+
+    try testing.expectEqual(@as(usize, 1), result.len);
+    try testing.expectEqualStrings("bold text", result[0].strong[0].text);
+}
+
+test "parseInlineContent italic" {
+    const testing = std.testing;
+    const allocator = testing.allocator;
+
+    const result = try parseInlineContent(allocator, "*italic text*");
+    defer {
+        for (result) |*r| {
+            r.deinit(allocator);
+        }
+        allocator.free(result);
+    }
+
+    try testing.expectEqual(@as(usize, 1), result.len);
+    try testing.expectEqualStrings("italic text", result[0].emphasis[0].text);
+}
+
+test "parseInlineContent inline code" {
+    const testing = std.testing;
+    const allocator = testing.allocator;
+
+    const result = try parseInlineContent(allocator, "`code here`");
+    defer {
+        for (result) |*r| {
+            r.deinit(allocator);
+        }
+        allocator.free(result);
+    }
+
+    try testing.expectEqual(@as(usize, 1), result.len);
+    try testing.expectEqualStrings("code here", result[0].code);
+}
+
+test "parseInlineContent link" {
+    const testing = std.testing;
+    const allocator = testing.allocator;
+
+    const result = try parseInlineContent(allocator, "[click here](https://example.com)");
+    defer {
+        for (result) |*r| {
+            r.deinit(allocator);
+        }
+        allocator.free(result);
+    }
+
+    try testing.expectEqual(@as(usize, 1), result.len);
+    try testing.expectEqualStrings("click here", result[0].link.text[0].text);
+    try testing.expectEqualStrings("https://example.com", result[0].link.url);
+}
+
+test "parseInlineContent image" {
+    const testing = std.testing;
+    const allocator = testing.allocator;
+
+    const result = try parseInlineContent(allocator, "![alt text](image.png)");
+    defer {
+        for (result) |*r| {
+            r.deinit(allocator);
+        }
+        allocator.free(result);
+    }
+
+    try testing.expectEqual(@as(usize, 1), result.len);
+    try testing.expectEqualStrings("alt text", result[0].image.alt);
+    try testing.expectEqualStrings("image.png", result[0].image.url);
+}
+
+test "parseInlineContent combined" {
+    const testing = std.testing;
+    const allocator = testing.allocator;
+
+    const result = try parseInlineContent(allocator, "Hello **bold** and *italic* world");
+    defer {
+        for (result) |*r| {
+            r.deinit(allocator);
+        }
+        allocator.free(result);
+    }
+
+    try testing.expectEqual(@as(usize, 5), result.len);
+    try testing.expectEqualStrings("Hello ", result[0].text);
+    try testing.expectEqualStrings("bold", result[1].strong[0].text);
+    try testing.expectEqualStrings(" and ", result[2].text);
+    try testing.expectEqualStrings("italic", result[3].emphasis[0].text);
+    try testing.expectEqualStrings(" world", result[4].text);
 }
