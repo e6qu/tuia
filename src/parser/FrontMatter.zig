@@ -29,13 +29,13 @@ pub fn parse(allocator: std.mem.Allocator, source: []const u8) !?FrontMatter {
     // Find the end of front matter (second ---)
     const after_first_delim = source[3..]; // Skip first ---
     const end_pos = std.mem.indexOf(u8, after_first_delim, "---");
-    
+
     if (end_pos == null) {
         return null; // No closing delimiter
     }
 
     const yaml_content = after_first_delim[0..end_pos.?];
-    
+
     var front_matter = FrontMatter{};
     errdefer front_matter.deinit(allocator);
 
@@ -54,9 +54,10 @@ pub fn parse(allocator: std.mem.Allocator, source: []const u8) !?FrontMatter {
         var value = std.mem.trim(u8, trimmed[colon_pos.? + 1 ..], " \t");
 
         // Remove quotes if present
-        if (value.len >= 2 and 
+        if (value.len >= 2 and
             ((value[0] == '"' and value[value.len - 1] == '"') or
-             (value[0] == '\'' and value[value.len - 1] == '\''))) {
+                (value[0] == '\'' and value[value.len - 1] == '\'')))
+        {
             value = value[1 .. value.len - 1];
         }
 
@@ -85,7 +86,7 @@ pub fn parseWithContent(allocator: std.mem.Allocator, source: []const u8) !struc
     // Find the end of front matter (second ---)
     const after_first_delim = source[3..]; // Skip first ---
     const end_pos = std.mem.indexOf(u8, after_first_delim, "---");
-    
+
     if (end_pos == null) {
         return .{ .front_matter = null, .content = source };
     }
@@ -97,7 +98,7 @@ pub fn parseWithContent(allocator: std.mem.Allocator, source: []const u8) !struc
         "";
 
     const fm = try parse(allocator, source);
-    
+
     return .{
         .front_matter = fm,
         .content = remaining_content,
@@ -112,10 +113,10 @@ test "parse simple front matter" {
 
     const result = try parse(allocator, source);
     try testing.expect(result != null);
-    
+
     const fm = result.?;
     defer fm.deinit(allocator);
-    
+
     try testing.expectEqualStrings("My Presentation", fm.title.?);
     try testing.expectEqualStrings("John Doe", fm.author.?);
     try testing.expectEqualStrings("2024-01-15", fm.date.?);
@@ -130,10 +131,10 @@ test "parse front matter with quotes" {
 
     const result = try parse(allocator, source);
     try testing.expect(result != null);
-    
+
     const fm = result.?;
     defer fm.deinit(allocator);
-    
+
     try testing.expectEqualStrings("My Title", fm.title.?);
     try testing.expectEqualStrings("Jane Doe", fm.author.?);
 }
@@ -143,7 +144,7 @@ test "no front matter" {
     const allocator = testing.allocator;
 
     const source = "# Just a regular markdown file";
-    
+
     const result = try parse(allocator, source);
     try testing.expect(result == null);
 }
@@ -156,7 +157,7 @@ test "parseWithContent" {
 
     const result = try parseWithContent(allocator, source);
     defer if (result.front_matter) |fm| fm.deinit(allocator);
-    
+
     try testing.expect(result.front_matter != null);
     try testing.expectEqualStrings("Test", result.front_matter.?.title.?);
     try testing.expect(std.mem.containsAtLeast(u8, result.content, 1, "# First Slide"));

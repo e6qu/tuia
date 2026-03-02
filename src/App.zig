@@ -109,10 +109,10 @@ pub const App = struct {
         // Parse the presentation
         var prs = Parser.init(self.allocator, content);
         var ast_presentation = try prs.parse();
-        
+
         // Convert AST presentation to core presentation
         const presentation = try convertPresentation(self.allocator, ast_presentation);
-        
+
         // Clean up AST presentation after conversion
         ast_presentation.deinit();
 

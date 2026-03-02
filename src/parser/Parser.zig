@@ -50,10 +50,10 @@ pub const Parser = struct {
 
     fn parseFrontMatter(self: *Self) !?AST.FrontMatter {
         const FrontMatterParser = @import("FrontMatter.zig");
-        
+
         // Get remaining source from current position
         const remaining_source = self.scanner.source[self.scanner.pos..];
-        
+
         // Check if there's front matter
         if (!std.mem.startsWith(u8, remaining_source, "---")) {
             return null;
@@ -61,7 +61,7 @@ pub const Parser = struct {
 
         // Parse front matter and get remaining content
         const result = try FrontMatterParser.parseWithContent(self.allocator, remaining_source);
-        
+
         // Advance scanner past the front matter
         const front_matter_end = std.mem.indexOf(u8, remaining_source[3..], "---");
         if (front_matter_end) |end| {
