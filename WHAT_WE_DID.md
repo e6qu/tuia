@@ -9,51 +9,16 @@
 **Duration:** Week 1  
 **Status:** Complete
 
-### Deliverables
-- 17 specification documents created:
-  - Requirements, Architecture, API specs
-  - ADRs (Architecture Decision Records)
-  - File formats, Theme formats
-  - Testing strategy, Keybindings
+- 17 specification documents created
 
 ---
 
 ## Milestone 1: Foundation ✅
 
-### Phase 1.1: Project Skeleton ✅
-
-**Date:** 2026-03-01
-
-- Created standard Zig project layout
-- 50+ source files across modules
-- `build.zig` with executable configuration
-- Test structure with integration tests
-
-### Phase 1.2: Build System & CI ✅
-
-**Date:** 2026-03-01/02
-
-- Cross-compilation for 5 targets
-- CI/CD Workflows (ci.yml, security.yml, pr.yml, release.yml)
-- `zig build verify` command working
-- All CI checks passing
-
-### Phase 1.3: Testing Framework ✅
-
-**Date:** 2026-03-01
-
-- Golden file testing utilities
-- 17+ unit tests passing
-- Integration test structure
-- Memory leak detection with GPA
-
-### Phase 1.4: Basic TUI Loop ✅
-
-**Date:** 2026-03-02
-
-- Added libvaxis 0.5.1 dependency
-- Basic TUI event loop implementation
-- CLI args support (`--help`, `--version`)
+- Phase 1.1: Project Skeleton ✅
+- Phase 1.2: Build System & CI ✅
+- Phase 1.3: Testing Framework ✅
+- Phase 1.4: Basic TUI Loop ✅
 
 ---
 
@@ -63,31 +28,37 @@
 
 **Date:** 2026-03-02
 
-- **Token.zig**: Token types for Markdown elements
-- **Scanner.zig**: Tokenizer for markdown source
-  - Handles headings, code blocks, lists, blockquotes
-  - Recognizes end_slide comments
-- **AST.zig**: AST types (Presentation, Slide, Element, Inline)
-  - Full memory management with deinit
-- **Parser.zig**: Main parser
-  - Parses slides separated by `<!-- end_slide -->`
-  - Block-level parsing (headings, paragraphs, lists)
-  - Basic inline text parsing
-- Tests for scanner and parser
+- Token.zig, Scanner.zig, AST.zig, Parser.zig
+- Slide splitting, block-level parsing
+
+### Phase 2.2: Slide Model ✅
+
+**Date:** 2026-03-02
+
+- Element.zig, Slide.zig, Presentation.zig
+- Core data models with validation
+
+### Phase 2.3: Widget System ✅
+
+**Date:** 2026-03-02
+
+- **Widget.zig**: Base Widget interface with VTable
+- **TextWidget.zig**: Paragraph rendering with word wrap
+- **HeadingWidget.zig**: Styled headings (bold, underline per level)
+- **CodeWidget.zig**: Code blocks with line numbers, dark background
+- **SlideWidget.zig**: Complete slide renderer for all element types
 
 ---
 
 ## Current State
 
 - **Binary:** `tuia` (~2.9MB)
-- **Tests:** 17+ passing
+- **Tests:** 20+ passing
 - **Build:** Cross-compilation working
 - **CI:** All workflows passing
-- **License:** AGPL-3.0
-- **Repository:** Clean PR-based workflow
 
 ---
 
 ## Next Phase
 
-**Phase 2.2: Slide Model** - See `DO_NEXT.md`
+**Phase 2.4: Theme Engine** - See `DO_NEXT.md`

@@ -4,78 +4,58 @@
 
 ---
 
-## Current Phase: 2.2 - Slide Model
+## Current Phase: 2.4 - Theme Engine
 
-**Goal:** Define and implement the slide presentation model
+**Goal:** Implement theme system for styling presentations
 
 ### Tasks
 
 | ID | Task | Description | Est. Hours |
 |----|------|-------------|------------|
-| 2.2.1 | Element Types | Define all AST element types | 4 |
-| 2.2.2 | Slide Struct | Slide representation | 2 |
-| 2.2.3 | Presentation Struct | Root model with metadata | 2 |
-| 2.2.4 | Validation | Validate model invariants | 4 |
-| 2.2.5 | Serialization | Debug printing | 2 |
+| 2.4.1 | Theme Struct | Define theme data model | 4 |
+| 2.4.2 | YAML Parser | Parse theme files from YAML | 4 |
+| 2.4.3 | Style Application | Apply styles to widgets | 6 |
+| 2.4.4 | Built-in Themes | Dark and light themes | 4 |
+| 2.4.5 | Custom Themes | Load user themes | 4 |
 
 ### Deliverables
 
-- `src/core/Slide.zig` - Slide model
-- `src/core/Presentation.zig` - Root presentation model
-- `src/core/Element.zig` - Element types (refined from AST)
-- Validation functions
-- Debug print/format functions
+- `src/render/Theme.zig` - Theme data model
+- `src/render/ThemeLoader.zig` - YAML theme loading
+- Dark theme (default)
+- Light theme
+- Theme application to widgets
 
 ### Acceptance Criteria
 
-- [ ] All element types defined (Heading, Paragraph, CodeBlock, List, etc.)
-- [ ] Slide can contain multiple elements
-- [ ] Presentation can contain multiple slides with metadata
-- [ ] Model validation catches invalid states
-- [ ] Can serialize to string for debugging
+- [ ] Themes can be loaded from YAML files
+- [ ] Dark and light built-in themes work
+- [ ] Styles apply correctly to all element types
+- [ ] Invalid theme files produce helpful errors
+- [ ] Theme switching works at runtime
 
 ---
 
 ## Upcoming Phases
 
-### Phase 2.3: Widget System
-- Widget interface
-- Slide widget
-- Text, Heading, Code widgets
-
-### Phase 2.4: Theme Engine
-- Theme data model
-- YAML parser for themes
-- Style application
-
 ### Phase 2.5: Navigation & Input
 - Key binding system
-- Slide navigation
-- Jump to slide
+- Slide navigation (next/prev/jump)
+- Help modal
+
+### Phase 2.6: Code Highlighting
+- Syntax highlighting for code blocks
+- Support multiple languages
 
 ---
 
-## PR Workflow
+## Document Update Checklist
 
-All work must be done via PRs:
-
-1. Create feature branch: `git checkout -b feature/phase-2.2-slide-model`
-2. Make changes
-3. Push branch: `git push -u origin feature/phase-2.2-slide-model`
-4. Create PR via GitHub
-5. Wait for CI checks
-6. You merge when CI passes
-
----
-
-## Document Updates Required After Each Phase
-
-After completing a phase, update:
-
-1. **`PLAN.md`** - Mark phase as complete
-2. **`STATUS.md`** - Update current phase
-3. **`WHAT_WE_DID.md`** - Add completed work
-4. **`DO_NEXT.md`** - Update upcoming tasks
+After each phase, update:
+- [ ] `PLAN.md` - Mark phase complete
+- [ ] `STATUS.md` - Update current status
+- [ ] `WHAT_WE_DID.md` - Add completed work
+- [ ] `DO_NEXT.md` - Set next phase
 
 ---
 
