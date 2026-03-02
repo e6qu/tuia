@@ -32,6 +32,20 @@ pub const ElementStyle = struct {
     strikethrough: ?bool = null,
 };
 
+/// Syntax highlighting colors for code blocks
+pub const SyntaxColors = struct {
+    comment: ?Color = null,
+    string: ?Color = null,
+    number: ?Color = null,
+    keyword: ?Color = null,
+    keyword_type: ?Color = null,
+    keyword_constant: ?Color = null,
+    operator: ?Color = null,
+    function: ?Color = null,
+    type_name: ?Color = null,
+    property: ?Color = null,
+};
+
 /// Complete theme definition
 pub const Theme = struct {
     name: []const u8,
@@ -56,6 +70,9 @@ pub const Theme = struct {
     emphasis: ElementStyle,
     strong: ElementStyle,
     thematic_break: ElementStyle,
+
+    // Syntax highlighting colors
+    syntax: SyntaxColors = .{},
 
     pub fn deinit(self: Theme, allocator: std.mem.Allocator) void {
         allocator.free(self.name);
@@ -110,6 +127,23 @@ pub const Theme = struct {
             element_style.underline != null or
             element_style.strikethrough != null;
     }
+
+    /// Get syntax color for a token kind
+    pub fn getSyntaxColor(self: Theme, token_kind: @import("../highlight/Token.zig").TokenKind) ?Color {
+        return switch (token_kind) {
+            .comment, .doc_comment => self.syntax.comment,
+            .string => self.syntax.string,
+            .number => self.syntax.number,
+            .keyword, .keyword_control => self.syntax.keyword,
+            .keyword_type => self.syntax.keyword_type,
+            .keyword_constant => self.syntax.keyword_constant,
+            .operator, .operator_arithmetic, .operator_comparison, .operator_logical, .operator_assignment => self.syntax.operator,
+            .function_name => self.syntax.function,
+            .type_name => self.syntax.type_name,
+            .property_name => self.syntax.property,
+            else => null,
+        };
+    }
 };
 
 /// Built-in dark theme
@@ -125,7 +159,7 @@ pub fn darkTheme() Theme {
         .heading5 = .{ .fg = .bright_black },
         .heading6 = .{ .fg = .bright_black, .italic = true },
         .paragraph = .{ .fg = .default },
-        .code_block = .{ .fg = .bright_green, .bg = .{ .rgb = .{ .r = 40, .g = 40, .b = 40 } } },
+        .code_block = .{ .fg = .bright_white, .bg = .{ .rgb = .{ .r = 40, .g = 40, .b = 40 } } },
         .code_inline = .{ .fg = .bright_green, .bg = .{ .rgb = .{ .r = 50, .g = 50, .b = 50 } } },
         .blockquote = .{ .fg = .bright_black, .italic = true },
         .list_bullet = .{ .fg = .bright_cyan },
@@ -135,6 +169,18 @@ pub fn darkTheme() Theme {
         .emphasis = .{ .italic = true },
         .strong = .{ .bold = true },
         .thematic_break = .{ .fg = .bright_black },
+        .syntax = .{
+            .comment = .bright_black,
+            .string = .bright_green,
+            .number = .cyan,
+            .keyword = .magenta,
+            .keyword_type = .cyan,
+            .keyword_constant = .yellow,
+            .operator = .yellow,
+            .function = .blue,
+            .type_name = .cyan,
+            .property = .default,
+        },
     };
 }
 
@@ -151,7 +197,7 @@ pub fn lightTheme() Theme {
         .heading5 = .{ .fg = .black },
         .heading6 = .{ .fg = .black, .italic = true },
         .paragraph = .{ .fg = .default },
-        .code_block = .{ .fg = .{ .rgb = .{ .r = 0, .g = 100, .b = 0 } }, .bg = .{ .rgb = .{ .r = 245, .g = 245, .b = 245 } } },
+        .code_block = .{ .fg = .black, .bg = .{ .rgb = .{ .r = 245, .g = 245, .b = 245 } } },
         .code_inline = .{ .fg = .{ .rgb = .{ .r = 0, .g = 100, .b = 0 } }, .bg = .{ .rgb = .{ .r = 240, .g = 240, .b = 240 } } },
         .blockquote = .{ .fg = .bright_black, .italic = true },
         .list_bullet = .{ .fg = .blue },
@@ -161,6 +207,18 @@ pub fn lightTheme() Theme {
         .emphasis = .{ .italic = true },
         .strong = .{ .bold = true },
         .thematic_break = .{ .fg = .bright_black },
+        .syntax = .{
+            .comment = .{ .rgb = .{ .r = 128, .g = 128, .b = 128 } },
+            .string = .{ .rgb = .{ .r = 0, .g = 128, .b = 0 } },
+            .number = .{ .rgb = .{ .r = 0, .g = 0, .b = 255 } },
+            .keyword = .{ .rgb = .{ .r = 175, .g = 0, .b = 219 } },
+            .keyword_type = .{ .rgb = .{ .r = 0, .g = 128, .b = 128 } },
+            .keyword_constant = .{ .rgb = .{ .r = 128, .g = 0, .b = 128 } },
+            .operator = .{ .rgb = .{ .r = 128, .g = 0, .b = 0 } },
+            .function = .{ .rgb = .{ .r = 0, .g = 0, .b = 128 } },
+            .type_name = .{ .rgb = .{ .r = 0, .g = 128, .b = 128 } },
+            .property = .default,
+        },
     };
 }
 

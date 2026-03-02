@@ -84,12 +84,31 @@
   - Current slide / total slides
   - Presentation title and messages
 
+### Phase 2.6: Code Highlighting ✅
+
+**Date:** 2026-03-02
+
+- **Token.zig**: Token types for syntax highlighting
+  - TokenKind enum with 20+ token types
+  - Default color mapping for each token kind
+- **Language.zig**: Language definitions
+  - Support for Zig, Python, JavaScript, TypeScript, Bash, JSON
+  - Language detection from file extension and markdown tags
+  - Keyword sets for each language
+- **Highlighter.zig**: Syntax highlighting engine
+  - Tokenizer for supported languages
+  - Comment, string, number, keyword, identifier recognition
+- **Theme Integration**:
+  - SyntaxColors struct for code highlighting
+  - Dark and light theme syntax color presets
+  - getSyntaxColor() method on Theme
+
 ---
 
 ## Current State
 
 - **Binary:** `tuia` (~2.9MB)
-- **Tests:** 35+ passing
+- **Tests:** 40+ passing
 - **Build:** Cross-compilation working
 - **CI:** All workflows passing
 
@@ -97,4 +116,4 @@
 
 ## Next Phase
 
-**Phase 2.6: Code Highlighting** - See `DO_NEXT.md`
+**Phase 3.1: Speaker Notes** - See `DO_NEXT.md`
