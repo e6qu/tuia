@@ -18,7 +18,7 @@ pub const cli = @import("cli.zig");
 pub const test_utils = @import("test_utils.zig");
 
 /// Library version
-pub const version = "0.1.0";
+pub const version = "1.0.0";
 
 // Tests
 test {
