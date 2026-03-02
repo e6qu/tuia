@@ -4,48 +4,47 @@
 
 ---
 
-## Current Phase: 2.4 - Theme Engine
+## Current Phase: 2.5 - Navigation & Input
 
-**Goal:** Implement theme system for styling presentations
+**Goal:** Implement keyboard navigation and input handling
 
 ### Tasks
 
 | ID | Task | Description | Est. Hours |
 |----|------|-------------|------------|
-| 2.4.1 | Theme Struct | Define theme data model | 4 |
-| 2.4.2 | YAML Parser | Parse theme files from YAML | 4 |
-| 2.4.3 | Style Application | Apply styles to widgets | 6 |
-| 2.4.4 | Built-in Themes | Dark and light themes | 4 |
-| 2.4.5 | Custom Themes | Load user themes | 4 |
+| 2.5.1 | Navigation State | Track current slide and view state | 4 |
+| 2.5.2 | Input Handling | Process keyboard input | 4 |
+| 2.5.3 | Slide Navigation | Next/prev/jump slide commands | 6 |
+| 2.5.4 | Key Bindings | Configurable key bindings | 4 |
 
 ### Deliverables
 
-- `src/render/Theme.zig` - Theme data model
-- `src/render/ThemeLoader.zig` - YAML theme loading
-- Dark theme (default)
-- Light theme
-- Theme application to widgets
+- Navigation state manager
+- Input event handler
+- Key binding configuration
+- Help overlay
 
 ### Acceptance Criteria
 
-- [ ] Themes can be loaded from YAML files
-- [ ] Dark and light built-in themes work
-- [ ] Styles apply correctly to all element types
-- [ ] Invalid theme files produce helpful errors
-- [ ] Theme switching works at runtime
+- [ ] Navigate between slides with arrow keys
+- [ ] Jump to specific slide number
+- [ ] Configurable key bindings
+- [ ] Help overlay showing all shortcuts
+- [ ] State persists during session
 
 ---
 
 ## Upcoming Phases
 
-### Phase 2.5: Navigation & Input
-- Key binding system
-- Slide navigation (next/prev/jump)
-- Help modal
-
 ### Phase 2.6: Code Highlighting
 - Syntax highlighting for code blocks
 - Support multiple languages
+
+### Phase 3.1: Speaker Notes
+- Note display in terminal
+
+### Phase 3.2: Export Formats
+- Static HTML, PDF export
 
 ---
 

@@ -48,12 +48,25 @@
 - **CodeWidget.zig**: Code blocks with line numbers, dark background
 - **SlideWidget.zig**: Complete slide renderer for all element types
 
+### Phase 2.4: Theme Engine ✅
+
+**Date:** 2026-03-02
+
+- **Theme.zig**: Theme data model with Color enum (ANSI + RGB)
+  - ElementStyle with fg, bg, bold, italic, underline, strikethrough
+  - Built-in dark and light themes
+  - vaxis.Color conversion for rendering
+- **ThemeLoader.zig**: YAML theme loader
+  - Hex color parsing (#RRGGBB)
+  - Named color support (16 ANSI colors)
+  - Simplified YAML format for theme files
+
 ---
 
 ## Current State
 
 - **Binary:** `tuia` (~2.9MB)
-- **Tests:** 20+ passing
+- **Tests:** 30+ passing
 - **Build:** Cross-compilation working
 - **CI:** All workflows passing
 
@@ -61,4 +74,4 @@
 
 ## Next Phase
 
-**Phase 2.4: Theme Engine** - See `DO_NEXT.md`
+**Phase 2.5: Navigation & Input** - See `DO_NEXT.md`

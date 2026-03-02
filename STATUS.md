@@ -3,7 +3,7 @@
 > Current status of TUIA (Terminal UI Application)
 
 **Last Updated:** 2026-03-02  
-**Current Phase:** 2.4 - Theme Engine  
+**Current Phase:** 2.5 - Navigation & Input  
 **Repository:** https://github.com/e6qu/tuia
 
 ---
@@ -18,8 +18,8 @@ Milestone 2: Core Presentation    🔄 IN PROGRESS
   Phase 2.1: Markdown Parser      ✅ COMPLETE
   Phase 2.2: Slide Model          ✅ COMPLETE
   Phase 2.3: Widget System        ✅ COMPLETE
-  Phase 2.4: Theme Engine         ⏳ CURRENT
-  Phase 2.5: Navigation & Input   ⏳ PENDING
+  Phase 2.4: Theme Engine         ✅ COMPLETE
+  Phase 2.5: Navigation & Input   ⏳ CURRENT
   Phase 2.6: Code Highlighting    ⏳ PENDING
 Milestone 3: Advanced Features    ⏳ PENDING
 Milestone 4: Polish & Release     ⏳ PENDING
@@ -39,17 +39,27 @@ Milestone 4: Polish & Release     ⏳ PENDING
 
 ---
 
-## ⏳ Current Phase: 2.4 - Theme Engine
+## ✅ Completed
+
+### Phase 2.4: Theme Engine ✅
+
+- Theme struct with color definitions
+- ElementStyle with fg/bg colors, bold/italic/underline
+- Built-in dark and light themes
+- ThemeLoader for YAML theme files
+- Hex color parsing (#RRGGBB)
+- Named color support (16 ANSI colors)
+
+## ⏳ Current Phase: 2.5 - Navigation & Input
 
 ### Tasks
 
 | ID | Task | Status |
 |----|------|--------|
-| 2.4.1 | Theme Struct | ⏳ Pending |
-| 2.4.2 | YAML Parser | ⏳ Pending |
-| 2.4.3 | Style Application | ⏳ Pending |
-| 2.4.4 | Built-in Themes | ⏳ Pending |
-| 2.4.5 | Custom Themes | ⏳ Pending |
+| 2.5.1 | Navigation State | ⏳ Pending |
+| 2.5.2 | Input Handling | ⏳ Pending |
+| 2.5.3 | Slide Navigation | ⏳ Pending |
+| 2.5.4 | Key Bindings | ⏳ Pending |
 
 ---
 
