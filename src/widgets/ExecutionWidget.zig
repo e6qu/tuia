@@ -282,8 +282,8 @@ pub const ExecutionWidget = struct {
 
     /// Get status bar text
     fn getStatusText(self: Self) ![]const u8 {
-        var parts = std.ArrayList(u8).init(self.allocator);
-        defer parts.deinit();
+        var parts: std.ArrayList(u8) = .empty;
+        defer parts.deinit(self.allocator);
 
         const writer = parts.writer();
 
@@ -302,7 +302,7 @@ pub const ExecutionWidget = struct {
         const stats = self.output_widget.capture.getStats();
         try writer.print(" | Lines: {d}", .{stats.total_lines});
 
-        return parts.toOwnedSlice();
+        return parts.toOwnedSlice(self.allocator);
     }
 };
 

@@ -47,6 +47,11 @@ pub const Language = enum {
 
     /// Get language from markdown code block language identifier
     pub fn fromMarkdownTag(tag: []const u8) Self {
+        return fromString(tag);
+    }
+
+    /// Get language from string identifier
+    pub fn fromString(str: []const u8) Self {
         const map = std.StaticStringMap(Self).initComptime(.{
             .{ "zig", .zig },
             .{ "python", .python },
@@ -70,7 +75,7 @@ pub const Language = enum {
             .{ "markdown", .markdown },
             .{ "md", .markdown },
         });
-        return map.get(tag) orelse .unknown;
+        return map.get(str) orelse .unknown;
     }
 
     /// Get the name of this language
