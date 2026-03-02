@@ -3,7 +3,7 @@
 > Current status of TUIA (Terminal UI Application)
 
 **Last Updated:** 2026-03-02  
-**Current Phase:** 3.1 - Speaker Notes  
+**Current Phase:** 3.2 - Export Formats  
 **Repository:** https://github.com/e6qu/tuia
 
 ---
@@ -22,6 +22,7 @@ Milestone 2: Core Presentation    ✅ COMPLETE
   Phase 2.5: Navigation & Input   ✅ COMPLETE
   Phase 2.6: Code Highlighting    ✅ COMPLETE
 Milestone 3: Advanced Features    🔄 IN PROGRESS
+  Phase 3.1: Speaker Notes          ✅ COMPLETE
 Milestone 4: Polish & Release     ⏳ PENDING
 ```
 
@@ -68,15 +69,23 @@ Milestone 4: Polish & Release     ⏳ PENDING
 - SyntaxColors in Theme for code highlighting
 - Integration with dark and light themes
 
-## ⏳ Current Phase: 3.1 - Speaker Notes
+### Phase 3.1: Speaker Notes ✅
+
+- Note model with content storage
+- NotesCollection for managing slide notes
+- NoteParser for extracting notes from markdown
+- NoteWidget for displaying notes
+- Support for <!-- note --> and <!-- endnote --> syntax
+
+## ⏳ Current Phase: 3.2 - Export Formats
 
 ### Tasks
 
 | ID | Task | Status |
 |----|------|--------|
-| 3.1.1 | Note Parser | ⏳ Pending |
-| 3.1.2 | Note Display | ⏳ Pending |
-| 3.1.3 | Separate Window | ⏳ Pending |
+| 3.2.1 | HTML Export | ⏳ Pending |
+| 3.2.2 | PDF Export | ⏳ Pending |
+| 3.2.3 | Static Site | ⏳ Pending |
 
 ---
 

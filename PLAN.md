@@ -561,25 +561,63 @@ pub const Widget = struct {
 **Duration:** Weeks 11-16  
 **Goal:** Full feature parity with presenterm
 
-### Phase 3.1: Image Support
+### Phase 3.1: Speaker Notes ✅
+
+**Status:** COMPLETE
+
+**Tasks:**
+
+| ID | Task | Description | Status |
+|----|------|-------------|--------|
+| 3.1.1 | Note Model | Speaker note data model | ✅ |
+| 3.1.2 | Note Parser | Extract notes from markdown | ✅ |
+| 3.1.3 | Note Widget | Display notes in terminal | ✅ |
+
+**Deliverables:**
+- `src/core/Note.zig` - Note model and NotesCollection
+- `src/parser/NoteParser.zig` - Note extraction from markdown
+- `src/widgets/NoteWidget.zig` - Note display widget
+
+**Acceptance Criteria:**
+- ✅ Notes parsed from `<!-- note -->` comments
+- ✅ Notes display in terminal
+- ✅ Per-slide note collection
+- ✅ Themed note display
+
+### Phase 3.2: Export Formats
 
 **Tasks:**
 
 | ID | Task | Description | Est. Hours |
 |----|------|-------------|------------|
-| 3.1.1 | Image Loading | Load PNG/JPEG/GIF | 4 |
-| 3.1.2 | Kitty Protocol | Kitty graphics support | 6 |
-| 3.1.3 | iTerm2 Protocol | iTerm2 inline images | 6 |
-| 3.1.4 | Sixel | Sixel graphics | 6 |
-| 3.1.5 | ASCII Fallback | Block character fallback | 2 |
-| 3.1.6 | Sizing | Width/height constraints | 4 |
+| 3.2.1 | HTML Renderer | Generate HTML output | 6 |
+| 3.2.2 | CSS Generation | Theme to CSS conversion | 4 |
+| 3.2.3 | Static Export | Single-file HTML export | 4 |
+
+**Acceptance Criteria:**
+- HTML export works
+- CSS matches theme
+- Single-file output
+
+### Phase 3.3: Image Support
+
+**Tasks:**
+
+| ID | Task | Description | Est. Hours |
+|----|------|-------------|------------|
+| 3.3.1 | Image Loading | Load PNG/JPEG/GIF | 4 |
+| 3.3.2 | Kitty Protocol | Kitty graphics support | 6 |
+| 3.3.3 | iTerm2 Protocol | iTerm2 inline images | 6 |
+| 3.3.4 | Sixel | Sixel graphics | 6 |
+| 3.3.5 | ASCII Fallback | Block character fallback | 2 |
+| 3.3.6 | Sizing | Width/height constraints | 4 |
 
 **Acceptance Criteria:**
 - Images display in Kitty, iTerm2, WezTerm
 - Fallback works in unsupported terminals
 - Animated GIFs play
 
-### Phase 3.2: Code Execution
+### Phase 3.4: Code Execution
 
 **Tasks:**
 
