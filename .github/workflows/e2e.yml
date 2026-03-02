@@ -74,6 +74,8 @@ jobs:
       - name: Run E2E tests
         working-directory: ./e2e
         run: npm test
+        env:
+          TUIA_BINARY: ${{ github.workspace }}/zig-out/bin/tuia
 
       - name: Upload test results
         if: always()

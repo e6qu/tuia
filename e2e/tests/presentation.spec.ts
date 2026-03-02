@@ -1,12 +1,12 @@
 import { test, expect } from '@microsoft/tui-test';
 import * as path from 'path';
-import * as fs from 'fs';
 
-const fixturePath = path.join(import.meta.dirname, 'fixtures', 'test-presentation.md');
+const tuiaBinary = process.env.TUIA_BINARY || 'tuia';
+const fixturePath = path.join(process.cwd(), 'tests', 'fixtures', 'test-presentation.md');
 
 test.use({ 
   program: { 
-    file: path.join(import.meta.dirname, '..', '..', 'zig-out', 'bin', 'tuia'),
+    file: tuiaBinary,
     args: [fixturePath]
   },
   shell: 'bash',
@@ -35,11 +35,9 @@ test('should navigate to next slide with j', async ({ terminal }) => {
 test('should navigate to previous slide with k', async ({ terminal }) => {
   await expect(terminal.getByText('Welcome to TUIA')).toBeVisible();
   
-  // Go to next slide
   terminal.write('j');
   await expect(terminal.getByText('Second Slide')).toBeVisible();
   
-  // Go back
   terminal.write('k');
   await expect(terminal.getByText('Welcome to TUIA')).toBeVisible();
   
@@ -59,11 +57,9 @@ test('should jump to last slide with G', async ({ terminal }) => {
 });
 
 test('should jump to first slide with g', async ({ terminal }) => {
-  // Go to last slide first
   terminal.write('G');
   await expect(terminal.getByText('The End')).toBeVisible();
   
-  // Jump to first
   terminal.write('g');
   await expect(terminal.getByText('Welcome to TUIA')).toBeVisible();
   
@@ -77,7 +73,6 @@ test('should show help with ? key', async ({ terminal }) => {
   terminal.write('?');
   await expect(terminal.getByText('Help', { full: true })).toBeVisible();
   
-  // Close help
   terminal.write('q');
   await expect(terminal.getByText('Welcome to TUIA')).toBeVisible();
   

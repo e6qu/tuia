@@ -1,12 +1,10 @@
 import { test, expect } from '@microsoft/tui-test';
-import * as path from 'path';
-import * as fs from 'fs';
 
-const tuiaBinary = path.join(import.meta.dirname, '..', '..', 'zig-out', 'bin', 'tuia');
+const tuiaBinary = process.env.TUIA_BINARY || 'tuia';
 
 test.use({ 
   program: { 
-    file: fs.existsSync(tuiaBinary) ? tuiaBinary : 'tuia',
+    file: tuiaBinary,
     args: []
   },
   shell: 'bash',
