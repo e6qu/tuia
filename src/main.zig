@@ -1,14 +1,9 @@
 const std = @import("std");
-const vaxis = @import("vaxis");
+const App = @import("App.zig").App;
 const root = @import("root.zig");
 
-const Event = union(enum) {
-    key: vaxis.Key,
-    winsize: vaxis.Winsize,
-};
-
 pub fn main() !void {
-    // Parse CLI args first (before allocating)
+    // Parse CLI args first
     const args = try std.process.argsAlloc(std.heap.page_allocator);
     defer std.process.argsFree(std.heap.page_allocator, args);
 
@@ -28,6 +23,9 @@ pub fn main() !void {
                 \\  -V, --version   Show version information
                 \\
                 \\COMMANDS (in presentation):
+                \\  j, k            Next/previous slide
+                \\  e               Execute code block
+                \\  E               Toggle execution output
                 \\  q, Ctrl+C       Quit
                 \\
             , .{root.version});
@@ -45,48 +43,21 @@ pub fn main() !void {
             std.log.err("Memory leaks detected!", .{});
         }
     }
-    const alloc = gpa.allocator();
+    const allocator = gpa.allocator();
 
-    // Initialize vaxis
-    var tty_buffer: [4096]u8 = undefined;
-    var tty = try vaxis.Tty.init(&tty_buffer);
-    defer tty.deinit();
+    // Initialize app
+    var app = try App.init(allocator);
+    defer app.deinit();
 
-    var vx = try vaxis.init(alloc, .{});
-    defer vx.deinit(alloc, tty.writer());
-
-    try vx.enterAltScreen(tty.writer());
-    try vx.queryTerminal(tty.writer(), 1 * std.time.ns_per_s);
-
-    // Set up event loop
-    var loop: vaxis.Loop(Event) = .{
-        .tty = &tty,
-        .vaxis = &vx,
-    };
-    try loop.init();
-
-    try loop.start();
-    defer loop.stop();
-
-    // Main event loop
-    while (true) {
-        const event = loop.nextEvent();
-        switch (event) {
-            .key => |key| {
-                if (key.codepoint == 'c' and key.mods.ctrl) break;
-                if (key.codepoint == 'q') break;
-            },
-            .winsize => {},
-        }
-
-        const win = vx.window();
-        win.clear();
-
-        const msg = "Welcome to tuia! Press 'q' or Ctrl+C to quit.";
-        const col = if (win.width > msg.len) @divTrunc(win.width - @as(u16, @intCast(msg.len)), 2) else 0;
-        const row = @divTrunc(win.height, 2);
-
-        win.writeCell(col, row, .{ .char = .{ .grapheme = msg } });
-        try vx.render(tty.writer());
+    // Load presentation file if provided
+    if (args.len > 1) {
+        const file_path = args[1];
+        app.loadPresentation(file_path) catch |err| {
+            std.debug.print("Error loading presentation: {s}\n", .{@errorName(err)});
+            std.process.exit(1);
+        };
     }
+
+    // Run the app
+    try app.run();
 }

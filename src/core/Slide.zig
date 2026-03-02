@@ -49,6 +49,30 @@ pub const Slide = struct {
             }
         }
     }
+
+    /// Get the first code block on this slide
+    pub fn getFirstCodeBlock(self: Self) ?Element.CodeBlock {
+        for (self.elements) |element| {
+            if (element == .code_block) {
+                return element.code_block;
+            }
+        }
+        return null;
+    }
+
+    /// Get all code blocks on this slide
+    pub fn getCodeBlocks(self: Self, allocator: std.mem.Allocator) ![]Element.CodeBlock {
+        var blocks = std.ArrayList(Element.CodeBlock).init(allocator);
+        defer blocks.deinit();
+
+        for (self.elements) |element| {
+            if (element == .code_block) {
+                try blocks.append(element.code_block);
+            }
+        }
+
+        return blocks.toOwnedSlice();
+    }
 };
 
 pub const ValidationError = error{

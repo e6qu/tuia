@@ -165,8 +165,9 @@ pub const Runner = struct {
     }
 };
 
-/// Check if a command exists in PATH
+/// Check if a command exists in PATH (POSIX only)
 fn commandExists(cmd: []const u8) bool {
+    if (@import("builtin").os.tag == .windows) return false;
     const path = std.posix.getenv("PATH") orelse return false;
 
     // Use a fixed-size buffer on the stack
