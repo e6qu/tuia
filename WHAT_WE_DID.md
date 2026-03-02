@@ -61,12 +61,35 @@
   - Named color support (16 ANSI colors)
   - Simplified YAML format for theme files
 
+### Phase 2.5: Navigation & Input ✅
+
+**Date:** 2026-03-02
+
+- **Navigation.zig**: Navigation state management
+  - Current slide tracking, total slides
+  - Help overlay and overview mode toggles
+  - Message display with timeout
+  - Jump-to-slide functionality
+- **KeyBindings.zig**: Configurable keyboard shortcuts
+  - vim-style navigation (j/k, h/l, g/G)
+  - Arrow keys and space/backspace support
+  - Help toggle (?, F1), quit (q, Esc)
+- **InputHandler.zig**: Keyboard event processing
+  - Jump mode for entering slide numbers
+  - Action dispatch to navigation
+- **HelpWidget.zig**: Help overlay display
+  - Keyboard shortcut reference
+  - Centered popup with themed styling
+- **StatusBar.zig**: Bottom status display
+  - Current slide / total slides
+  - Presentation title and messages
+
 ---
 
 ## Current State
 
 - **Binary:** `tuia` (~2.9MB)
-- **Tests:** 30+ passing
+- **Tests:** 35+ passing
 - **Build:** Cross-compilation working
 - **CI:** All workflows passing
 
@@ -74,4 +97,4 @@
 
 ## Next Phase
 
-**Phase 2.5: Navigation & Input** - See `DO_NEXT.md`
+**Phase 2.6: Code Highlighting** - See `DO_NEXT.md`

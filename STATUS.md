@@ -3,7 +3,7 @@
 > Current status of TUIA (Terminal UI Application)
 
 **Last Updated:** 2026-03-02  
-**Current Phase:** 2.5 - Navigation & Input  
+**Current Phase:** 2.6 - Code Highlighting  
 **Repository:** https://github.com/e6qu/tuia
 
 ---
@@ -19,8 +19,8 @@ Milestone 2: Core Presentation    🔄 IN PROGRESS
   Phase 2.2: Slide Model          ✅ COMPLETE
   Phase 2.3: Widget System        ✅ COMPLETE
   Phase 2.4: Theme Engine         ✅ COMPLETE
-  Phase 2.5: Navigation & Input   ⏳ CURRENT
-  Phase 2.6: Code Highlighting    ⏳ PENDING
+  Phase 2.5: Navigation & Input   ✅ COMPLETE
+  Phase 2.6: Code Highlighting    ⏳ CURRENT
 Milestone 3: Advanced Features    ⏳ PENDING
 Milestone 4: Polish & Release     ⏳ PENDING
 ```
@@ -50,16 +50,25 @@ Milestone 4: Polish & Release     ⏳ PENDING
 - Hex color parsing (#RRGGBB)
 - Named color support (16 ANSI colors)
 
-## ⏳ Current Phase: 2.5 - Navigation & Input
+### Phase 2.5: Navigation & Input ✅
+
+- Navigation state with slide tracking
+- KeyBindings with vim-style shortcuts
+- InputHandler for keyboard event processing
+- HelpWidget for shortcut display
+- StatusBar for slide info and messages
+- Jump-to-slide functionality
+
+## ⏳ Current Phase: 2.6 - Code Highlighting
 
 ### Tasks
 
 | ID | Task | Status |
 |----|------|--------|
-| 2.5.1 | Navigation State | ⏳ Pending |
-| 2.5.2 | Input Handling | ⏳ Pending |
-| 2.5.3 | Slide Navigation | ⏳ Pending |
-| 2.5.4 | Key Bindings | ⏳ Pending |
+| 2.6.1 | Syntax Parser | ⏳ Pending |
+| 2.6.2 | Language Support | ⏳ Pending |
+| 2.6.3 | Highlight Rules | ⏳ Pending |
+| 2.6.4 | Integration | ⏳ Pending |
 
 ---
 

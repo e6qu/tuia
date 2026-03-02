@@ -4,47 +4,44 @@
 
 ---
 
-## Current Phase: 2.5 - Navigation & Input
+## Current Phase: 2.6 - Code Highlighting
 
-**Goal:** Implement keyboard navigation and input handling
+**Goal:** Implement syntax highlighting for code blocks
 
 ### Tasks
 
 | ID | Task | Description | Est. Hours |
 |----|------|-------------|------------|
-| 2.5.1 | Navigation State | Track current slide and view state | 4 |
-| 2.5.2 | Input Handling | Process keyboard input | 4 |
-| 2.5.3 | Slide Navigation | Next/prev/jump slide commands | 6 |
-| 2.5.4 | Key Bindings | Configurable key bindings | 4 |
+| 2.6.1 | Syntax Parser | Parse code into tokens | 8 |
+| 2.6.2 | Language Support | Support top languages | 6 |
+| 2.6.3 | Highlight Rules | Define color rules | 6 |
+| 2.6.4 | Integration | Apply highlighting to CodeWidget | 4 |
 
 ### Deliverables
 
-- Navigation state manager
-- Input event handler
-- Key binding configuration
-- Help overlay
+- Syntax highlighter module
+- Language definitions (Zig, Python, JS, etc.)
+- Highlight theme integration
+- Updated CodeWidget with colors
 
 ### Acceptance Criteria
 
-- [ ] Navigate between slides with arrow keys
-- [ ] Jump to specific slide number
-- [ ] Configurable key bindings
-- [ ] Help overlay showing all shortcuts
-- [ ] State persists during session
+- [ ] Code blocks show syntax highlighting
+- [ ] Multiple languages supported
+- [ ] Highlighting matches theme colors
+- [ ] Performance <10ms for 100 lines
 
 ---
 
 ## Upcoming Phases
 
-### Phase 2.6: Code Highlighting
-- Syntax highlighting for code blocks
-- Support multiple languages
-
 ### Phase 3.1: Speaker Notes
 - Note display in terminal
+- Separate note window support
 
 ### Phase 3.2: Export Formats
-- Static HTML, PDF export
+- Static HTML export
+- PDF generation
 
 ---
 

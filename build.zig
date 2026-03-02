@@ -16,6 +16,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    // Add vaxis for TUI/rendering in library modules
+    root_module.addImport("vaxis", vaxis_dep.module("vaxis"));
 
     // Main executable - uses main.zig directly
     const exe_module = b.createModule(.{
