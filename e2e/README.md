@@ -1,85 +1,47 @@
-# TUIA End-to-End Tests
+# E2E Tests for TUIA
 
-This directory contains end-to-end tests for TUIA using [Microsoft TUI Test](https://github.com/microsoft/tui-test).
+This directory contains end-to-end tests using Microsoft TUI Test.
 
-## Prerequisites
+## Status
 
-- Node.js 18+ 
-- TUIA binary built (`zig build`)
+⚠️ **E2E tests are currently disabled in CI** due to compatibility issues between
+libvaxis (the TUI library used by TUIA) and the PTY environment provided by
+the test runner. The terminal buffer remains empty when running in CI.
 
-## Setup
+## Running Locally
+
+E2E tests can be run locally where a real terminal is available:
 
 ```bash
+# Build TUIA first
+zig build -Doptimize=ReleaseSafe
+
+# Install dependencies
 cd e2e
 npm install
-```
 
-## Running Tests
-
-```bash
-# Run all tests
-npm test
-
-# Run tests with UI mode (for debugging)
-npm run test:ui
-
-# Run tests with debug output
-npm run test:debug
-
-# Run specific test file
-npx tui-test tests/navigation.spec.ts
+# Run tests
+TUIA_BINARY=../zig-out/bin/tuia npm test
 ```
 
 ## Test Structure
 
-- `tests/navigation.spec.ts` - Navigation key tests (j/k/g/G/?)
-- `tests/snapshot.spec.ts` - Visual snapshot tests
-- `tests/fixtures.ts` - Test utilities and sample presentations
+- `tests/welcome.spec.ts` - Tests for welcome screen
+- `tests/presentation.spec.ts` - Tests for presentation navigation
+- `tests/fixtures/` - Test fixture files
 
-## Snapshots
+## Known Issues
 
-Snapshots are stored in the `snapshots/` directory. To update snapshots:
+1. **CI Compatibility**: libvaxis requires a real TTY terminal and doesn't render
+   in the PTY environment used by Microsoft TUI Test in CI.
+   
+2. **RC Version API**: The Microsoft TUI Test RC version has a limited API:
+   - No `test.describe()` or `test.beforeAll()`/`test.afterAll()`
+   - No `terminal.spawn()` per test - use `test.use()` at file level
+   - No `terminal.waitForTimeout()` or `terminal.waitForExit()`
 
-```bash
-npx tui-test --update-snapshots
-```
+## Future Work
 
-## Configuration
-
-See `tui-test.config.ts` for test configuration including:
-- Timeout settings
-- Retry configuration
-- Multiple shell support (bash, zsh)
-- Reporter settings
-
-## Writing New Tests
-
-```typescript
-import { test, expect } from '@microsoft/tui-test';
-import { createTestPresentation, getTuiaBinary } from './fixtures.js';
-
-test('my test', async ({ terminal }) => {
-  const filePath = createTestPresentation('test', '# Hello\n\nWorld');
-  
-  await terminal.spawn(getTuiaBinary(), [filePath]);
-  
-  // Wait for content
-  await expect(terminal.getByText('Hello')).toBeVisible();
-  
-  // Take screenshot
-  const screenshot = await terminal.screenshot();
-  await expect(screenshot).toMatchSnapshot('hello.png');
-  
-  // Clean up
-  terminal.write('q');
-  await terminal.waitForExit();
-});
-```
-
-## CI Integration
-
-The tests are configured to run in CI with the following features:
-- Automatic retry on failure (flakiness handling)
-- HTML report generation
-- Screenshot capture on failure
-- Trace recording for debugging
+- Investigate alternative testing approaches for TUI applications
+- Consider using expect/tcl or a custom test harness
+- Wait for stable release of Microsoft TUI Test
