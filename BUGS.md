@@ -314,7 +314,7 @@ zig build && ./zig-out/bin/tuia examples/feature-showcase.md
 | Inline code | ✅ | ✅ | ✅ | ⚠️ | Parsed, needs render |
 | Links | ✅ | ✅ | ✅ | ⚠️ | Parsed, needs render |
 | Images | ✅ | ✅ | ✅ | ⚠️ | Parsed, needs render |
-| Speaker notes | ⚠️ | ❌ | ❌ | ❌ | Stripped by scanner |
+| Speaker notes | ✅ | ✅ | ✅ | ⚠️ | Parsed (needs display UI) |
 | Nested lists | ❌ | ❌ | ❌ | ❌ | Not implemented |
 | Tables | ❌ | ❌ | ❌ | ❌ | Not in spec |
 | Hard breaks | ❌ | ❌ | ❌ | ❌ | Not implemented |
