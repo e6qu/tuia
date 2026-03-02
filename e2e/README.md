@@ -1,47 +1,80 @@
 # E2E Tests for TUIA
 
-This directory contains end-to-end tests using Microsoft TUI Test.
+This directory contains end-to-end tests using Microsoft TUI Test and expect with real TTY.
 
-## Status
+## Test Approaches
 
-⚠️ **E2E tests are currently disabled in CI** due to compatibility issues between
-libvaxis (the TUI library used by TUIA) and the PTY environment provided by
-the test runner. The terminal buffer remains empty when running in CI.
+### 1. Microsoft TUI Test (Experimental)
 
-## Running Locally
+Uses `@microsoft/tui-test` for terminal testing. Currently limited in CI due to PTY compatibility issues with libvaxis.
 
-E2E tests can be run locally where a real terminal is available:
+**Status**: Basic smoke tests only - the terminal buffer remains empty in CI PTY environment.
+
+### 2. Real TTY with expect (Working)
+
+Uses `expect` with the `script` command to provide a real TTY for TUIA to render in.
+
+**Status**: ✅ Fully working in CI with comprehensive tests.
+
+## Running Tests
+
+### Real TTY Tests (Recommended)
 
 ```bash
 # Build TUIA first
 zig build -Doptimize=ReleaseSafe
 
-# Install dependencies
-cd e2e
-npm install
+# Install expect (Ubuntu/Debian)
+sudo apt-get install -y expect
 
 # Run tests
+export TUIA_BIN="$PWD/zig-out/bin/tuia"
+export FIXTURE="$PWD/e2e/tests/fixtures/test-presentation.md"
+
+# Run welcome screen test
+expect /tmp/test_welcome.exp
+
+# Run navigation test
+expect /tmp/test_nav.exp
+```
+
+### Microsoft TUI Test (Local Only)
+
+```bash
+cd e2e
+npm install
 TUIA_BINARY=../zig-out/bin/tuia npm test
 ```
 
-## Test Structure
+## CI Configuration
 
-- `tests/welcome.spec.ts` - Tests for welcome screen
-- `tests/presentation.spec.ts` - Tests for presentation navigation
-- `tests/fixtures/` - Test fixture files
+- **E2E Tests (Real TTY)**: Runs comprehensive tests using expect in a real TTY
+- **E2E Tests (Microsoft TUI Test)**: Runs basic smoke tests (may have limited functionality)
 
-## Known Issues
+## Test Coverage
 
-1. **CI Compatibility**: libvaxis requires a real TTY terminal and doesn't render
-   in the PTY environment used by Microsoft TUI Test in CI.
-   
-2. **RC Version API**: The Microsoft TUI Test RC version has a limited API:
-   - No `test.describe()` or `test.beforeAll()`/`test.afterAll()`
-   - No `terminal.spawn()` per test - use `test.use()` at file level
-   - No `terminal.waitForTimeout()` or `terminal.waitForExit()`
+### Real TTY Tests
+- ✅ Welcome screen display
+- ✅ Opening presentation files
+- ✅ Navigation (j/k for next/previous slide)
+- ✅ Jump commands (g/G for first/last slide)
+- ✅ Help display (? key)
 
-## Future Work
+### Microsoft TUI Test
+- ⚠️ Basic smoke tests only (start and quit)
 
-- Investigate alternative testing approaches for TUI applications
-- Consider using expect/tcl or a custom test harness
-- Wait for stable release of Microsoft TUI Test
+## Fixtures
+
+Test presentations are located in `tests/fixtures/`:
+- `test-presentation.md` - Standard test presentation with multiple slides
+
+## Known Limitations
+
+### Microsoft TUI Test RC Version
+The RC version has a limited API:
+- No `test.describe()` or `test.beforeAll()`/`test.afterAll()`
+- No `terminal.spawn()` per test - use `test.use()` at file level
+- Some methods like `terminal.waitForTimeout()` are not available
+
+### libvaxis TTY Requirements
+libvaxis (the TUI library used by TUIA) requires a real TTY/PTY to render correctly. The `script` command provides this in CI environments.
