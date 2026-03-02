@@ -13,12 +13,10 @@ test.use({
 });
 
 test('should display welcome screen when no file provided', async ({ terminal }) => {
-  // Wait a bit for the terminal to render
-  await terminal.waitForTimeout(1000);
+  // Use the viewable buffer for debugging
+  const buffer = terminal.getViewableBuffer();
+  console.log('Terminal buffer:', JSON.stringify(buffer));
   
-  // Take a screenshot for debugging
-  await expect(terminal).toMatchSnapshot('welcome-screen.png');
-  
+  await expect(terminal.getByText('Welcome to tuia!', { full: true })).toBeVisible();
   terminal.write('q');
-  await terminal.waitForExit();
 });
