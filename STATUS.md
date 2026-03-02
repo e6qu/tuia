@@ -3,7 +3,7 @@
 > Current status of TUIA (Terminal UI Application)
 
 **Last Updated:** 2026-03-02  
-**Current Phase:** 3.4 - Code Execution  
+**Current Phase:** 3.5 - Configuration System  
 **Repository:** https://github.com/e6qu/tuia
 
 ---
@@ -22,9 +22,10 @@ Milestone 2: Core Presentation    ✅ COMPLETE
   Phase 2.5: Navigation & Input   ✅ COMPLETE
   Phase 2.6: Code Highlighting    ✅ COMPLETE
 Milestone 3: Advanced Features    🔄 IN PROGRESS
-  Phase 3.1: Speaker Notes          ✅ COMPLETE
-  Phase 3.2: Export Formats         ✅ COMPLETE
-  Phase 3.3: Image Support          ✅ COMPLETE
+  Phase 3.1: Speaker Notes        ✅ COMPLETE
+  Phase 3.2: Export Formats       ✅ COMPLETE
+  Phase 3.3: Image Support        ✅ COMPLETE
+  Phase 3.4: Code Execution       ✅ COMPLETE
 Milestone 4: Polish & Release     ⏳ PENDING
 ```
 
@@ -39,10 +40,6 @@ Milestone 4: Polish & Release     ⏳ PENDING
 - HeadingWidget (styled headings)
 - CodeWidget (code blocks with line numbers)
 - SlideWidget (complete slide rendering)
-
----
-
-## ✅ Completed
 
 ### Phase 2.4: Theme Engine ✅
 
@@ -95,15 +92,28 @@ Milestone 4: Polish & Release     ⏳ PENDING
 - ASCII art fallback with block characters
 - ImageRenderer for automatic protocol selection
 
-## ⏳ Current Phase: 3.4 - Code Execution
+### Phase 3.4: Code Execution ✅
+
+- CodeExecutor for running code blocks in sandboxed processes
+- LanguageRunner for 8 languages (Bash, Python, JavaScript, Zig, Rust, Go, Lua, Ruby)
+- OutputCapture for collecting and formatting execution output
+- ExecutionOutputWidget for scrollable output display
+- ExecutorRegistry for managing execution state
+- Configurable timeouts with automatic process termination
+- stdout/stderr capture with size limits
+
+---
+
+## ⏳ Current Phase: 3.5 - Configuration System
 
 ### Tasks
 
 | ID | Task | Status |
 |----|------|--------|
-| 3.4.1 | Executor Engine | ⏳ Pending |
-| 3.4.2 | Language Runtimes | ⏳ Pending |
-| 3.4.3 | Output Display | ⏳ Pending |
+| 3.5.1 | Config Parser | ⏳ Pending |
+| 3.5.2 | Config Manager | ⏳ Pending |
+| 3.5.3 | CLI Integration | ⏳ Pending |
+| 3.5.4 | Config Defaults | ⏳ Pending |
 
 ---
 
@@ -112,7 +122,7 @@ Milestone 4: Polish & Release     ⏳ PENDING
 | Metric | Value | Target |
 |--------|-------|--------|
 | Binary size | ~3MB | <5MB ✅ |
-| Test count | 20+ | 100+ 🔄 |
+| Test count | 65+ | 100+ 🔄 |
 | Cross-compile | 5 targets | 5 targets ✅ |
 
 ---
@@ -129,4 +139,4 @@ Milestone 4: Polish & Release     ⏳ PENDING
 
 ---
 
-*Ready for Phase 2.4: Theme Engine*
+*Ready for Phase 3.5: Configuration System*
