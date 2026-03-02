@@ -11,6 +11,7 @@ pub const Action = enum {
     goto_slide,
     toggle_help,
     toggle_overview,
+    execute_code,
     quit,
     none,
 };
@@ -81,6 +82,9 @@ pub const KeyBindings = struct {
         try self.bind(.{ .codepoint = vaxis.Key.f1, .mods = .{} }, .toggle_help, "Toggle help");
         try self.bind(.{ .codepoint = 'o', .mods = .{} }, .toggle_overview, "Toggle overview");
 
+        // Code execution
+        try self.bind(.{ .codepoint = 'e', .mods = .{} }, .execute_code, "Execute code block");
+
         // Quit
         try self.bind(.{ .codepoint = 'q', .mods = .{} }, .quit, "Quit");
         try self.bind(.{ .codepoint = vaxis.Key.escape, .mods = .{} }, .quit, "Quit");
@@ -138,6 +142,9 @@ pub const KeyBindings = struct {
         try writer.writeAll("UI:\n");
         try writer.writeAll("  ?, F1              Toggle help\n");
         try writer.writeAll("  o                  Toggle overview\n");
+        try writer.writeAll("\n");
+        try writer.writeAll("Code Execution:\n");
+        try writer.writeAll("  e                  Execute current code block\n");
         try writer.writeAll("\n");
         try writer.writeAll("General:\n");
         try writer.writeAll("  q, Esc             Quit\n");
