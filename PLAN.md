@@ -584,20 +584,28 @@ pub const Widget = struct {
 - ✅ Per-slide note collection
 - ✅ Themed note display
 
-### Phase 3.2: Export Formats
+### Phase 3.2: Export Formats ✅
+
+**Status:** COMPLETE
 
 **Tasks:**
 
-| ID | Task | Description | Est. Hours |
-|----|------|-------------|------------|
-| 3.2.1 | HTML Renderer | Generate HTML output | 6 |
-| 3.2.2 | CSS Generation | Theme to CSS conversion | 4 |
-| 3.2.3 | Static Export | Single-file HTML export | 4 |
+| ID | Task | Description | Status |
+|----|------|-------------|--------|
+| 3.2.1 | HTML Renderer | Generate HTML output | ✅ |
+| 3.2.2 | CSS Generation | Theme to CSS conversion | ✅ |
+| 3.2.3 | Static Export | Single-file HTML export | ✅ |
+
+**Deliverables:**
+- `src/export/HtmlExporter.zig` - HTML export functionality
+- `src/export/CssGenerator.zig` - Theme to CSS conversion
 
 **Acceptance Criteria:**
-- HTML export works
-- CSS matches theme
-- Single-file output
+- ✅ HTML export works
+- ✅ CSS matches theme
+- ✅ Single-file output
+- ✅ Keyboard navigation in HTML
+- ✅ Dark mode support
 
 ### Phase 3.3: Image Support
 

@@ -11,6 +11,7 @@ pub const config = @import("config/root.zig");
 pub const features = @import("features/root.zig");
 pub const infra = @import("infra/root.zig");
 pub const highlight = @import("highlight/root.zig");
+pub const export_ = @import("export/root.zig");
 
 // Test utilities (only available in test mode)
 pub const test_utils = @import("test_utils.zig");

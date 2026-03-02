@@ -3,7 +3,7 @@
 > Current status of TUIA (Terminal UI Application)
 
 **Last Updated:** 2026-03-02  
-**Current Phase:** 3.2 - Export Formats  
+**Current Phase:** 3.3 - Image Support  
 **Repository:** https://github.com/e6qu/tuia
 
 ---
@@ -23,6 +23,7 @@ Milestone 2: Core Presentation    ✅ COMPLETE
   Phase 2.6: Code Highlighting    ✅ COMPLETE
 Milestone 3: Advanced Features    🔄 IN PROGRESS
   Phase 3.1: Speaker Notes          ✅ COMPLETE
+  Phase 3.2: Export Formats         ✅ COMPLETE
 Milestone 4: Polish & Release     ⏳ PENDING
 ```
 
@@ -77,15 +78,22 @@ Milestone 4: Polish & Release     ⏳ PENDING
 - NoteWidget for displaying notes
 - Support for <!-- note --> and <!-- endnote --> syntax
 
-## ⏳ Current Phase: 3.2 - Export Formats
+### Phase 3.2: Export Formats ✅
+
+- HtmlExporter for generating HTML presentations
+- CssGenerator for theme to CSS conversion
+- Self-contained HTML export with navigation
+- Dark mode support via CSS media queries
+
+## ⏳ Current Phase: 3.3 - Image Support
 
 ### Tasks
 
 | ID | Task | Status |
 |----|------|--------|
-| 3.2.1 | HTML Export | ⏳ Pending |
-| 3.2.2 | PDF Export | ⏳ Pending |
-| 3.2.3 | Static Site | ⏳ Pending |
+| 3.3.1 | Image Loading | ⏳ Pending |
+| 3.3.2 | Kitty Protocol | ⏳ Pending |
+| 3.3.3 | iTerm2 Protocol | ⏳ Pending |
 
 ---
 

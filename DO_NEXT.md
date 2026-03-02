@@ -4,43 +4,44 @@
 
 ---
 
-## Current Phase: 3.2 - Export Formats
+## Current Phase: 3.3 - Image Support
 
-**Goal:** Implement export to HTML and PDF
+**Goal:** Implement image display in terminal presentations
 
 ### Tasks
 
 | ID | Task | Description | Est. Hours |
 |----|------|-------------|------------|
-| 3.2.1 | HTML Renderer | Generate HTML output | 6 |
-| 3.2.2 | CSS Generation | Theme to CSS conversion | 4 |
-| 3.2.3 | Static Export | Single-file HTML export | 4 |
+| 3.3.1 | Image Loading | Load PNG/JPEG/GIF | 4 |
+| 3.3.2 | Kitty Protocol | Kitty graphics support | 6 |
+| 3.3.3 | iTerm2 Protocol | iTerm2 inline images | 6 |
+| 3.3.4 | Sixel | Sixel graphics | 6 |
+| 3.3.5 | ASCII Fallback | Block character fallback | 2 |
 
 ### Deliverables
 
-- HTML export command
-- CSS generation from themes
-- Self-contained HTML files
+- Image loading module
+- Terminal graphics protocol support
+- Fallback for unsupported terminals
 
 ### Acceptance Criteria
 
-- [ ] Export to HTML works
-- [ ] CSS matches theme colors
-- [ ] Single-file output option
-- [ ] Images included inline
+- [ ] Images display in Kitty terminal
+- [ ] Images display in iTerm2
+- [ ] Sixel support for compatible terminals
+- [ ] ASCII fallback for other terminals
 
 ---
 
 ## Upcoming Phases
 
-### Phase 3.3: Image Support
-- Kitty graphics protocol
-- iTerm2 inline images
-- Sixel support
-
 ### Phase 3.4: Code Execution
 - Execute code blocks
 - Display output
+
+### Phase 4.1: Documentation
+- User guide
+- API documentation
 
 ---
 
