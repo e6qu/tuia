@@ -5,6 +5,7 @@ pub const Presentation = struct {
     allocator: std.mem.Allocator,
     metadata: ?FrontMatter,
     slides: []Slide,
+    link_references: std.StringHashMap([]const u8),
 
     pub fn deinit(self: *Presentation) void {
         for (self.slides) |*slide| {
@@ -14,6 +15,13 @@ pub const Presentation = struct {
         if (self.metadata) |*fm| {
             fm.deinit(self.allocator);
         }
+        // Free all link reference keys and values
+        var it = self.link_references.iterator();
+        while (it.next()) |entry| {
+            self.allocator.free(entry.key_ptr.*);
+            self.allocator.free(entry.value_ptr.*);
+        }
+        self.link_references.deinit();
     }
 };
 
@@ -216,6 +224,7 @@ pub const Inline = union(enum) {
 pub const Link = struct {
     text: []Inline,
     url: []const u8,
+    ref_label: ?[]const u8, // For reference-style links [text][label] or [text][]
 
     pub fn deinit(self: *Link, allocator: std.mem.Allocator) void {
         for (self.text) |*inline_elem| {
@@ -223,6 +232,7 @@ pub const Link = struct {
         }
         allocator.free(self.text);
         allocator.free(self.url);
+        if (self.ref_label) |label| allocator.free(label);
     }
 };
 

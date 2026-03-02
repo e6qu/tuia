@@ -211,23 +211,34 @@ table.alignments = [.default, .default]
 
 ---
 
-### MED-4: Reference-Style Links Not Parsed
-**Status:** 🔴 Open  
-**Component:** Parser  
+### ✅ MED-4: Reference-Style Links Not Parsed
+**Status:** 🟢 Fixed  
+**Component:** Parser/Converter  
 **Impact:** Low
 
 **Description:**  
-Reference-style links are not supported:
-```markdown
-[text][ref]
+Reference-style links were not supported.
 
-[ref]: https://example.com
+**Fix:**
+- Added `link_ref_def` token type to Token.zig
+- Added `isLinkRefDef()` method to Scanner
+- Added `link_references: std.StringHashMap([]const u8)` to AST.Presentation
+- Added `parseLinkRefDef()` to Parser to collect reference definitions
+- Updated `AST.Link` with optional `ref_label` field
+- Updated `parseInlineContent()` to handle `[text][label]` and `[text]` syntax
+- Updated Converter to resolve references during conversion
+
+**Example:**
+```markdown
+[example]: https://example.com
+
+Click [here][example] or [example]
 ```
 
-**Expected Behavior:**  
-References should be resolved and converted to regular links.
-
-**Workaround:** Use inline links `[text](url)` (when inline links are implemented)
+**Supported Formats:**
+- `[text](url)` - inline links
+- `[text][label]` - reference-style with explicit label
+- `[text]` - reference-style with implicit label (text is the label)
 
 ---
 

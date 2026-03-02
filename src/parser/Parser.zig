@@ -32,12 +32,15 @@ pub const Parser = struct {
         // Parse front matter if present
         const front_matter = try self.parseFrontMatter();
 
-        // Parse slides
+        // Initialize link references map
+        var link_references = std.StringHashMap([]const u8).init(self.allocator);
+
+        // Parse slides (link ref defs will be collected during slide parsing)
         var slides: std.ArrayList(AST.Slide) = .empty;
         defer slides.deinit(self.allocator);
 
         while (self.current.type != .eof) {
-            const slide = try self.parseSlide();
+            const slide = try self.parseSlide(&link_references);
             try slides.append(self.allocator, slide);
         }
 
@@ -45,6 +48,7 @@ pub const Parser = struct {
             .allocator = self.allocator,
             .metadata = front_matter,
             .slides = try slides.toOwnedSlice(self.allocator),
+            .link_references = link_references,
         };
     }
 
@@ -87,7 +91,7 @@ pub const Parser = struct {
         return null;
     }
 
-    fn parseSlide(self: *Self) !AST.Slide {
+    fn parseSlide(self: *Self, link_references: *std.StringHashMap([]const u8)) !AST.Slide {
         var elements: std.ArrayList(AST.Element) = .empty;
         defer elements.deinit(self.allocator);
 
@@ -107,6 +111,12 @@ pub const Parser = struct {
                     speaker_notes = notes;
                 }
                 self.advance();
+                continue;
+            }
+
+            // Handle link reference definitions
+            if (self.current.type == .link_ref_def) {
+                try self.parseLinkRefDef(link_references);
                 continue;
             }
 
@@ -130,6 +140,69 @@ pub const Parser = struct {
             .elements = try elements.toOwnedSlice(self.allocator),
             .speaker_notes = speaker_notes,
         };
+    }
+
+    fn parseLinkRefDef(self: *Self, link_references: *std.StringHashMap([]const u8)) !void {
+        const text = self.current.text;
+
+        // Parse [label]: url
+        // Find the label between [ and ]
+        const label_start: usize = 1; // Skip [
+        var label_end: usize = label_start;
+        while (label_end < text.len and text[label_end] != ']') {
+            label_end += 1;
+        }
+
+        if (label_end >= text.len) {
+            self.advance();
+            return;
+        }
+
+        const label = try self.allocator.dupe(u8, text[label_start..label_end]);
+        errdefer self.allocator.free(label);
+
+        // Skip ]: and whitespace
+        var url_start = label_end + 1; // Skip ]
+        if (url_start < text.len and text[url_start] == ':') {
+            url_start += 1;
+        }
+        while (url_start < text.len and (text[url_start] == ' ' or text[url_start] == '\t')) {
+            url_start += 1;
+        }
+
+        // Skip optional <>
+        if (url_start < text.len and text[url_start] == '<') {
+            url_start += 1;
+        }
+
+        var url_end = url_start;
+        while (url_end < text.len and text[url_end] != ' ' and text[url_end] != '\t' and text[url_end] != '>' and text[url_end] != '\n') {
+            url_end += 1;
+        }
+
+        if (url_start < url_end) {
+            const url = try self.allocator.dupe(u8, text[url_start..url_end]);
+
+            // Store in hash map
+            const result = link_references.getOrPut(label) catch |err| {
+                self.allocator.free(label);
+                return err;
+            };
+
+            if (result.found_existing) {
+                // Update existing entry
+                self.allocator.free(result.value_ptr.*);
+                result.value_ptr.* = url;
+                self.allocator.free(label);
+            } else {
+                result.key_ptr.* = label;
+                result.value_ptr.* = url;
+            }
+        } else {
+            self.allocator.free(label);
+        }
+
+        self.advance();
     }
 
     fn parseBlockElement(self: *Self) ParseError!?AST.Element {
@@ -537,7 +610,7 @@ fn parseInlineContent(allocator: std.mem.Allocator, text: []const u8) ![]AST.Inl
                 j += 1;
             }
 
-            // Check for ( following ]
+            // Check for ( following ] - inline link
             if (j + 1 < text.len and text[j] == ']' and text[j + 1] == '(') {
                 // Flush pending text
                 if (i > text_start) {
@@ -568,9 +641,92 @@ fn parseInlineContent(allocator: std.mem.Allocator, text: []const u8) ![]AST.Inl
                 try result.append(allocator, .{ .link = .{
                     .text = inner,
                     .url = url,
+                    .ref_label = null,
                 } });
 
                 if (j < text.len) j += 1; // skip )
+                i = j;
+                text_start = i;
+                continue;
+            }
+
+            // Check for [ following ] - reference-style link [text][label]
+            if (j + 1 < text.len and text[j] == ']' and text[j + 1] == '[') {
+                // Flush pending text
+                if (i > text_start) {
+                    const txt = try allocator.dupe(u8, text[text_start..i]);
+                    try result.append(allocator, .{ .text = txt });
+                }
+
+                const link_text = text[i + 1 .. j];
+                j += 2; // skip ][
+
+                // Find closing ]
+                const label_start = j;
+                while (j < text.len and text[j] != ']') {
+                    j += 1;
+                }
+                const label = if (j > label_start)
+                    try allocator.dupe(u8, text[label_start..j])
+                else
+                    null; // Empty label means use link text as label
+
+                // Parse link text
+                const inner = try parseInlineContent(allocator, link_text);
+                errdefer {
+                    for (inner) |*inl| {
+                        inl.deinit(allocator);
+                    }
+                    allocator.free(inner);
+                }
+
+                // Store with empty URL - will be resolved during conversion
+                try result.append(allocator, .{ .link = .{
+                    .text = inner,
+                    .url = try allocator.dupe(u8, ""),
+                    .ref_label = label,
+                } });
+
+                if (j < text.len) j += 1; // skip ]
+                i = j;
+                text_start = i;
+                continue;
+            }
+
+            // Check for just [text] - reference-style link with implicit label
+            if (j < text.len and text[j] == ']') {
+                // This could be a reference-style link with implicit label
+                // We need to check if there's a matching reference definition
+                // For now, treat it as a link with ref_label = link_text
+
+                // Flush pending text
+                if (i > text_start) {
+                    const txt = try allocator.dupe(u8, text[text_start..i]);
+                    try result.append(allocator, .{ .text = txt });
+                }
+
+                const link_text = text[i + 1 .. j];
+
+                // Parse link text
+                const inner = try parseInlineContent(allocator, link_text);
+                errdefer {
+                    for (inner) |*inl| {
+                        inl.deinit(allocator);
+                    }
+                    allocator.free(inner);
+                }
+
+                // Store with implicit label
+                const label = try allocator.dupe(u8, link_text);
+                errdefer allocator.free(label);
+
+                try result.append(allocator, .{ .link = .{
+                    .text = inner,
+                    .url = try allocator.dupe(u8, ""),
+                    .ref_label = label,
+                } });
+
+                if (j < text.len) j += 1; // skip ]
                 i = j;
                 text_start = i;
                 continue;
@@ -1237,4 +1393,31 @@ test "Scanner table tokens" {
     var scanner2 = Scanner.init("|------|------|\n");
     const t2 = scanner2.nextToken();
     try testing.expectEqual(.table_separator, t2.type);
+}
+
+test "Parser link reference definition" {
+    const testing = std.testing;
+    const allocator = testing.allocator;
+
+    const source =
+        \\# Link Test
+        \\[example]: https://example.com
+        \\Click [here][example]
+    ;
+
+    var parser = Parser.init(allocator, source);
+    var presentation = try parser.parse();
+    defer presentation.deinit();
+
+    // Check link reference was collected
+    try testing.expect(presentation.link_references.get("example") != null);
+    try testing.expectEqualStrings("https://example.com", presentation.link_references.get("example").?);
+}
+
+test "Scanner link ref def token" {
+    const testing = std.testing;
+
+    var scanner = Scanner.init("[ref]: https://example.com\n");
+    const t1 = scanner.nextToken();
+    try testing.expectEqual(.link_ref_def, t1.type);
 }

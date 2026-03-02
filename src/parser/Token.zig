@@ -33,6 +33,7 @@ pub const Token = struct {
         speaker_note, // <!-- Speaker note: ... -->
         table_row, // | col1 | col2 |
         table_separator, // |------|------|
+        link_ref_def, // [ref]: url
         front_matter_marker, // ---
         eof,
         invalid,

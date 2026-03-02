@@ -56,6 +56,15 @@ pub const Scanner = struct {
             return self.nextToken();
         }
 
+        // Check for link reference definition [ref]: url
+        if (c == '[' and self.isLinkRefDef()) {
+            // Consume until end of line
+            while (!self.isAtEnd() and self.peek() != '\n') {
+                _ = self.advance();
+            }
+            return self.makeToken(.link_ref_def, start, line, col, indent);
+        }
+
         // Headings
         if (c == '#') {
             _ = self.countPrefix('#');
@@ -226,6 +235,39 @@ pub const Scanner = struct {
         // Don't restore col since we didn't actually advance
 
         return indent;
+    }
+
+    /// Check if current position is a link reference definition
+    /// Pattern: [label]: url
+    fn isLinkRefDef(self: *Self) bool {
+        const saved_pos = self.pos;
+        defer self.pos = saved_pos;
+
+        // Already consumed '[', so check what follows
+        // Find closing ']'
+        var found_close: bool = false;
+        while (self.pos < self.source.len) {
+            const ch = self.source[self.pos];
+            if (ch == ']') {
+                found_close = true;
+                self.pos += 1;
+                break;
+            }
+            if (ch == '\n' or ch == '[') {
+                // Not a valid link ref def
+                return false;
+            }
+            self.pos += 1;
+        }
+
+        if (!found_close) return false;
+
+        // Check for ':'
+        if (self.pos >= self.source.len or self.source[self.pos] != ':') {
+            return false;
+        }
+
+        return true;
     }
 };
 

@@ -7,6 +7,9 @@ const Presentation = @import("../core/Presentation.zig");
 
 /// Convert AST Presentation to core Presentation
 pub fn convertPresentation(allocator: std.mem.Allocator, ast_pres: AST.Presentation) !core.Presentation {
+    // Store link references for use during conversion
+    const link_refs = &ast_pres.link_references;
+
     // Convert metadata
     const metadata = if (ast_pres.metadata) |ast_fm|
         Presentation.Metadata{
@@ -33,7 +36,7 @@ pub fn convertPresentation(allocator: std.mem.Allocator, ast_pres: AST.Presentat
     }
 
     for (ast_pres.slides, 0..) |ast_slide, i| {
-        slides[i] = try convertSlide(allocator, ast_slide);
+        slides[i] = try convertSlide(allocator, ast_slide, link_refs);
     }
 
     return core.Presentation{
@@ -44,7 +47,7 @@ pub fn convertPresentation(allocator: std.mem.Allocator, ast_pres: AST.Presentat
 }
 
 /// Convert AST Slide to core Slide
-fn convertSlide(allocator: std.mem.Allocator, ast_slide: AST.Slide) !core.Slide {
+fn convertSlide(allocator: std.mem.Allocator, ast_slide: AST.Slide, link_refs: *const std.StringHashMap([]const u8)) !core.Slide {
     var elements = try allocator.alloc(core.Element, ast_slide.elements.len);
     errdefer {
         for (elements) |*elem| {
@@ -54,7 +57,7 @@ fn convertSlide(allocator: std.mem.Allocator, ast_slide: AST.Slide) !core.Slide 
     }
 
     for (ast_slide.elements, 0..) |ast_elem, i| {
-        elements[i] = try convertElement(allocator, ast_elem);
+        elements[i] = try convertElement(allocator, ast_elem, link_refs);
     }
 
     // Convert speaker notes
@@ -71,17 +74,17 @@ fn convertSlide(allocator: std.mem.Allocator, ast_slide: AST.Slide) !core.Slide 
 }
 
 /// Convert AST Element to core Element
-fn convertElement(allocator: std.mem.Allocator, ast_elem: AST.Element) !core.Element {
+fn convertElement(allocator: std.mem.Allocator, ast_elem: AST.Element, link_refs: *const std.StringHashMap([]const u8)) !core.Element {
     return switch (ast_elem) {
         .heading => |h| .{
             .heading = .{
                 .level = h.level,
-                .text = try inlineToText(allocator, h.content),
+                .text = try inlineToTextWithLinks(allocator, h.content, link_refs),
             },
         },
         .paragraph => |p| .{
             .paragraph = .{
-                .text = try inlineToText(allocator, p.content),
+                .text = try inlineToTextWithLinks(allocator, p.content, link_refs),
             },
         },
         .code_block => |cb| .{
@@ -93,23 +96,23 @@ fn convertElement(allocator: std.mem.Allocator, ast_elem: AST.Element) !core.Ele
         .list => |l| .{
             .list = .{
                 .ordered = l.ordered,
-                .items = try convertListItems(allocator, l.items),
+                .items = try convertListItems(allocator, l.items, link_refs),
             },
         },
         .blockquote => |bq| .{
             .blockquote = .{
-                .text = try blockquoteToText(allocator, bq),
+                .text = try blockquoteToTextWithLinks(allocator, bq, link_refs),
             },
         },
         .table => |t| .{
-            .table = try convertTable(allocator, t),
+            .table = try convertTable(allocator, t, link_refs),
         },
         .thematic_break => .thematic_break,
     };
 }
 
-/// Convert inline elements to plain text
-fn inlineToText(allocator: std.mem.Allocator, inlines: []AST.Inline) ![]const u8 {
+/// Convert inline elements to plain text (with link reference resolution)
+fn inlineToTextWithLinks(allocator: std.mem.Allocator, inlines: []AST.Inline, link_refs: *const std.StringHashMap([]const u8)) ![]const u8 {
     // Simple implementation - just concatenate all text
     var result: std.ArrayList(u8) = .empty;
     defer result.deinit(allocator);
@@ -124,20 +127,32 @@ fn inlineToText(allocator: std.mem.Allocator, inlines: []AST.Inline) ![]const u8
             },
             .emphasis => |e| {
                 try result.append(allocator, '*');
-                const text = try inlineToText(allocator, e);
+                const text = try inlineToTextWithLinks(allocator, e, link_refs);
                 defer allocator.free(text);
                 try result.appendSlice(allocator, text);
                 try result.append(allocator, '*');
             },
             .strong => |s| {
                 try result.appendSlice(allocator, "**");
-                const text = try inlineToText(allocator, s);
+                const text = try inlineToTextWithLinks(allocator, s, link_refs);
                 defer allocator.free(text);
                 try result.appendSlice(allocator, text);
                 try result.appendSlice(allocator, "**");
             },
             .link => |l| {
-                try result.appendSlice(allocator, l.url);
+                // Resolve reference-style links
+                if (l.ref_label) |label| {
+                    if (link_refs.get(label)) |url| {
+                        try result.appendSlice(allocator, url);
+                    } else {
+                        // Reference not found, just show the text
+                        const text = try inlineToTextWithLinks(allocator, l.text, link_refs);
+                        defer allocator.free(text);
+                        try result.appendSlice(allocator, text);
+                    }
+                } else {
+                    try result.appendSlice(allocator, l.url);
+                }
             },
             .image => |img| {
                 try result.appendSlice(allocator, img.alt);
@@ -149,15 +164,15 @@ fn inlineToText(allocator: std.mem.Allocator, inlines: []AST.Inline) ![]const u8
     return result.toOwnedSlice(allocator);
 }
 
-/// Convert blockquote to text
-fn blockquoteToText(allocator: std.mem.Allocator, bq: AST.Blockquote) ![]const u8 {
+/// Convert blockquote to text (with link resolution)
+fn blockquoteToTextWithLinks(allocator: std.mem.Allocator, bq: AST.Blockquote, link_refs: *const std.StringHashMap([]const u8)) ![]const u8 {
     // For simplicity, convert all elements to text
     var result: std.ArrayList(u8) = .empty;
     defer result.deinit(allocator);
 
     for (bq.content) |elem| {
         const text = switch (elem) {
-            .paragraph => |p| try inlineToText(allocator, p.content),
+            .paragraph => |p| try inlineToTextWithLinks(allocator, p.content, link_refs),
             else => try std.fmt.allocPrint(allocator, "[{s}]", .{@tagName(elem)}),
         };
         defer allocator.free(text);
@@ -169,7 +184,7 @@ fn blockquoteToText(allocator: std.mem.Allocator, bq: AST.Blockquote) ![]const u
 }
 
 /// Convert list items
-fn convertListItems(allocator: std.mem.Allocator, items: []AST.ListItem) ![]core.ListItem {
+fn convertListItems(allocator: std.mem.Allocator, items: []AST.ListItem, link_refs: *const std.StringHashMap([]const u8)) ![]core.ListItem {
     var result = try allocator.alloc(core.ListItem, items.len);
     errdefer allocator.free(result);
 
@@ -180,8 +195,8 @@ fn convertListItems(allocator: std.mem.Allocator, items: []AST.ListItem) ![]core
 
         for (item.content) |elem| {
             const elem_text = switch (elem) {
-                .paragraph => |p| try inlineToText(allocator, p.content),
-                .heading => |h| try inlineToText(allocator, h.content),
+                .paragraph => |p| try inlineToTextWithLinks(allocator, p.content, link_refs),
+                .heading => |h| try inlineToTextWithLinks(allocator, h.content, link_refs),
                 else => try std.fmt.allocPrint(allocator, "[{s}]", .{@tagName(elem)}),
             };
             defer allocator.free(elem_text);
@@ -195,7 +210,7 @@ fn convertListItems(allocator: std.mem.Allocator, items: []AST.ListItem) ![]core
             children = try allocator.create(ElementMod.List);
             children.?.* = .{
                 .ordered = child_list.ordered,
-                .items = try convertListItems(allocator, child_list.items),
+                .items = try convertListItems(allocator, child_list.items, link_refs),
             };
         }
 
@@ -209,7 +224,7 @@ fn convertListItems(allocator: std.mem.Allocator, items: []AST.ListItem) ![]core
 }
 
 /// Convert AST Table to core Table
-fn convertTable(allocator: std.mem.Allocator, ast_table: AST.Table) !ElementMod.Table {
+fn convertTable(allocator: std.mem.Allocator, ast_table: AST.Table, link_refs: *const std.StringHashMap([]const u8)) !ElementMod.Table {
     // Convert headers
     var headers = try allocator.alloc([]const u8, ast_table.headers.len);
     errdefer allocator.free(headers);
@@ -247,7 +262,7 @@ fn convertTable(allocator: std.mem.Allocator, ast_table: AST.Table) !ElementMod.
 
         for (ast_row, 0..) |ast_cell, j| {
             cells[j] = .{
-                .text = try inlineToText(allocator, ast_cell.content),
+                .text = try inlineToTextWithLinks(allocator, ast_cell.content, link_refs),
             };
         }
 
