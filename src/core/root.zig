@@ -2,6 +2,7 @@
 const std = @import("std");
 
 pub const Element = @import("Element.zig").Element;
+pub const List = @import("Element.zig").List;
 pub const ListItem = @import("Element.zig").ListItem;
 pub const Slide = @import("Slide.zig").Slide;
 pub const Presentation = @import("Presentation.zig").Presentation;

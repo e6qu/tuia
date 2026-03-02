@@ -20,6 +20,9 @@ pub const Scanner = struct {
     }
 
     pub fn nextToken(self: *Self) Token {
+        // Calculate indentation at start of line before skipping whitespace
+        const indent = self.calculateIndent();
+
         self.skipWhitespace();
 
         const start = self.pos;
@@ -27,7 +30,7 @@ pub const Scanner = struct {
         const col = self.col;
 
         if (self.isAtEnd()) {
-            return self.makeToken(.eof, start, line, col);
+            return self.makeToken(.eof, start, line, col, indent);
         }
 
         const c = self.advance();
@@ -39,14 +42,14 @@ pub const Scanner = struct {
                 std.mem.eql(u8, self.source[self.pos..][0..10], " end_slide "))
             {
                 _ = self.consumeUntil("-->");
-                return self.makeToken(.end_slide, start, line, col);
+                return self.makeToken(.end_slide, start, line, col, indent);
             }
             // Check for speaker note comment
             if (self.peek() == ' ' and self.pos + 14 <= self.source.len and
                 std.mem.eql(u8, self.source[self.pos..][0..14], " Speaker note:"))
             {
                 _ = self.consumeUntil("-->");
-                return self.makeToken(.speaker_note, start, line, col);
+                return self.makeToken(.speaker_note, start, line, col, indent);
             }
             // Skip other HTML comments
             _ = self.consumeUntil("-->");
@@ -57,30 +60,30 @@ pub const Scanner = struct {
         if (c == '#') {
             _ = self.countPrefix('#');
             self.skipWhitespace();
-            return self.makeToken(.heading, start, line, col);
+            return self.makeToken(.heading, start, line, col, indent);
         }
 
         // Thematic break / Front matter
         if (c == '-') {
             if (self.countPrefix('-') >= 2) {
-                return self.makeToken(.thematic_break, start, line, col);
+                return self.makeToken(.thematic_break, start, line, col, indent);
             }
         }
 
         // Code block
         if (c == '`' and self.matchString("``")) {
-            return self.makeToken(.code_block, start, line, col);
+            return self.makeToken(.code_block, start, line, col, indent);
         }
 
         // Blockquote
         if (c == '>') {
-            return self.makeToken(.blockquote, start, line, col);
+            return self.makeToken(.blockquote, start, line, col, indent);
         }
 
         // List item
         if (c == '-' or c == '*' or c == '+') {
             if (self.peek() == ' ' or self.peek() == '\t') {
-                return self.makeToken(.list_item, start, line, col);
+                return self.makeToken(.list_item, start, line, col, indent);
             }
         }
 
@@ -88,13 +91,13 @@ pub const Scanner = struct {
         if (std.ascii.isDigit(c)) {
             if (self.peek() == '.' and (self.peekAhead(1) == ' ' or self.peekAhead(1) == '\t')) {
                 _ = self.advance(); // consume '.'
-                return self.makeToken(.ordered_list_item, start, line, col);
+                return self.makeToken(.ordered_list_item, start, line, col, indent);
             }
         }
 
         // Blank line
         if (c == '\n') {
-            return self.makeToken(.blank_line, start, line, col);
+            return self.makeToken(.blank_line, start, line, col, indent);
         }
 
         // Regular text - consume until end of line
@@ -102,7 +105,7 @@ pub const Scanner = struct {
             _ = self.advance();
         }
 
-        return self.makeToken(.text, start, line, col);
+        return self.makeToken(.text, start, line, col, indent);
     }
 
     fn isAtEnd(self: *Self) bool {
@@ -169,13 +172,44 @@ pub const Scanner = struct {
         return self.source[start..self.pos];
     }
 
-    fn makeToken(self: *Self, typ: Token.Type, start: usize, line: usize, col: usize) Token {
+    fn makeToken(self: *Self, typ: Token.Type, start: usize, line: usize, col: usize, indent: usize) Token {
         return .{
             .type = typ,
             .text = self.source[start..self.pos],
             .line = line,
             .col = col,
+            .indent = indent,
         };
+    }
+
+    fn calculateIndent(self: *Self) usize {
+        // Save current position
+        const saved_pos = self.pos;
+        const saved_col = self.col;
+
+        var indent: usize = 0;
+
+        // Only calculate indent if we're at the start of a line
+        if (saved_col == 1) {
+            while (self.pos < self.source.len) {
+                const c = self.source[self.pos];
+                if (c == ' ') {
+                    indent += 1;
+                    self.pos += 1;
+                } else if (c == '\t') {
+                    indent += 4; // Tab = 4 spaces
+                    self.pos += 1;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        // Restore position (we only wanted to peek)
+        self.pos = saved_pos;
+        // Don't restore col since we didn't actually advance
+
+        return indent;
     }
 };
 

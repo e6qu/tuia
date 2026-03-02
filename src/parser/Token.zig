@@ -6,6 +6,7 @@ pub const Token = struct {
     text: []const u8,
     line: usize,
     col: usize,
+    indent: usize, // Indentation level in spaces
 
     pub const Type = enum {
         // Block tokens

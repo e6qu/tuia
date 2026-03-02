@@ -143,13 +143,21 @@ Numbered lists (1., 2., 3.) were parsed but the `ordered` flag was hardcoded to 
 
 ---
 
-### MED-2: Nested Lists Not Supported
-**Status:** 🔴 Open  
-**Component:** Parser  
+### ✅ MED-2: Nested Lists Not Supported
+**Status:** 🟢 Fixed  
+**Component:** Parser/Scanner/Core  
 **Impact:** Medium
 
 **Description:**  
-Nested list items (indented with 2+ spaces) are not properly parsed as children of parent items.
+Nested list items (indented with 2+ spaces) were not properly parsed as children of parent items.
+
+**Fix:**
+- Added `indent` field to `Token` struct to track indentation level
+- Added `calculateIndent()` function to `Scanner` to measure leading whitespace
+- Updated `AST.ListItem` with `children: ?*List` field for nested lists
+- Updated `core.ListItem` with `children: ?*List` field
+- Rewrote `parseList()` to track base indentation and recursively parse nested items
+- Updated `Converter` to handle nested list conversion
 
 **Example:**
 ```markdown
@@ -158,10 +166,13 @@ Nested list items (indented with 2+ spaces) are not properly parsed as children 
   - Child 2
 ```
 
-**Expected Behavior:**  
-Nested items should be represented hierarchically in the AST.
-
-**Workaround:** Use flat lists only
+**Result:**
+```zig
+list.items[0].children = List{ // nested list
+    .ordered = false,
+    .items = [Child 1, Child 2]
+}
+```
 
 ---
 
@@ -317,7 +328,7 @@ zig build && ./zig-out/bin/tuia examples/feature-showcase.md
 | Links | ✅ | ✅ | ✅ | ⚠️ | Parsed, needs render |
 | Images | ✅ | ✅ | ✅ | ⚠️ | Parsed, needs render |
 | Speaker notes | ✅ | ✅ | ✅ | ⚠️ | Parsed (needs display UI) |
-| Nested lists | ❌ | ❌ | ❌ | ❌ | Not implemented |
+| Nested lists | ✅ | ✅ | ✅ | ⚠️ | Parsed (widget needs update) |
 | Tables | ❌ | ❌ | ❌ | ❌ | Not in spec |
 | Hard breaks | ❌ | ❌ | ❌ | ❌ | Not implemented |
 

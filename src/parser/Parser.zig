@@ -241,32 +241,62 @@ pub const Parser = struct {
     }
 
     fn parseList(self: *Self, ordered: bool) !AST.Element {
+        const base_indent = self.current.indent;
+
         var items: std.ArrayList(AST.ListItem) = .empty;
         defer items.deinit(self.allocator);
 
         // Determine which token type to expect
         const item_token = if (ordered) Token.Type.ordered_list_item else Token.Type.list_item;
 
-        // Consume list items
-        while (self.current.type == item_token) {
+        // Consume list items at this indentation level
+        while (self.current.type == item_token and self.current.indent == base_indent) {
             self.advance();
             var content: std.ArrayList(AST.Element) = .empty;
             defer content.deinit(self.allocator);
 
-            // Parse until next list item (of any type) or blank line
-            while (self.current.type != .list_item and
-                self.current.type != .ordered_list_item and
-                self.current.type != .blank_line and
-                self.current.type != .eof and
-                self.current.type != .end_slide)
+            // Parse content until next item at same level, blank line, or lower indentation
+            while (self.current.type != .eof and
+                self.current.type != .end_slide and
+                self.current.type != .blank_line)
             {
+                // Check if we hit a list item at same or lower indentation
+                if ((self.current.type == .list_item or self.current.type == .ordered_list_item) and
+                    self.current.indent <= base_indent)
+                {
+                    break;
+                }
+
+                // Check for nested list (higher indentation)
+                if ((self.current.type == .list_item or self.current.type == .ordered_list_item) and
+                    self.current.indent > base_indent)
+                {
+                    break; // Will be handled after we finish this item's content
+                }
+
                 const elem = try self.parseBlockElement();
                 if (elem) |e| {
                     try content.append(self.allocator, e);
+                } else if (self.current.type == .speaker_note) {
+                    self.advance(); // Skip speaker notes in list context
                 }
             }
 
-            try items.append(self.allocator, .{ .content = try content.toOwnedSlice(self.allocator) });
+            // Check for nested list
+            var children: ?*AST.List = null;
+            if ((self.current.type == .list_item or self.current.type == .ordered_list_item) and
+                self.current.indent > base_indent)
+            {
+                const nested_ordered = self.current.type == .ordered_list_item;
+                const nested_list_elem = try self.parseList(nested_ordered);
+                children = try self.allocator.create(AST.List);
+                children.?.* = nested_list_elem.list;
+            }
+
+            try items.append(self.allocator, .{
+                .content = try content.toOwnedSlice(self.allocator),
+                .children = children,
+            });
         }
 
         return .{ .list = .{
@@ -922,4 +952,62 @@ test "Scanner ordered list item token" {
     var scanner2 = Scanner.init("- Item\n");
     const t2 = scanner2.nextToken();
     try testing.expectEqual(.list_item, t2.type);
+}
+
+test "Parser nested unordered list" {
+    const testing = std.testing;
+    const allocator = testing.allocator;
+
+    const source =
+        \\# Nested List
+        \\- Parent 1
+        \\  - Child 1
+        \\  - Child 2
+        \\- Parent 2
+    ;
+
+    var parser = Parser.init(allocator, source);
+    var presentation = try parser.parse();
+    defer presentation.deinit();
+
+    try testing.expectEqual(@as(usize, 1), presentation.slides.len);
+    try testing.expectEqual(@as(usize, 2), presentation.slides[0].elements.len);
+
+    const list = presentation.slides[0].elements[1].list;
+    try testing.expect(!list.ordered);
+    try testing.expectEqual(@as(usize, 2), list.items.len);
+
+    // Check first parent has children
+    try testing.expect(list.items[0].children != null);
+    try testing.expectEqual(@as(usize, 2), list.items[0].children.?.items.len);
+
+    // Check second parent has no children
+    try testing.expect(list.items[1].children == null);
+}
+
+test "Parser deeply nested list" {
+    const testing = std.testing;
+    const allocator = testing.allocator;
+
+    const source =
+        \\# Deep Nesting
+        \\- Level 1
+        \\  - Level 2
+        \\    - Level 3
+        \\- Back to Level 1
+    ;
+
+    var parser = Parser.init(allocator, source);
+    var presentation = try parser.parse();
+    defer presentation.deinit();
+
+    const list = presentation.slides[0].elements[1].list;
+    try testing.expectEqual(@as(usize, 2), list.items.len);
+
+    // First item has nested list with nested list
+    const nested1 = list.items[0].children.?;
+    try testing.expectEqual(@as(usize, 1), nested1.items.len);
+
+    const nested2 = nested1.items[0].children.?;
+    try testing.expectEqual(@as(usize, 1), nested2.items.len);
 }

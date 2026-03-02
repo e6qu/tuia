@@ -2,6 +2,7 @@
 const std = @import("std");
 const AST = @import("AST.zig");
 const core = @import("../core/root.zig");
+const ElementMod = @import("../core/Element.zig");
 const Presentation = @import("../core/Presentation.zig");
 
 /// Convert AST Presentation to core Presentation
@@ -185,8 +186,19 @@ fn convertListItems(allocator: std.mem.Allocator, items: []AST.ListItem) ![]core
             try text_list.append(allocator, ' ');
         }
 
+        // Convert nested list if present
+        var children: ?*ElementMod.List = null;
+        if (item.children) |child_list| {
+            children = try allocator.create(ElementMod.List);
+            children.?.* = .{
+                .ordered = child_list.ordered,
+                .items = try convertListItems(allocator, child_list.items),
+            };
+        }
+
         result[i] = .{
             .text = try text_list.toOwnedSlice(allocator),
+            .children = children,
         };
     }
 

@@ -64,9 +64,14 @@ pub const List = struct {
 
 pub const ListItem = struct {
     text: []const u8,
+    children: ?*List, // Nested list (if any)
 
     pub fn deinit(self: ListItem, allocator: std.mem.Allocator) void {
         allocator.free(self.text);
+        if (self.children) |child_list| {
+            child_list.deinit(allocator);
+            allocator.destroy(child_list);
+        }
     }
 };
 

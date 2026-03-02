@@ -113,12 +113,17 @@ pub const List = struct {
 
 pub const ListItem = struct {
     content: []Element,
+    children: ?*List, // Nested list (if any)
 
     pub fn deinit(self: *ListItem, allocator: std.mem.Allocator) void {
         for (self.content) |*elem| {
             elem.deinit(allocator);
         }
         allocator.free(self.content);
+        if (self.children) |child_list| {
+            child_list.deinit(allocator);
+            allocator.destroy(child_list);
+        }
     }
 };
 

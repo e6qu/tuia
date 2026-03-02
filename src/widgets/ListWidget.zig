@@ -179,9 +179,9 @@ test "ListWidget unordered" {
     var items: std.ArrayList(ListItem) = .empty;
     defer items.deinit(allocator);
 
-    try items.append(allocator, .{ .text = try allocator.dupe(u8, "First item") });
-    try items.append(allocator, .{ .text = try allocator.dupe(u8, "Second item") });
-    try items.append(allocator, .{ .text = try allocator.dupe(u8, "Third item") });
+    try items.append(allocator, .{ .text = try allocator.dupe(u8, "First item"), .children = null });
+    try items.append(allocator, .{ .text = try allocator.dupe(u8, "Second item"), .children = null });
+    try items.append(allocator, .{ .text = try allocator.dupe(u8, "Third item"), .children = null });
 
     const list = List{
         .ordered = false,
@@ -206,8 +206,8 @@ test "ListWidget ordered" {
     var items: std.ArrayList(ListItem) = .empty;
     defer items.deinit(allocator);
 
-    try items.append(allocator, .{ .text = try allocator.dupe(u8, "Step one") });
-    try items.append(allocator, .{ .text = try allocator.dupe(u8, "Step two") });
+    try items.append(allocator, .{ .text = try allocator.dupe(u8, "Step one"), .children = null });
+    try items.append(allocator, .{ .text = try allocator.dupe(u8, "Step two"), .children = null });
 
     const list = List{
         .ordered = true,
@@ -231,8 +231,8 @@ test "ListWidget size calculation" {
     var items: std.ArrayList(ListItem) = .empty;
     defer items.deinit(allocator);
 
-    try items.append(allocator, .{ .text = try allocator.dupe(u8, "Item 1") });
-    try items.append(allocator, .{ .text = try allocator.dupe(u8, "Item 2") });
+    try items.append(allocator, .{ .text = try allocator.dupe(u8, "Item 1"), .children = null });
+    try items.append(allocator, .{ .text = try allocator.dupe(u8, "Item 2"), .children = null });
 
     const list = List{
         .ordered = false,
