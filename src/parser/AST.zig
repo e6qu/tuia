@@ -20,11 +20,13 @@ pub const Presentation = struct {
 pub const FrontMatter = struct {
     title: ?[]const u8,
     author: ?[]const u8,
+    date: ?[]const u8,
     theme: ?[]const u8,
 
     pub fn deinit(self: *FrontMatter, allocator: std.mem.Allocator) void {
         if (self.title) |t| allocator.free(t);
         if (self.author) |a| allocator.free(a);
+        if (self.date) |d| allocator.free(d);
         if (self.theme) |th| allocator.free(th);
     }
 };

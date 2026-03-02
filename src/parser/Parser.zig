@@ -3,6 +3,11 @@ const Scanner = @import("Scanner.zig").Scanner;
 const Token = @import("Token.zig").Token;
 const AST = @import("AST.zig");
 
+pub const ParseError = error{
+    OutOfMemory,
+    InvalidSyntax,
+};
+
 /// Parser builds an AST from markdown source
 pub const Parser = struct {
     allocator: std.mem.Allocator,
@@ -39,27 +44,47 @@ pub const Parser = struct {
         return .{
             .allocator = self.allocator,
             .metadata = front_matter,
-            .slides = try slides.toOwnedSlice(),
+            .slides = try slides.toOwnedSlice(self.allocator),
         };
     }
 
     fn parseFrontMatter(self: *Self) !?AST.FrontMatter {
-        // Check for front matter: --- at start
-        if (self.current.type != .thematic_break) return null;
+        const FrontMatterParser = @import("FrontMatter.zig");
 
-        // Simple front matter parsing (just skip for now)
-        self.advance();
+        // Get remaining source from current position
+        const remaining_source = self.scanner.source[self.scanner.pos..];
 
-        // Skip until next ---
-        while (self.current.type != .thematic_break and self.current.type != .eof) {
-            self.advance();
+        // Check if there's front matter
+        if (!std.mem.startsWith(u8, remaining_source, "---")) {
+            return null;
         }
 
-        if (self.current.type == .thematic_break) {
-            self.advance();
+        // Parse front matter and get remaining content
+        const result = try FrontMatterParser.parseWithContent(self.allocator, remaining_source);
+
+        // Advance scanner past the front matter
+        const front_matter_end = std.mem.indexOf(u8, remaining_source[3..], "---");
+        if (front_matter_end) |end| {
+            // Skip past the second ---
+            const skip_len = 3 + end + 3;
+            for (0..skip_len) |_| {
+                _ = self.scanner.nextToken();
+            }
+            // Update current token
+            self.current = self.scanner.nextToken();
         }
 
-        return null; // TODO: Parse YAML front matter
+        // Convert to AST.FrontMatter
+        if (result.front_matter) |fm| {
+            return AST.FrontMatter{
+                .title = if (fm.title) |t| try self.allocator.dupe(u8, t) else null,
+                .author = if (fm.author) |a| try self.allocator.dupe(u8, a) else null,
+                .date = if (fm.date) |d| try self.allocator.dupe(u8, d) else null,
+                .theme = if (fm.theme) |th| try self.allocator.dupe(u8, th) else null,
+            };
+        }
+
+        return null;
     }
 
     fn parseSlide(self: *Self) !AST.Slide {
@@ -84,11 +109,11 @@ pub const Parser = struct {
         }
 
         return .{
-            .elements = try elements.toOwnedSlice(),
+            .elements = try elements.toOwnedSlice(self.allocator),
         };
     }
 
-    fn parseBlockElement(self: *Self) !?AST.Element {
+    fn parseBlockElement(self: *Self) ParseError!?AST.Element {
         switch (self.current.type) {
             .heading => return try self.parseHeading(),
             .code_block => return try self.parseCodeBlock(),
@@ -137,7 +162,7 @@ pub const Parser = struct {
         return .{ .paragraph = .{ .content = try self.parseInlineText() } };
     }
 
-    fn parseBlockquote(self: *Self) !AST.Element {
+    fn parseBlockquote(self: *Self) ParseError!AST.Element {
         self.advance();
         var content: std.ArrayList(AST.Element) = .empty;
         defer content.deinit(self.allocator);
