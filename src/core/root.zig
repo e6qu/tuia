@@ -1,7 +1,10 @@
 //! Core data models
 const std = @import("std");
 
-// Placeholder exports - will be implemented
+pub const Element = @import("Element.zig");
+pub const Slide = @import("Slide.zig");
+pub const Presentation = @import("Presentation.zig");
+
 test {
     std.testing.refAllDecls(@This());
 }
