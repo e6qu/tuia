@@ -3,7 +3,7 @@ const std = @import("std");
 const vaxis = @import("vaxis");
 
 const core = @import("core/root.zig");
-const parser = @import("parser/root.zig");
+const parser_module = @import("parser/root.zig");
 const widgets = @import("widgets/root.zig");
 const render = @import("render/root.zig");
 const executor = @import("features/executor/root.zig");
@@ -11,6 +11,8 @@ const executor = @import("features/executor/root.zig");
 const Presentation = core.Presentation;
 const PresentationBuilder = core.PresentationBuilder;
 const Navigation = core.Navigation;
+const Parser = parser_module.Parser;
+const convertPresentation = @import("parser/Converter.zig").convertPresentation;
 const InputHandler = @import("core/InputHandler.zig").InputHandler;
 const ExecutionWidget = @import("widgets/ExecutionWidget.zig").ExecutionWidget;
 const HelpWidget = @import("widgets/HelpWidget.zig").HelpWidget;
@@ -96,33 +98,44 @@ pub const App = struct {
     }
 
     /// Load a presentation from a file
-    /// TODO: Implement full parsing once Parser is updated for Zig 0.15
     pub fn loadPresentation(self: *Self, file_path: []const u8) !void {
-        _ = file_path;
-        // Placeholder - creates a minimal presentation with a code block
-        // This demonstrates the integration structure without requiring
-        // the full parser to be updated.
+        // Read file contents
+        const file = try std.fs.cwd().openFile(file_path, .{});
+        defer file.close();
 
-        // Initialize navigation with placeholder
+        const content = try file.readToEndAlloc(self.allocator, 1024 * 1024); // 1MB max
+        defer self.allocator.free(content);
+
+        // Parse the presentation
+        var prs = Parser.init(self.allocator, content);
+        var ast_presentation = try prs.parse();
+        
+        // Convert AST presentation to core presentation
+        const presentation = try convertPresentation(self.allocator, ast_presentation);
+        
+        // Clean up AST presentation after conversion
+        ast_presentation.deinit();
+
+        // Clean up old state
         if (self.navigation) |*old_nav| {
-            old_nav.*.deinit(self.allocator);
+            old_nav.deinit(self.allocator);
         }
-
-        // Create a minimal presentation
         if (self.presentation) |*old| {
             old.deinit();
         }
-
-        var builder = PresentationBuilder.init(self.allocator);
-        _ = try builder.withTitle("Code Execution Demo");
-        self.presentation = try builder.build();
-        self.navigation = Navigation.init(&self.presentation.?);
-
-        // Initialize executor
         if (self.executor_registry) |*old_reg| {
             old_reg.deinit();
         }
+
+        // Store new presentation
+        self.presentation = presentation;
+        self.navigation = Navigation.init(&self.presentation.?);
+
+        // Initialize executor
         self.executor_registry = ExecutorRegistry.init(self.allocator, ExecutionConfig{});
+
+        // Update renderer with first slide
+        self.renderer.clearSlide();
     }
 
     /// Run the main event loop
@@ -177,13 +190,25 @@ pub const App = struct {
     }
 
     /// Execute the code block on the current slide
-    /// TODO: Implement real code block extraction once parser is ready
     fn executeCurrentCodeBlock(self: *Self) !void {
         var nav = &self.navigation.?;
+        const pres = self.presentation.?;
 
-        // Demo: Execute a simple bash command
-        const demo_code = "echo 'Hello from TUIA!'";
-        const language = Language.bash;
+        // Get current slide
+        const slide = pres.getSlide(nav.current_slide) orelse {
+            try nav.setMessage(self.allocator, "No slide to execute code from", 60);
+            return;
+        };
+
+        // Extract first code block from slide
+        const code_block = slide.getFirstCodeBlock() orelse {
+            try nav.setMessage(self.allocator, "No code block on this slide", 60);
+            return;
+        };
+
+        // Determine language
+        const lang_str = code_block.language orelse "bash";
+        const language = Language.fromString(lang_str) orelse Language.bash;
 
         // Check if language is available
         const runner = executor.Runner.forLanguage(language);
@@ -195,11 +220,11 @@ pub const App = struct {
 
         // Show execution widget
         nav.showExecution();
-        try self.execution_widget.startExecution("bash", demo_code);
+        try self.execution_widget.startExecution(lang_str, code_block.code);
 
         // Execute
         var exec = CodeExecutor.init(self.allocator, ExecutionConfig{});
-        const result = exec.execute(demo_code, language) catch |err| {
+        const result = exec.execute(code_block.code, language) catch |err| {
             const msg = try std.fmt.allocPrint(self.allocator, "Execution failed: {s}", .{@errorName(err)});
             defer self.allocator.free(msg);
             try nav.setMessage(self.allocator, msg, 120);

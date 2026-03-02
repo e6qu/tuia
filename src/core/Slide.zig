@@ -1,5 +1,6 @@
 const std = @import("std");
-const Element = @import("Element.zig").Element;
+const ElementMod = @import("Element.zig");
+const Element = ElementMod.Element;
 
 /// Slide represents a single presentation slide
 pub const Slide = struct {
@@ -51,7 +52,7 @@ pub const Slide = struct {
     }
 
     /// Get the first code block on this slide
-    pub fn getFirstCodeBlock(self: Self) ?Element.CodeBlock {
+    pub fn getFirstCodeBlock(self: Self) ?ElementMod.CodeBlock {
         for (self.elements) |element| {
             if (element == .code_block) {
                 return element.code_block;
@@ -61,8 +62,8 @@ pub const Slide = struct {
     }
 
     /// Get all code blocks on this slide
-    pub fn getCodeBlocks(self: Self, allocator: std.mem.Allocator) ![]Element.CodeBlock {
-        var blocks = std.ArrayList(Element.CodeBlock).init(allocator);
+    pub fn getCodeBlocks(self: Self, allocator: std.mem.Allocator) ![]ElementMod.CodeBlock {
+        var blocks = std.ArrayList(ElementMod.CodeBlock).init(allocator);
         defer blocks.deinit();
 
         for (self.elements) |element| {
