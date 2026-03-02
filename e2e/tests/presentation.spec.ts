@@ -2,11 +2,11 @@ import { test, expect } from '@microsoft/tui-test';
 import * as path from 'path';
 import * as fs from 'fs';
 
-const fixturePath = path.join(process.cwd(), 'tests', 'fixtures', 'test-presentation.md');
+const fixturePath = path.join(import.meta.dirname, 'fixtures', 'test-presentation.md');
 
 test.use({ 
   program: { 
-    file: path.join(process.cwd(), '..', 'zig-out', 'bin', 'tuia'),
+    file: path.join(import.meta.dirname, '..', '..', 'zig-out', 'bin', 'tuia'),
     args: [fixturePath]
   },
   shell: 'bash',
