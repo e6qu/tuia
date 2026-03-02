@@ -3,7 +3,7 @@
 > Current status of TUIA (Terminal UI Application)
 
 **Last Updated:** 2026-03-02  
-**Current Phase:** 3.3 - Image Support  
+**Current Phase:** 3.4 - Code Execution  
 **Repository:** https://github.com/e6qu/tuia
 
 ---
@@ -24,6 +24,7 @@ Milestone 2: Core Presentation    ✅ COMPLETE
 Milestone 3: Advanced Features    🔄 IN PROGRESS
   Phase 3.1: Speaker Notes          ✅ COMPLETE
   Phase 3.2: Export Formats         ✅ COMPLETE
+  Phase 3.3: Image Support          ✅ COMPLETE
 Milestone 4: Polish & Release     ⏳ PENDING
 ```
 
@@ -85,15 +86,24 @@ Milestone 4: Polish & Release     ⏳ PENDING
 - Self-contained HTML export with navigation
 - Dark mode support via CSS media queries
 
-## ⏳ Current Phase: 3.3 - Image Support
+### Phase 3.3: Image Support ✅
+
+- ImageLoader with caching and format detection
+- Kitty graphics protocol support
+- iTerm2 inline image protocol support  
+- Sixel graphics protocol support
+- ASCII art fallback with block characters
+- ImageRenderer for automatic protocol selection
+
+## ⏳ Current Phase: 3.4 - Code Execution
 
 ### Tasks
 
 | ID | Task | Status |
 |----|------|--------|
-| 3.3.1 | Image Loading | ⏳ Pending |
-| 3.3.2 | Kitty Protocol | ⏳ Pending |
-| 3.3.3 | iTerm2 Protocol | ⏳ Pending |
+| 3.4.1 | Executor Engine | ⏳ Pending |
+| 3.4.2 | Language Runtimes | ⏳ Pending |
+| 3.4.3 | Output Display | ⏳ Pending |
 
 ---
 

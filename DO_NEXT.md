@@ -4,44 +4,45 @@
 
 ---
 
-## Current Phase: 3.3 - Image Support
+## Current Phase: 3.4 - Code Execution
 
-**Goal:** Implement image display in terminal presentations
+**Goal:** Implement code block execution
 
 ### Tasks
 
 | ID | Task | Description | Est. Hours |
 |----|------|-------------|------------|
-| 3.3.1 | Image Loading | Load PNG/JPEG/GIF | 4 |
-| 3.3.2 | Kitty Protocol | Kitty graphics support | 6 |
-| 3.3.3 | iTerm2 Protocol | iTerm2 inline images | 6 |
-| 3.3.4 | Sixel | Sixel graphics | 6 |
-| 3.3.5 | ASCII Fallback | Block character fallback | 2 |
+| 3.4.1 | Executor Engine | Run code in subprocess | 6 |
+| 3.4.2 | Language Support | Support multiple languages | 4 |
+| 3.4.3 | Output Capture | Display execution results | 4 |
+| 3.4.4 | Security | Sandboxing and timeouts | 4 |
 
 ### Deliverables
 
-- Image loading module
-- Terminal graphics protocol support
-- Fallback for unsupported terminals
+- Code execution engine
+- Language runner modules
+- Output display widget
 
 ### Acceptance Criteria
 
-- [ ] Images display in Kitty terminal
-- [ ] Images display in iTerm2
-- [ ] Sixel support for compatible terminals
-- [ ] ASCII fallback for other terminals
+- [ ] Execute code blocks
+- [ ] Support Python, Zig, Bash
+- [ ] Display stdout/stderr
+- [ ] Configurable timeouts
 
 ---
 
 ## Upcoming Phases
 
-### Phase 3.4: Code Execution
-- Execute code blocks
-- Display output
-
 ### Phase 4.1: Documentation
 - User guide
 - API documentation
+- Examples
+
+### Phase 4.2: Polish & Release
+- Performance optimization
+- Final testing
+- Release packaging
 
 ---
 
