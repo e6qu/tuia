@@ -4,40 +4,36 @@
 
 ---
 
-## Current Phase: 3.5 - Configuration System
+## Current Phase: 4.1 - Documentation
 
-**Goal:** Implement user configuration system
+**Goal:** Create comprehensive user and developer documentation
 
 ### Tasks
 
 | ID | Task | Description | Est. Hours |
 |----|------|-------------|------------|
-| 3.5.1 | Config Parser | Parse config files | 4 |
-| 3.5.2 | Config Manager | Manage user settings | 4 |
-| 3.5.3 | CLI Integration | Connect config to CLI | 3 |
-| 3.5.4 | Config Defaults | Sensible defaults | 2 |
+| 4.1.1 | User Guide | Write user documentation | 4 |
+| 4.1.2 | API Docs | Document public APIs | 3 |
+| 4.1.3 | Examples | Create example presentations | 2 |
+| 4.1.4 | README | Update main README | 2 |
 
 ### Deliverables
 
-- Configuration file parser
-- Config manager module
-- CLI integration
+- User guide with examples
+- API documentation
+- Example presentations
+- Updated README
 
 ### Acceptance Criteria
 
-- [ ] Read config from file
-- [ ] Override with CLI args
-- [ ] Sensible defaults
-- [ ] Hot reload support
+- [ ] Complete user guide
+- [ ] API docs for all public modules
+- [ ] Example presentations
+- [ ] README with badges and quickstart
 
 ---
 
 ## Upcoming Phases
-
-### Phase 4.1: Documentation
-- User guide
-- API documentation
-- Examples
 
 ### Phase 4.2: Polish & Release
 - Performance optimization

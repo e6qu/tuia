@@ -194,12 +194,37 @@
   - Language availability queries
   - Execution result caching
 
+### Phase 3.5: Configuration System ✅
+
+**Date:** 2026-03-02
+
+- **Config.zig**: Configuration data structures
+  - Hierarchical config structure
+  - Presentation, theme, key bindings, display settings
+  - Export, executor, and file watch settings
+  - Config merging with override support
+- **ConfigParser.zig**: YAML-like config parser
+  - Simple key-value pair parsing
+  - Section-based configuration
+  - Support for all config types
+  - Boolean and numeric parsing
+- **ConfigManager.zig**: Configuration manager
+  - Load from multiple locations (system, user, project)
+  - Standard config file paths
+  - CLI override integration
+  - Sample config generation
+- **cli.zig**: CLI argument parsing
+  - Full argument parsing with flags
+  - Config overrides from command line
+  - Help and version display
+  - Export options
+
 ---
 
 ## Current State
 
-- **Binary:** `tuia` (~2.9MB)
-- **Tests:** 60+ passing
+- **Binary:** `tuia` (~3MB)
+- **Tests:** 70+ passing
 - **Build:** Cross-compilation working
 - **CI:** All workflows passing
 
@@ -207,4 +232,4 @@
 
 ## Next Phase
 
-**Phase 3.5: Configuration System** - See `DO_NEXT.md`
+**Phase 4.1: Documentation** - See `DO_NEXT.md`

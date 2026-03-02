@@ -3,7 +3,7 @@
 > Current status of TUIA (Terminal UI Application)
 
 **Last Updated:** 2026-03-02  
-**Current Phase:** 3.5 - Configuration System  
+**Current Phase:** 4.1 - Documentation  
 **Repository:** https://github.com/e6qu/tuia
 
 ---
@@ -21,12 +21,14 @@ Milestone 2: Core Presentation    ✅ COMPLETE
   Phase 2.4: Theme Engine         ✅ COMPLETE
   Phase 2.5: Navigation & Input   ✅ COMPLETE
   Phase 2.6: Code Highlighting    ✅ COMPLETE
-Milestone 3: Advanced Features    🔄 IN PROGRESS
+Milestone 3: Advanced Features    ✅ COMPLETE
   Phase 3.1: Speaker Notes        ✅ COMPLETE
   Phase 3.2: Export Formats       ✅ COMPLETE
   Phase 3.3: Image Support        ✅ COMPLETE
   Phase 3.4: Code Execution       ✅ COMPLETE
-Milestone 4: Polish & Release     ⏳ PENDING
+  Phase 3.5: Configuration System ✅ COMPLETE
+Milestone 4: Polish & Release     🔄 IN PROGRESS
+  Phase 4.1: Documentation        ⏳ PENDING
 ```
 
 ---
@@ -102,18 +104,27 @@ Milestone 4: Polish & Release     ⏳ PENDING
 - Configurable timeouts with automatic process termination
 - stdout/stderr capture with size limits
 
+### Phase 3.5: Configuration System ✅
+
+- Config.zig with hierarchical configuration structures
+- ConfigParser for YAML-like configuration files
+- ConfigManager for loading from multiple locations
+- CLI argument parsing with config overrides
+- Sample configuration generation
+- Support for system, user, and project-level configs
+
 ---
 
-## ⏳ Current Phase: 3.5 - Configuration System
+## ⏳ Current Phase: 4.1 - Documentation
 
 ### Tasks
 
 | ID | Task | Status |
 |----|------|--------|
-| 3.5.1 | Config Parser | ⏳ Pending |
-| 3.5.2 | Config Manager | ⏳ Pending |
-| 3.5.3 | CLI Integration | ⏳ Pending |
-| 3.5.4 | Config Defaults | ⏳ Pending |
+| 4.1.1 | User Guide | ⏳ Pending |
+| 4.1.2 | API Docs | ⏳ Pending |
+| 4.1.3 | Examples | ⏳ Pending |
+| 4.1.4 | README | ⏳ Pending |
 
 ---
 
@@ -122,7 +133,7 @@ Milestone 4: Polish & Release     ⏳ PENDING
 | Metric | Value | Target |
 |--------|-------|--------|
 | Binary size | ~3MB | <5MB ✅ |
-| Test count | 65+ | 100+ 🔄 |
+| Test count | 70+ | 100+ 🔄 |
 | Cross-compile | 5 targets | 5 targets ✅ |
 
 ---
@@ -139,4 +150,4 @@ Milestone 4: Polish & Release     ⏳ PENDING
 
 ---
 
-*Ready for Phase 3.5: Configuration System*
+*Ready for Phase 4.1: Documentation*
