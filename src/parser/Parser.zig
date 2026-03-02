@@ -157,9 +157,47 @@ pub const Parser = struct {
     }
 
     fn parseCodeBlock(self: *Self) !AST.Element {
-        // For now, treat as paragraph (proper implementation later)
+        // Get the opening line (e.g., "```zig" or "```")
+        const open_line = self.current.text;
         self.advance();
-        return .{ .paragraph = .{ .content = try self.parseInlineText() } };
+
+        // Extract language from opening line (e.g., "```zig" -> "zig")
+        const language = extractLanguage(open_line, self.allocator);
+        errdefer if (language) |l| self.allocator.free(l);
+
+        // Collect code content until closing ```
+        var code_lines: std.ArrayList(u8) = .empty;
+        defer code_lines.deinit(self.allocator);
+
+        while (self.current.type != .eof and
+            self.current.type != .end_slide and
+            !isCodeBlockEnd(self.current.text))
+        {
+            // Append the line text
+            try code_lines.appendSlice(self.allocator, self.current.text);
+            try code_lines.append(self.allocator, '\n');
+            self.advance();
+        }
+
+        // Skip the closing ``` if present
+        if (isCodeBlockEnd(self.current.text)) {
+            self.advance();
+        }
+
+        // Remove trailing newline
+        const code = try code_lines.toOwnedSlice(self.allocator);
+        const trimmed_code = if (code.len > 0 and code[code.len - 1] == '\n')
+            try self.allocator.dupe(u8, code[0 .. code.len - 1])
+        else
+            code;
+        if (trimmed_code.ptr != code.ptr) {
+            self.allocator.free(code);
+        }
+
+        return .{ .code_block = .{
+            .language = language,
+            .code = trimmed_code,
+        } };
     }
 
     fn parseBlockquote(self: *Self) ParseError!AST.Element {
@@ -248,6 +286,52 @@ fn countHeadingLevel(text: []const u8) u8 {
     return @min(count, 6);
 }
 
+/// Extract language identifier from code block opener (e.g., "```zig" -> "zig")
+fn extractLanguage(text: []const u8, allocator: std.mem.Allocator) ?[]const u8 {
+    // Find the first backtick
+    var i: usize = 0;
+    while (i < text.len and text[i] != '`') {
+        i += 1;
+    }
+    // Skip the backticks
+    while (i < text.len and text[i] == '`') {
+        i += 1;
+    }
+    // Skip whitespace
+    while (i < text.len and (text[i] == ' ' or text[i] == '\t')) {
+        i += 1;
+    }
+    // Collect language identifier
+    const start = i;
+    while (i < text.len and text[i] != ' ' and text[i] != '\t' and text[i] != '\n' and text[i] != '`') {
+        i += 1;
+    }
+    if (i > start) {
+        return allocator.dupe(u8, text[start..i]) catch null;
+    }
+    return null;
+}
+
+/// Check if a line is a code block end marker (```)
+fn isCodeBlockEnd(text: []const u8) bool {
+    var i: usize = 0;
+    // Skip leading whitespace
+    while (i < text.len and (text[i] == ' ' or text[i] == '\t')) {
+        i += 1;
+    }
+    // Check for exactly 3 backticks
+    if (i + 3 > text.len) return false;
+    if (text[i] != '`' or text[i + 1] != '`' or text[i + 2] != '`') return false;
+    // Make sure there's nothing else significant on the line
+    i += 3;
+    while (i < text.len) {
+        if (text[i] == '\n' or text[i] == '\r') return true;
+        if (text[i] != ' ' and text[i] != '\t') return false;
+        i += 1;
+    }
+    return true;
+}
+
 // Tests
 test "Parser basic slide" {
     const testing = std.testing;
@@ -279,4 +363,97 @@ test "Parser multiple slides" {
     defer presentation.deinit();
 
     try testing.expectEqual(@as(usize, 2), presentation.slides.len);
+}
+
+test "Parser code block with language" {
+    const testing = std.testing;
+    const allocator = testing.allocator;
+
+    const source =
+        \\# Code Example
+        \\```zig
+        \\const x = 42;
+        \\print(x);
+        \\```
+        \\<!-- end_slide -->
+    ;
+
+    var parser = Parser.init(allocator, source);
+    var presentation = try parser.parse();
+    defer presentation.deinit();
+
+    try testing.expectEqual(@as(usize, 1), presentation.slides.len);
+    try testing.expectEqual(@as(usize, 2), presentation.slides[0].elements.len);
+
+    // Check that the second element is a code block
+    const code_block = presentation.slides[0].elements[1].code_block;
+    try testing.expectEqualStrings("zig", code_block.language.?);
+    try testing.expectEqualStrings("const x = 42;\nprint(x);", code_block.code);
+}
+
+test "Parser code block without language" {
+    const testing = std.testing;
+    const allocator = testing.allocator;
+
+    const source =
+        \\# Example
+        \\```
+        \\plain text
+        \\more text
+        \\```
+    ;
+
+    var parser = Parser.init(allocator, source);
+    var presentation = try parser.parse();
+    defer presentation.deinit();
+
+    try testing.expectEqual(@as(usize, 1), presentation.slides.len);
+
+    const code_block = presentation.slides[0].elements[1].code_block;
+    try testing.expect(code_block.language == null);
+    try testing.expectEqualStrings("plain text\nmore text", code_block.code);
+}
+
+test "extractLanguage helper" {
+    const testing = std.testing;
+    const allocator = testing.allocator;
+
+    // With language
+    if (extractLanguage("```zig", allocator)) |lang| {
+        defer allocator.free(lang);
+        try testing.expectEqualStrings("zig", lang);
+    } else {
+        try testing.fail();
+    }
+
+    // With language and trailing spaces
+    if (extractLanguage("```python  ", allocator)) |lang| {
+        defer allocator.free(lang);
+        try testing.expectEqualStrings("python", lang);
+    } else {
+        try testing.fail();
+    }
+
+    // Without language
+    try testing.expect(extractLanguage("```", allocator) == null);
+
+    // With leading spaces
+    if (extractLanguage("  ```rust", allocator)) |lang| {
+        defer allocator.free(lang);
+        try testing.expectEqualStrings("rust", lang);
+    } else {
+        try testing.fail();
+    }
+}
+
+test "isCodeBlockEnd helper" {
+    const testing = std.testing;
+
+    try testing.expect(isCodeBlockEnd("```"));
+    try testing.expect(isCodeBlockEnd("```\n"));
+    try testing.expect(isCodeBlockEnd("  ```"));
+    try testing.expect(isCodeBlockEnd("```  "));
+    try testing.expect(!isCodeBlockEnd("```zig"));
+    try testing.expect(!isCodeBlockEnd("text"));
+    try testing.expect(!isCodeBlockEnd(" ``"));
 }

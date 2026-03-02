@@ -9,30 +9,31 @@
 
 ## 🐛 Critical Bugs
 
-### CRITICAL-1: Code Blocks Parsed as Paragraphs
-**Status:** 🔴 Open  
+### ✅ CRITICAL-1: Code Blocks Parsed as Paragraphs
+**Status:** 🟢 Fixed  
 **Component:** Parser  
 **Impact:** High
 
 **Description:**  
-Code blocks (```) are being parsed as plain paragraphs instead of being preserved as code blocks with language metadata.
+Code blocks (```) were being parsed as plain paragraphs instead of being preserved as code blocks with language metadata.
 
-**Location:** `src/parser/Parser.zig:159-163`
+**Fix:** `src/parser/Parser.zig`
+- Rewrote `parseCodeBlock()` to properly extract language and code content
+- Added `extractLanguage()` helper to parse language from opener line
+- Added `isCodeBlockEnd()` helper to detect closing ```
+- Code content is preserved exactly with newlines
+
+**Verification:**
 ```zig
-fn parseCodeBlock(self: *Self) !AST.Element {
-    // For now, treat as paragraph (proper implementation later)
-    self.advance();
-    return .{ .paragraph = .{ .content = try self.parseInlineText() } };
-}
+// Input:
+\```zig
+\const x = 42;
+\```
+
+// Result:
+code_block.language = "zig"
+code_block.code = "const x = 42;"
 ```
-
-**Expected Behavior:**  
-Code blocks should be parsed as `AST.Element.code_block` with:
-- Language identifier (e.g., "zig", "python")
-- Code content preserved exactly
-- Proper rendering with syntax highlighting
-
-**Workaround:** None
 
 ---
 
@@ -306,7 +307,7 @@ zig build && ./zig-out/bin/tuia examples/feature-showcase.md
 | Paragraphs | ✅ | ✅ | ✅ | ✅ | Complete |
 | Unordered lists | ✅ | ✅ | ✅ | ✅ | Complete |
 | Ordered lists | ✅ | ⚠️ | ⚠️ | ⚠️ | Parser bug |
-| Code blocks | ✅ | ❌ | ❌ | ❌ | Not implemented |
+| Code blocks | ✅ | ✅ | ✅ | ✅ | Complete |
 | Blockquotes | ✅ | ✅ | ✅ | ✅ | Complete |
 | Thematic breaks | ✅ | ✅ | ✅ | ✅ | Complete |
 | **Inline formatting** | ❌ | ❌ | ❌ | ❌ | **Missing** |
