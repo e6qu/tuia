@@ -95,17 +95,20 @@ pub const CodeExecutor = struct {
     /// Create a temporary file with code
     fn createTempFile(self: Self, code: []const u8, extension: []const u8) ![:0]const u8 {
         // Use current directory as temp directory
-        const file_name = try std.fmt.allocPrintZ(self.allocator, ".tuia_{d}.{s}", .{
+        const file_name_slice = try std.fmt.allocPrint(self.allocator, ".tuia_{d}.{s}", .{
             @as(i64, @intCast(std.time.milliTimestamp())),
             extension,
         });
-        errdefer self.allocator.free(file_name);
+        errdefer self.allocator.free(file_name_slice);
 
-        const file = try std.fs.cwd().createFile(file_name, .{});
+        const file = try std.fs.cwd().createFile(file_name_slice, .{});
         defer file.close();
 
         try file.writeAll(code);
 
+        // Convert to null-terminated
+        const file_name = try self.allocator.dupeZ(u8, file_name_slice);
+        self.allocator.free(file_name_slice);
         return file_name;
     }
 

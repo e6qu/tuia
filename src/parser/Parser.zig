@@ -28,12 +28,12 @@ pub const Parser = struct {
         const front_matter = try self.parseFrontMatter();
 
         // Parse slides
-        var slides = std.ArrayList(AST.Slide).init(self.allocator);
-        defer slides.deinit();
+        var slides: std.ArrayList(AST.Slide) = .empty;
+        defer slides.deinit(self.allocator);
 
         while (self.current.type != .eof) {
             const slide = try self.parseSlide();
-            try slides.append(slide);
+            try slides.append(self.allocator, slide);
         }
 
         return .{
@@ -63,13 +63,13 @@ pub const Parser = struct {
     }
 
     fn parseSlide(self: *Self) !AST.Slide {
-        var elements = std.ArrayList(AST.Element).init(self.allocator);
-        defer elements.deinit();
+        var elements: std.ArrayList(AST.Element) = .empty;
+        defer elements.deinit(self.allocator);
 
         while (self.current.type != .end_slide and self.current.type != .eof) {
             const elem = try self.parseBlockElement();
             if (elem) |e| {
-                try elements.append(e);
+                try elements.append(self.allocator, e);
             }
         }
 
@@ -139,28 +139,28 @@ pub const Parser = struct {
 
     fn parseBlockquote(self: *Self) !AST.Element {
         self.advance();
-        var content = std.ArrayList(AST.Element).init(self.allocator);
-        defer content.deinit();
+        var content: std.ArrayList(AST.Element) = .empty;
+        defer content.deinit(self.allocator);
 
         while (self.current.type != .blank_line and self.current.type != .eof and self.current.type != .end_slide) {
             const elem = try self.parseBlockElement();
             if (elem) |e| {
-                try content.append(e);
+                try content.append(self.allocator, e);
             }
         }
 
-        return .{ .blockquote = .{ .content = try content.toOwnedSlice() } };
+        return .{ .blockquote = .{ .content = try content.toOwnedSlice(self.allocator) } };
     }
 
     fn parseList(self: *Self) !AST.Element {
-        var items = std.ArrayList(AST.ListItem).init(self.allocator);
-        defer items.deinit();
+        var items: std.ArrayList(AST.ListItem) = .empty;
+        defer items.deinit(self.allocator);
 
         // For now, just consume list items
         while (self.current.type == .list_item) {
             self.advance();
-            var content = std.ArrayList(AST.Element).init(self.allocator);
-            defer content.deinit();
+            var content: std.ArrayList(AST.Element) = .empty;
+            defer content.deinit(self.allocator);
 
             // Parse until next list item or blank line
             while (self.current.type != .list_item and self.current.type != .blank_line and
@@ -168,34 +168,34 @@ pub const Parser = struct {
             {
                 const elem = try self.parseBlockElement();
                 if (elem) |e| {
-                    try content.append(e);
+                    try content.append(self.allocator, e);
                 }
             }
 
-            try items.append(.{ .content = try content.toOwnedSlice() });
+            try items.append(self.allocator, .{ .content = try content.toOwnedSlice(self.allocator) });
         }
 
         return .{ .list = .{
             .ordered = false,
-            .items = try items.toOwnedSlice(),
+            .items = try items.toOwnedSlice(self.allocator),
         } };
     }
 
     fn parseInlineText(self: *Self) ![]AST.Inline {
-        var content = std.ArrayList(AST.Inline).init(self.allocator);
-        defer content.deinit();
+        var content: std.ArrayList(AST.Inline) = .empty;
+        defer content.deinit(self.allocator);
 
         // For now, just create a single text node
         if (self.current.type == .text or self.current.type == .paragraph) {
             const text = std.mem.trim(u8, self.current.text, " \t\n");
             if (text.len > 0) {
                 const copy = try self.allocator.dupe(u8, text);
-                try content.append(.{ .text = copy });
+                try content.append(self.allocator, .{ .text = copy });
             }
             self.advance();
         }
 
-        return try content.toOwnedSlice();
+        return try content.toOwnedSlice(self.allocator);
     }
 
     fn advance(self: *Self) void {
