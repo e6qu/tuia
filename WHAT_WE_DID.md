@@ -123,12 +123,30 @@
   - Word-wrapped content rendering
   - Empty state handling
 
+### Phase 3.2: Export Formats ✅
+
+**Date:** 2026-03-02
+
+- **HtmlExporter.zig**: HTML export functionality
+  - Full presentation to HTML conversion
+  - All element types supported (headings, paragraphs, code, lists, etc.)
+  - exportToHtml() and exportToFile() methods
+- **CssGenerator.zig**: Theme to CSS conversion
+  - Converts theme colors to CSS
+  - Responsive slide styling
+  - Dark mode support via media queries
+- **Features**:
+  - Self-contained HTML files
+  - Keyboard navigation (arrow keys, space)
+  - Scroll-snap for slide transitions
+  - Print-friendly CSS
+
 ---
 
 ## Current State
 
 - **Binary:** `tuia` (~2.9MB)
-- **Tests:** 45+ passing
+- **Tests:** 50+ passing
 - **Build:** Cross-compilation working
 - **CI:** All workflows passing
 
@@ -136,4 +154,4 @@
 
 ## Next Phase
 
-**Phase 3.2: Export Formats** - See `DO_NEXT.md`
+**Phase 3.3: Image Support** - See `DO_NEXT.md`
