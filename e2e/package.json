@@ -9,6 +9,6 @@
     "test:debug": "tui-test --debug"
   },
   "devDependencies": {
-    "@microsoft/tui-test": "^0.1.0"
+    "@microsoft/tui-test": "^0.0.1-rc.5"
   }
 }
