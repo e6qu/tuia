@@ -14,6 +14,13 @@ pub const OutputLine = @import("OutputCapture.zig").OutputLine;
 pub const StreamType = @import("OutputCapture.zig").StreamType;
 pub const ExecutionOutputWidget = @import("OutputCapture.zig").ExecutionOutputWidget;
 
+pub const Sandbox = @import("Sandbox.zig").Sandbox;
+pub const SandboxConfig = @import("Sandbox.zig").SandboxConfig;
+pub const SecurityLevel = @import("Sandbox.zig").SecurityLevel;
+pub const SecurityWarning = @import("Sandbox.zig").SecurityWarning;
+pub const checkSecurity = @import("Sandbox.zig").checkSecurity;
+pub const ResourceLimits = @import("Sandbox.zig").ResourceLimits;
+
 /// Executor registry for managing multiple executors
 pub const ExecutorRegistry = struct {
     allocator: std.mem.Allocator,
