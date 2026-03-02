@@ -71,6 +71,14 @@ jobs:
       - name: Make binary executable
         run: chmod +x ./zig-out/bin/tuia
 
+      - name: Verify TUIA binary
+        run: |
+          ls -la ./zig-out/bin/
+          ./zig-out/bin/tuia --help || true
+          ./zig-out/bin/tuia tests/fixtures/test-presentation.md &
+          sleep 2
+          kill %1 || true
+
       - name: Run E2E tests
         working-directory: ./e2e
         run: npm test
