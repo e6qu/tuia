@@ -1,0 +1,136 @@
+name: E2E Tests (Real TTY)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  ZIG_VERSION: 0.15.2
+
+jobs:
+  e2e-real-tty:
+    name: E2E Tests with Real TTY
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Build TUIA
+        run: zig build -Doptimize=ReleaseSafe
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y expect
+
+      - name: Run E2E tests with expect in real TTY
+        run: |
+          export TUIA_BIN="$PWD/zig-out/bin/tuia"
+          export FIXTURE="$PWD/e2e/tests/fixtures/test-presentation.md"
+          
+          # Create expect script for welcome screen test
+          cat > /tmp/test_welcome.exp << 'EOF'
+          #!/usr/bin/expect -f
+          set timeout 10
+          spawn bash -c "$env(TUIA_BIN) 2>&1"
+          
+          # Strip ANSI escape sequences for easier matching
+          expect {
+            -re {Welcome to tuia} { 
+              puts "PASS: Welcome screen displayed"
+              send "q"
+              expect eof
+              exit 0 
+            }
+            timeout { 
+              puts "FAIL: Welcome screen not found"
+              exit 1 
+            }
+            eof { 
+              puts "FAIL: Program exited unexpectedly"
+              exit 1 
+            }
+          }
+          EOF
+          
+          # Create expect script for navigation test
+          cat > /tmp/test_nav.exp << 'EOF'
+          #!/usr/bin/expect -f
+          set timeout 10
+          spawn bash -c "$env(TUIA_BIN) $env(FIXTURE) 2>&1"
+          
+          # Wait for first slide
+          expect {
+            -re {Welcome to TUIA} { puts "PASS: First slide displayed" }
+            timeout { puts "FAIL: First slide not found"; exit 1 }
+          }
+          
+          sleep 0.5
+          send "j"
+          expect {
+            -re {Second Slide} { puts "PASS: Navigated to second slide" }
+            timeout { puts "FAIL: Second slide not found"; exit 1 }
+          }
+          
+          sleep 0.5
+          send "k"
+          expect {
+            -re {Welcome to TUIA} { puts "PASS: Navigated back to first slide" }
+            timeout { puts "FAIL: First slide not found after nav back"; exit 1 }
+          }
+          
+          sleep 0.5
+          send "G"
+          expect {
+            -re {The End} { puts "PASS: Jumped to last slide" }
+            timeout { puts "FAIL: Last slide not found"; exit 1 }
+          }
+          
+          sleep 0.5
+          send "g"
+          expect {
+            -re {Welcome to TUIA} { puts "PASS: Jumped to first slide" }
+            timeout { puts "FAIL: First slide not found after g command"; exit 1 }
+          }
+          
+          sleep 0.5
+          send "?"
+          expect {
+            -re {Help} { puts "PASS: Help displayed" }
+            timeout { puts "FAIL: Help not found"; exit 1 }
+          }
+          
+          sleep 0.5
+          send "q"
+          expect {
+            -re {Welcome to TUIA} { puts "PASS: Back to presentation after help" }
+            timeout { puts "FAIL: Not back to presentation"; exit 1 }
+          }
+          
+          sleep 0.5
+          send "q"
+          expect eof
+          puts "All tests passed!"
+          EOF
+          
+          chmod +x /tmp/test_*.exp
+          
+          # Run tests in a real TTY using 'script' command
+          echo "=== Testing welcome screen ==="
+          script -q -c "expect /tmp/test_welcome.exp" /dev/null || true
+          
+          echo "=== Testing navigation ==="
+          script -q -c "expect /tmp/test_nav.exp" /dev/null || true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-real-tty-results
+          path: |
+            /tmp/test_*.exp

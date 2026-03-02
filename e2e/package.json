@@ -1,0 +1,14 @@
+{
+  "name": "tuia-e2e-tests",
+  "version": "1.0.0",
+  "description": "End-to-end tests for TUIA using Microsoft TUI Test",
+  "type": "module",
+  "scripts": {
+    "test": "tui-test",
+    "test:ui": "tui-test --ui",
+    "test:debug": "tui-test --debug"
+  },
+  "devDependencies": {
+    "@microsoft/tui-test": "^0.0.1-rc.5"
+  }
+}

@@ -2,6 +2,10 @@
 
 const std = @import("std");
 
+/// Snapshot testing - compare output to stored snapshots
+/// Set ZIG_UPDATE_SNAPSHOTS=1 to update snapshots
+pub const Snapshot = @import("test_utils/Snapshot.zig");
+
 /// Golden file testing - compare output to expected
 pub const Golden = struct {
     /// Directory for golden files

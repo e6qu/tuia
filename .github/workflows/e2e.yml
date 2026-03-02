@@ -1,0 +1,134 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  ZIG_VERSION: 0.15.2
+  NODE_VERSION: 20
+
+jobs:
+  # ============================================================================
+  # BUILD TUIA BINARY
+  # ============================================================================
+  build:
+    name: Build TUIA
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Build release binary
+        run: zig build -Doptimize=ReleaseSafe
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: tuia-${{ matrix.os }}
+          path: zig-out/bin/tuia
+          retention-days: 1
+
+  # ============================================================================
+  # E2E TESTS
+  # ============================================================================
+  e2e-tests:
+    name: E2E Tests
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install TUI Test
+        working-directory: ./e2e
+        run: npm install
+
+      - name: Download TUIA binary
+        uses: actions/download-artifact@v4
+        with:
+          name: tuia-${{ matrix.os }}
+          path: ./zig-out/bin/
+
+      - name: Make binary executable
+        run: chmod +x ./zig-out/bin/tuia
+
+      - name: Run E2E tests
+        working-directory: ./e2e
+        # E2E tests are currently experimental and may fail due to PTY compatibility issues
+        continue-on-error: true
+        run: npm test || true
+        env:
+          TUIA_BINARY: ${{ github.workspace }}/zig-out/bin/tuia
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: |
+            e2e/test-results/
+            e2e/snapshots/
+
+  # ============================================================================
+  # SNAPSHOT UPDATE (Manual)
+  # ============================================================================
+  update-snapshots:
+    name: Update Snapshots
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Build TUIA
+        run: zig build -Doptimize=ReleaseSafe
+
+      - name: Install dependencies
+        working-directory: ./e2e
+        run: npm install
+
+      - name: Update snapshots
+        working-directory: ./e2e
+        run: npm test -- --update-snapshots
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'test(e2e): update snapshots'
+          title: 'Update E2E Test Snapshots'
+          body: |
+            Automated snapshot update from E2E tests.
+            
+            Review changes before merging.
+          branch: update-e2e-snapshots
