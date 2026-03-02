@@ -5,13 +5,18 @@ const Element = ElementMod.Element;
 /// Slide represents a single presentation slide
 pub const Slide = struct {
     elements: []Element,
+    speaker_notes: ?[]const u8,
 
     const Self = @This();
 
-    pub fn init(allocator: std.mem.Allocator, elements: []const Element) !Self {
+    pub fn init(allocator: std.mem.Allocator, elements: []const Element, speaker_notes: ?[]const u8) !Self {
         const copy = try allocator.alloc(Element, elements.len);
         @memcpy(copy, elements);
-        return .{ .elements = copy };
+        const notes_copy = if (speaker_notes) |notes| try allocator.dupe(u8, notes) else null;
+        return .{
+            .elements = copy,
+            .speaker_notes = notes_copy,
+        };
     }
 
     pub fn deinit(self: Self, allocator: std.mem.Allocator) void {
@@ -19,6 +24,9 @@ pub const Slide = struct {
             element.deinit(allocator);
         }
         allocator.free(self.elements);
+        if (self.speaker_notes) |notes| {
+            allocator.free(notes);
+        }
     }
 
     pub fn elementCount(self: Self) usize {
@@ -86,6 +94,6 @@ test "Slide basic operations" {
     const testing = std.testing;
 
     // Test empty slide validation
-    const empty_slide = Slide{ .elements = &.{} };
+    const empty_slide = Slide{ .elements = &.{}, .speaker_notes = null };
     try testing.expectError(ValidationError.EmptySlide, empty_slide.validate());
 }

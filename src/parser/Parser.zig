@@ -91,7 +91,25 @@ pub const Parser = struct {
         var elements: std.ArrayList(AST.Element) = .empty;
         defer elements.deinit(self.allocator);
 
+        var speaker_notes: ?[]const u8 = null;
+
         while (self.current.type != .end_slide and self.current.type != .eof) {
+            // Handle speaker notes
+            if (self.current.type == .speaker_note) {
+                const notes = try extractSpeakerNotes(self.current.text, self.allocator);
+                if (speaker_notes) |old_notes| {
+                    // Append to existing notes
+                    const combined = try std.fmt.allocPrint(self.allocator, "{s}\n{s}", .{ old_notes, notes });
+                    self.allocator.free(old_notes);
+                    self.allocator.free(notes);
+                    speaker_notes = combined;
+                } else {
+                    speaker_notes = notes;
+                }
+                self.advance();
+                continue;
+            }
+
             const elem = try self.parseBlockElement();
             if (elem) |e| {
                 try elements.append(self.allocator, e);
@@ -110,6 +128,7 @@ pub const Parser = struct {
 
         return .{
             .elements = try elements.toOwnedSlice(self.allocator),
+            .speaker_notes = speaker_notes,
         };
     }
 
@@ -524,6 +543,45 @@ fn parseInlineContent(allocator: std.mem.Allocator, text: []const u8) ![]AST.Inl
     return try result.toOwnedSlice(allocator);
 }
 
+/// Extract speaker note text from HTML comment
+/// Input: "<!-- Speaker note: This is a note -->"
+/// Output: "This is a note"
+fn extractSpeakerNotes(text: []const u8, allocator: std.mem.Allocator) ![]const u8 {
+    // Find the start of "Speaker note:"
+    const prefix = "<!-- Speaker note:";
+    var start: usize = 0;
+
+    if (std.mem.startsWith(u8, text, prefix)) {
+        start = prefix.len;
+    } else {
+        // Find "Speaker note:" anywhere in the text
+        if (std.mem.indexOf(u8, text, "Speaker note:")) |idx| {
+            start = idx + "Speaker note:".len;
+        } else {
+            // No prefix found, use everything after <!--
+            if (std.mem.indexOf(u8, text, "<!--")) |idx| {
+                start = idx + 4;
+            }
+        }
+    }
+
+    // Find the end (-->)  
+    var end = text.len;
+    if (std.mem.indexOf(u8, text[start..], "-->")) |idx| {
+        end = start + idx;
+    }
+
+    // Trim whitespace
+    while (start < end and (text[start] == ' ' or text[start] == '\t')) {
+        start += 1;
+    }
+    while (end > start and (text[end - 1] == ' ' or text[end - 1] == '\t' or text[end - 1] == '\n' or text[end - 1] == '\r')) {
+        end -= 1;
+    }
+
+    return try allocator.dupe(u8, text[start..end]);
+}
+
 // Tests
 test "Parser basic slide" {
     const testing = std.testing;
@@ -750,4 +808,48 @@ test "parseInlineContent combined" {
     try testing.expectEqualStrings(" and ", result[2].text);
     try testing.expectEqualStrings("italic", result[3].emphasis[0].text);
     try testing.expectEqualStrings(" world", result[4].text);
+}
+
+test "extractSpeakerNotes" {
+    const testing = std.testing;
+    const allocator = testing.allocator;
+
+    // Basic speaker note
+    const notes1 = try extractSpeakerNotes("<!-- Speaker note: This is a note -->", allocator);
+    defer allocator.free(notes1);
+    try testing.expectEqualStrings("This is a note", notes1);
+
+    // With extra whitespace
+    const notes2 = try extractSpeakerNotes("<!-- Speaker note:   Trimmed note  -->", allocator);
+    defer allocator.free(notes2);
+    try testing.expectEqualStrings("Trimmed note", notes2);
+
+    // Without "Speaker note:" prefix (fallback)
+    const notes3 = try extractSpeakerNotes("<!-- Some other comment -->", allocator);
+    defer allocator.free(notes3);
+    try testing.expectEqualStrings("Some other comment", notes3);
+}
+
+test "Parser speaker notes" {
+    const testing = std.testing;
+    const allocator = testing.allocator;
+
+    const source =
+        \\# Title
+        \\<!-- Speaker note: Remember to mention key point -->
+        \\Content here
+        \\<!-- Speaker note: Second note -->
+        \\<!-- end_slide -->
+    ;
+
+    var parser = Parser.init(allocator, source);
+    var presentation = try parser.parse();
+    defer presentation.deinit();
+
+    try testing.expectEqual(@as(usize, 1), presentation.slides.len);
+    try testing.expect(presentation.slides[0].speaker_notes != null);
+    // Notes should be combined with newline
+    const notes = presentation.slides[0].speaker_notes.?;
+    try testing.expect(std.mem.indexOf(u8, notes, "Remember to mention key point") != null);
+    try testing.expect(std.mem.indexOf(u8, notes, "Second note") != null);
 }

@@ -56,8 +56,16 @@ fn convertSlide(allocator: std.mem.Allocator, ast_slide: AST.Slide) !core.Slide 
         elements[i] = try convertElement(allocator, ast_elem);
     }
 
+    // Convert speaker notes
+    const speaker_notes = if (ast_slide.speaker_notes) |notes|
+        try allocator.dupe(u8, notes)
+    else
+        null;
+    errdefer if (speaker_notes) |sn| allocator.free(sn);
+
     return core.Slide{
         .elements = elements,
+        .speaker_notes = speaker_notes,
     };
 }
 

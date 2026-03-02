@@ -32,11 +32,21 @@ pub const Scanner = struct {
 
         const c = self.advance();
 
-        // Check for end_slide comment
+        // Check for HTML comments (end_slide or speaker notes)
         if (c == '<' and self.matchString("!--")) {
-            if (self.matchString(" end_slide ")) {
+            // Check for end_slide comment
+            if (self.peek() == ' ' and self.pos + 10 <= self.source.len and
+                std.mem.eql(u8, self.source[self.pos..][0..10], " end_slide "))
+            {
                 _ = self.consumeUntil("-->");
                 return self.makeToken(.end_slide, start, line, col);
+            }
+            // Check for speaker note comment
+            if (self.peek() == ' ' and self.pos + 14 <= self.source.len and
+                std.mem.eql(u8, self.source[self.pos..][0..14], " Speaker note:"))
+            {
+                _ = self.consumeUntil("-->");
+                return self.makeToken(.speaker_note, start, line, col);
             }
             // Skip other HTML comments
             _ = self.consumeUntil("-->");

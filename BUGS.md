@@ -89,28 +89,30 @@ Images should be:
 
 ---
 
-### HIGH-3: Speaker Notes Not Implemented
-**Status:** 🔴 Open  
-**Component:** Parser  
+### ✅ HIGH-3: Speaker Notes Not Implemented
+**Status:** 🟢 Fixed  
+**Component:** Parser/Core  
 **Impact:** Medium
 
 **Description:**  
-HTML comments meant for speaker notes (`<!-- Speaker note: ... -->`) are stripped by the scanner but not preserved for display.
+HTML comments meant for speaker notes (`<!-- Speaker note: ... -->`) were stripped by the scanner.
 
-**Location:** `src/parser/Scanner.zig:41-43`
-```zig
-// Skip other HTML comments
-_ = self.consumeUntil("-->");
-return self.nextToken();
+**Fix:**
+- Added `speaker_note` token type to `Token.zig`
+- Modified `Scanner.zig` to recognize `<!-- Speaker note: ... -->` comments
+- Added `speaker_notes` field to `AST.Slide` and `core.Slide`
+- Updated `Parser.zig` to collect speaker notes for each slide
+- Added `extractSpeakerNotes()` helper function
+- Updated `Converter.zig` to pass notes through
+
+**Usage:**
+```markdown
+# Slide Title
+Content here
+<!-- Speaker note: Remember to mention key points -->
 ```
 
-**Expected Behavior:**  
-Speaker notes should be:
-1. Preserved during parsing
-2. Associated with the current slide
-3. Displayable in a notes view (e.g., separate window or overlay)
-
-**Workaround:** None
+**Note:** Multiple speaker notes on one slide are combined with newlines.
 
 ---
 

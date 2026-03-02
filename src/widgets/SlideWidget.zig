@@ -196,6 +196,7 @@ test "SlideWidget basic" {
 
     const slide = Slide{
         .elements = try elements.toOwnedSlice(allocator),
+        .speaker_notes = null,
     };
 
     var widget = try SlideWidget.init(allocator, slide);
@@ -227,6 +228,7 @@ test "SlideWidget with multiple elements" {
 
     const slide = Slide{
         .elements = try elements.toOwnedSlice(allocator),
+        .speaker_notes = null,
     };
 
     var widget = try SlideWidget.init(allocator, slide);
@@ -257,6 +259,7 @@ test "SlideWidget getTitle" {
 
     const slide = Slide{
         .elements = try elements.toOwnedSlice(allocator),
+        .speaker_notes = null,
     };
 
     var widget = try SlideWidget.init(allocator, slide);
@@ -283,6 +286,7 @@ test "SlideWidget padding" {
     });
 
     const slide = Slide{
+            .speaker_notes = null,
         .elements = try elements.toOwnedSlice(allocator),
     };
 

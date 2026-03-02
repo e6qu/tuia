@@ -33,12 +33,16 @@ pub const FrontMatter = struct {
 
 pub const Slide = struct {
     elements: []Element,
+    speaker_notes: ?[]const u8,
 
     pub fn deinit(self: *Slide, allocator: std.mem.Allocator) void {
         for (self.elements) |*elem| {
             elem.deinit(allocator);
         }
         allocator.free(self.elements);
+        if (self.speaker_notes) |notes| {
+            allocator.free(notes);
+        }
     }
 };
 

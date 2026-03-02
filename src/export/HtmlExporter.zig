@@ -222,6 +222,7 @@ test "HtmlExporter basic" {
 
     presentation.slides[0] = Slide{
         .elements = try elements.toOwnedSlice(allocator),
+        .speaker_notes = null,
     };
 
     // Export to HTML

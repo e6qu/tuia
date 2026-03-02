@@ -164,6 +164,7 @@ test "Navigation basic operations" {
     for (0..5) |_| {
         try slides.append(allocator, @import("Slide.zig").Slide{
             .elements = &.{},
+            .speaker_notes = null,
         });
     }
 
