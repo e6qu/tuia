@@ -13,6 +13,10 @@ test.use({
 });
 
 test('should display welcome screen when no file provided', async ({ terminal }) => {
+  // Debug: print all text content
+  const content = await terminal.getTextContent();
+  console.log('Terminal content:', content);
+  
   await expect(terminal.getByText('Welcome to tuia!', { full: true })).toBeVisible();
   terminal.write('q');
   await terminal.waitForExit();
