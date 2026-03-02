@@ -281,21 +281,52 @@ AC-PERF-002: Startup time remains <50ms
 
 ---
 
-### 5. After Committing
+### 5. After Creating PR
 
-#### 5.1 Verify CI
+**STOP.** Do not wait for CI or merge. The user will:
+1. Review the PR
+2. Merge when CI passes (if they choose to)
+3. Ask for next phase
 
-Check that CI passes:
+**Never:**
+- Wait for CI status
+- Merge the PR yourself
+- Continue working until user confirms merge
+
+### 6. After User Confirms Merge
+
+#### 6.1 Sync main branch
 
 ```bash
-# If you have gh CLI
-gh run list --limit 5
-
-# Or check web interface
-gh pr checks
+git checkout main
+git pull origin main
 ```
 
-#### 5.2 Handle Review
+#### 6.2 Update tracking documents
+
+Update these files after each phase:
+- `WHAT_WE_DID.md` - Add completed work
+- `DO_NEXT.md` - Set next phase
+- `STATUS.md` - Update current status
+- `PLAN.md` - Mark phase complete
+
+Create a PR for these updates before starting next phase.
+
+#### 6.3 Clean up branches
+
+```bash
+git fetch --prune origin
+git branch -d <old-feature-branch>
+```
+
+#### 6.4 Start next phase
+
+Create new feature branch:
+```bash
+git checkout -b feature/phase-X.Y-<name>
+```
+
+### 7. Handling Review
 
 If changes requested:
 1. Address each comment
@@ -500,7 +531,7 @@ This guide applies to:
 - **Project:** ZIGPRESENTERM / tuia
 - **Phase:** Milestone 0-4
 - **Stack:** Zig 0.15+, libvaxis
-- **Last Updated:** 2026-03-01
+- **Last Updated:** 2026-03-02
 
 ---
 
