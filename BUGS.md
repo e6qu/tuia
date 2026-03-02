@@ -118,26 +118,28 @@ Content here
 
 ## 📝 Medium Priority Issues
 
-### MED-1: Ordered Lists Marked as Unordered
-**Status:** 🔴 Open  
-**Component:** Parser  
+### ✅ MED-1: Ordered Lists Marked as Unordered
+**Status:** 🟢 Fixed  
+**Component:** Parser/Scanner  
 **Impact:** Medium
 
 **Description:**  
-Numbered lists (1., 2., 3.) are parsed but the `ordered` flag is hardcoded to `false`.
+Numbered lists (1., 2., 3.) were parsed but the `ordered` flag was hardcoded to `false`.
 
-**Location:** `src/parser/Parser.zig:203-206`
+**Fix:**
+- Added `ordered_list_item` token type to `Token.zig`
+- Modified `Scanner.zig` to emit `.ordered_list_item` for numbered lists
+- Updated `Parser.zig` `parseBlockElement()` to handle both token types
+- Modified `parseList()` to accept `ordered` parameter
+
+**Verification:**
 ```zig
-return .{ .list = .{
-    .ordered = false,  // Should detect from input
-    .items = try items.toOwnedSlice(self.allocator),
-} };
+// Input: "1. First\n2. Second"
+// Result: list.ordered = true
+
+// Input: "- First\n- Second"
+// Result: list.ordered = false
 ```
-
-**Expected Behavior:**  
-Lists starting with numbers should have `ordered: true` and render with numbers instead of bullets.
-
-**Workaround:** None
 
 ---
 
@@ -304,7 +306,7 @@ zig build && ./zig-out/bin/tuia examples/feature-showcase.md
 | Headings | ✅ | ✅ | ✅ | ✅ | Complete |
 | Paragraphs | ✅ | ✅ | ✅ | ✅ | Complete |
 | Unordered lists | ✅ | ✅ | ✅ | ✅ | Complete |
-| Ordered lists | ✅ | ⚠️ | ⚠️ | ⚠️ | Parser bug |
+| Ordered lists | ✅ | ✅ | ✅ | ✅ | Complete |
 | Code blocks | ✅ | ✅ | ✅ | ✅ | Complete |
 | Blockquotes | ✅ | ✅ | ✅ | ✅ | Complete |
 | Thematic breaks | ✅ | ✅ | ✅ | ✅ | Complete |

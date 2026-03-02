@@ -137,10 +137,16 @@ pub const Parser = struct {
             .heading => return try self.parseHeading(),
             .code_block => return try self.parseCodeBlock(),
             .blockquote => return try self.parseBlockquote(),
-            .list_item => return try self.parseList(),
+            .list_item => return try self.parseList(false),
+            .ordered_list_item => return try self.parseList(true),
             .thematic_break => {
                 self.advance();
                 return .thematic_break;
+            },
+            .speaker_note => {
+                // Speaker notes are handled in parseSlide
+                self.advance();
+                return null;
             },
             .text, .paragraph => return try self.parseParagraph(),
             .blank_line => {
@@ -234,19 +240,25 @@ pub const Parser = struct {
         return .{ .blockquote = .{ .content = try content.toOwnedSlice(self.allocator) } };
     }
 
-    fn parseList(self: *Self) !AST.Element {
+    fn parseList(self: *Self, ordered: bool) !AST.Element {
         var items: std.ArrayList(AST.ListItem) = .empty;
         defer items.deinit(self.allocator);
 
-        // For now, just consume list items
-        while (self.current.type == .list_item) {
+        // Determine which token type to expect
+        const item_token = if (ordered) Token.Type.ordered_list_item else Token.Type.list_item;
+
+        // Consume list items
+        while (self.current.type == item_token) {
             self.advance();
             var content: std.ArrayList(AST.Element) = .empty;
             defer content.deinit(self.allocator);
 
-            // Parse until next list item or blank line
-            while (self.current.type != .list_item and self.current.type != .blank_line and
-                self.current.type != .eof and self.current.type != .end_slide)
+            // Parse until next list item (of any type) or blank line
+            while (self.current.type != .list_item and
+                self.current.type != .ordered_list_item and
+                self.current.type != .blank_line and
+                self.current.type != .eof and
+                self.current.type != .end_slide)
             {
                 const elem = try self.parseBlockElement();
                 if (elem) |e| {
@@ -258,7 +270,7 @@ pub const Parser = struct {
         }
 
         return .{ .list = .{
-            .ordered = false,
+            .ordered = ordered,
             .items = try items.toOwnedSlice(self.allocator),
         } };
     }
@@ -852,4 +864,62 @@ test "Parser speaker notes" {
     const notes = presentation.slides[0].speaker_notes.?;
     try testing.expect(std.mem.indexOf(u8, notes, "Remember to mention key point") != null);
     try testing.expect(std.mem.indexOf(u8, notes, "Second note") != null);
+}
+
+test "Parser ordered list" {
+    const testing = std.testing;
+    const allocator = testing.allocator;
+
+    const source =
+        \\# Ordered List
+        \\1. First item
+        \\2. Second item
+        \\3. Third item
+    ;
+
+    var parser = Parser.init(allocator, source);
+    var presentation = try parser.parse();
+    defer presentation.deinit();
+
+    try testing.expectEqual(@as(usize, 1), presentation.slides.len);
+    try testing.expectEqual(@as(usize, 2), presentation.slides[0].elements.len);
+
+    const list = presentation.slides[0].elements[1].list;
+    try testing.expect(list.ordered);
+    try testing.expectEqual(@as(usize, 3), list.items.len);
+}
+
+test "Parser unordered list" {
+    const testing = std.testing;
+    const allocator = testing.allocator;
+
+    const source =
+        \\# Unordered List
+        \\- First item
+        \\- Second item
+        \\- Third item
+    ;
+
+    var parser = Parser.init(allocator, source);
+    var presentation = try parser.parse();
+    defer presentation.deinit();
+
+    try testing.expectEqual(@as(usize, 1), presentation.slides.len);
+    try testing.expectEqual(@as(usize, 2), presentation.slides[0].elements.len);
+
+    const list = presentation.slides[0].elements[1].list;
+    try testing.expect(!list.ordered);
+    try testing.expectEqual(@as(usize, 3), list.items.len);
+}
+
+test "Scanner ordered list item token" {
+    const testing = std.testing;
+
+    var scanner = Scanner.init("1. Item\n");
+    const t1 = scanner.nextToken();
+    try testing.expectEqual(.ordered_list_item, t1.type);
+
+    var scanner2 = Scanner.init("- Item\n");
+    const t2 = scanner2.nextToken();
+    try testing.expectEqual(.list_item, t2.type);
 }

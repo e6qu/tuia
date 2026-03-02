@@ -14,6 +14,7 @@ pub const Token = struct {
         code_block,
         blockquote,
         list_item,
+        ordered_list_item,
         thematic_break, // ---
         blank_line,
 

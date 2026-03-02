@@ -84,11 +84,11 @@ pub const Scanner = struct {
             }
         }
 
-        // Numbered list
+        // Numbered list (ordered)
         if (std.ascii.isDigit(c)) {
             if (self.peek() == '.' and (self.peekAhead(1) == ' ' or self.peekAhead(1) == '\t')) {
                 _ = self.advance(); // consume '.'
-                return self.makeToken(.list_item, start, line, col);
+                return self.makeToken(.ordered_list_item, start, line, col);
             }
         }
 
