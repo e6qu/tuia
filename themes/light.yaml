@@ -1,0 +1,59 @@
+# TUIA Light Theme
+# Light theme for presentations
+
+name: light
+author: TUIA
+
+heading1:
+  fg: blue
+  bold: true
+
+heading2:
+  fg: bright_blue
+  bold: true
+
+heading3:
+  fg: black
+  bold: true
+
+heading4:
+  fg: black
+  bold: true
+
+heading5:
+  fg: black
+
+heading6:
+  fg: bright_black
+
+paragraph:
+  fg: default
+
+code_block:
+  fg: black
+
+code_inline:
+  fg: green
+
+blockquote:
+  fg: bright_black
+  italic: true
+
+list_bullet:
+  fg: cyan
+
+list_number:
+  fg: cyan
+
+link:
+  fg: blue
+  underline: true
+
+image:
+  fg: magenta
+
+emphasis:
+  italic: true
+
+strong:
+  bold: true

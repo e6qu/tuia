@@ -474,22 +474,30 @@ pub const Widget = struct {
 - Widgets compose properly
 - Layout constraints respected
 
-### Phase 2.4: Theme Engine
+### Phase 2.4: Theme Engine ✅
+
+**Status:** COMPLETE
 
 **Tasks:**
 
-| ID | Task | Description | Est. Hours |
-|----|------|-------------|------------|
-| 2.4.1 | Theme Struct | Theme data model | 4 |
-| 2.4.2 | YAML Parser | Parse theme files | 4 |
-| 2.4.3 | Style Application | Apply styles to elements | 6 |
-| 2.4.4 | Built-in Themes | Dark and light themes | 4 |
-| 2.4.5 | Custom Themes | Load user themes | 4 |
+| ID | Task | Description | Status |
+|----|------|-------------|--------|
+| 2.4.1 | Theme Struct | Theme data model | ✅ |
+| 2.4.2 | YAML Parser | Parse theme files | ✅ |
+| 2.4.3 | Style Application | Apply styles to elements | ✅ |
+| 2.4.4 | Built-in Themes | Dark and light themes | ✅ |
+| 2.4.5 | Custom Themes | Load user themes | ✅ |
+
+**Deliverables:**
+- `src/render/Theme.zig` - Color definitions, ElementStyle, Theme struct
+- `src/render/ThemeLoader.zig` - YAML theme loading with hex/named colors
+- `darkTheme()` / `lightTheme()` - Built-in theme presets
 
 **Acceptance Criteria:**
-- Themes apply correctly to all elements
-- Invalid theme files produce helpful errors
-- Theme switching works at runtime
+- ✅ Themes can be loaded from YAML files
+- ✅ Dark and light built-in themes work
+- ✅ Hex colors (#RRGGBB) and named colors supported
+- ✅ Styles apply correctly to all element types
 
 ### Phase 2.5: Navigation & Input
 

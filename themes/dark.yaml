@@ -1,0 +1,59 @@
+# TUIA Dark Theme
+# Default dark theme for presentations
+
+name: dark
+author: TUIA
+
+heading1:
+  fg: bright_yellow
+  bold: true
+
+heading2:
+  fg: yellow
+  bold: true
+
+heading3:
+  fg: bright_white
+  bold: true
+
+heading4:
+  fg: white
+  bold: true
+
+heading5:
+  fg: white
+
+heading6:
+  fg: bright_black
+
+paragraph:
+  fg: default
+
+code_block:
+  fg: bright_white
+
+code_inline:
+  fg: bright_green
+
+blockquote:
+  fg: bright_black
+  italic: true
+
+list_bullet:
+  fg: bright_cyan
+
+list_number:
+  fg: bright_cyan
+
+link:
+  fg: bright_blue
+  underline: true
+
+image:
+  fg: bright_magenta
+
+emphasis:
+  italic: true
+
+strong:
+  bold: true
