@@ -50,7 +50,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        shell: [bash, zsh]
     steps:
       - uses: actions/checkout@v4
 
@@ -74,13 +73,13 @@ jobs:
 
       - name: Run E2E tests
         working-directory: ./e2e
-        run: npm test -- --project=${{ matrix.shell }}
+        run: npm test
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ matrix.os }}-${{ matrix.shell }}
+          name: test-results-${{ matrix.os }}
           path: |
             e2e/test-results/
             e2e/snapshots/
@@ -112,7 +111,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./e2e
-        run: npm ci
+        run: npm install
 
       - name: Update snapshots
         working-directory: ./e2e
