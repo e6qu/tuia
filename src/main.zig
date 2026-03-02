@@ -1,5 +1,6 @@
 const std = @import("std");
 const vaxis = @import("vaxis");
+const root = @import("root.zig");
 
 const Event = union(enum) {
     key: vaxis.Key,
@@ -16,7 +17,7 @@ pub fn main() !void {
         const arg = args[1];
         if (std.mem.eql(u8, arg, "-h") or std.mem.eql(u8, arg, "--help")) {
             std.debug.print(
-                \\tuia 0.1.0 - Terminal presentation tool
+                \\tuia {s} - Terminal presentation tool
                 \\
                 \\USAGE:
                 \\  tuia [OPTIONS] <FILE>    Present a markdown file
@@ -29,11 +30,11 @@ pub fn main() !void {
                 \\COMMANDS (in presentation):
                 \\  q, Ctrl+C       Quit
                 \\
-            , .{});
+            , .{root.version});
             return;
         }
         if (std.mem.eql(u8, arg, "-V") or std.mem.eql(u8, arg, "--version")) {
-            std.debug.print("tuia 0.1.0\n", .{});
+            std.debug.print("tuia {s}\n", .{root.version});
             return;
         }
     }

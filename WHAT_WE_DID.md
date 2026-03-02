@@ -250,18 +250,37 @@
   - Memory management guidelines
   - Complete usage example
 
+### Phase 4.2: Polish & Release ✅
+
+**Date:** 2026-03-02
+
+- **Version Update** - Bumped to 1.0.0
+  - Updated version constant in root.zig
+  - Centralized version in single location
+  - CLI and main.zig reference root.version
+
+- **Changelog** - Created CHANGELOG.md
+  - Following Keep a Changelog format
+  - Documenting all features in 1.0.0 release
+  - Semantic versioning adherence
+
+- **Integration Tests** - Updated for 1.0.0
+  - Fixed version test
+  - Added highlight and cli module references
+
 ---
 
 ## Current State
 
+- **Version:** 1.0.0 🎉
 - **Binary:** `tuia` (~3MB)
-- **Tests:** 70+ passing
+- **Tests:** 74 passing
 - **Build:** Cross-compilation working
 - **CI:** All workflows passing
-- **Docs:** User guide, API docs, examples complete
+- **Docs:** Complete
 
 ---
 
-## Next Phase
+## 🎉 Project Complete!
 
-**Phase 4.2: Polish & Release** - See `DO_NEXT.md`
+All milestones finished. TUIA v1.0.0 is ready for release.

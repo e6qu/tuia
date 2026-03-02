@@ -1,5 +1,6 @@
 //! Command-line interface parsing for TUIA
 const std = @import("std");
+const root = @import("root.zig");
 const config = @import("config/root.zig");
 const Config = config.Config;
 const ConfigOverrides = config.ConfigOverrides;
@@ -138,7 +139,7 @@ pub fn deinitOptions(options: *CliOptions, allocator: std.mem.Allocator) void {
 /// Print help message
 pub fn printHelp() void {
     std.debug.print(
-        \\tuia 0.1.0 - Terminal presentation tool
+        \\tuia {s} - Terminal presentation tool
         \\
         \\USAGE:
         \\  tuia [OPTIONS] <FILE>    Present a markdown file
@@ -165,12 +166,12 @@ pub fn printHelp() void {
         \\  ?, F1                   Show help
         \\  q, Ctrl+C               Quit
         \\
-    , .{});
+    , .{root.version});
 }
 
 /// Print version information
 pub fn printVersion() void {
-    std.debug.print("tuia 0.1.0\n", .{});
+    std.debug.print("tuia {s}\n", .{root.version});
 }
 
 test "parseArgs basic" {

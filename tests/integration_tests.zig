@@ -10,7 +10,7 @@ test "sanity check" {
 
 // Test version is set
 test "version is set" {
-    try std.testing.expectEqualStrings("0.1.0", tuia.version);
+    try std.testing.expectEqualStrings("1.0.0", tuia.version);
 }
 
 // Test fixture loading
@@ -74,4 +74,6 @@ test "all modules compile" {
     _ = tuia.config;
     _ = tuia.features;
     _ = tuia.infra;
+    _ = tuia.highlight;
+    _ = tuia.cli;
 }
