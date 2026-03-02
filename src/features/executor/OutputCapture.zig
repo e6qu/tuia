@@ -32,7 +32,7 @@ pub const OutputCapture = struct {
     pub fn init(allocator: std.mem.Allocator, max_lines: usize, max_line_length: usize) Self {
         return .{
             .allocator = allocator,
-            .lines = std.ArrayList(OutputLine).init(allocator),
+            .lines = .empty,
             .max_lines = max_lines,
             .max_line_length = max_line_length,
         };
@@ -42,7 +42,7 @@ pub const OutputCapture = struct {
         for (self.lines.items) |line| {
             line.deinit(self.allocator);
         }
-        self.lines.deinit();
+        self.lines.deinit(self.allocator);
     }
 
     /// Add raw output data
@@ -67,7 +67,7 @@ pub const OutputCapture = struct {
                 .timestamp_ms = now,
             };
 
-            try self.lines.append(output_line);
+            try self.lines.append(self.allocator, output_line);
 
             // Remove oldest if over limit
             if (self.lines.items.len > self.max_lines) {
@@ -84,12 +84,12 @@ pub const OutputCapture = struct {
 
     /// Get lines filtered by stream
     pub fn getLinesByStream(self: Self, allocator: std.mem.Allocator, stream: StreamType) ![]OutputLine {
-        var filtered = std.ArrayList(OutputLine).init(allocator);
-        defer filtered.deinit();
+        var filtered: std.ArrayList(OutputLine) = .empty;
+        defer filtered.deinit(allocator);
 
         for (self.lines.items) |line| {
             if (line.stream == stream) {
-                try filtered.append(line);
+                try filtered.append(allocator, line);
             }
         }
 

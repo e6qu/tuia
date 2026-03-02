@@ -72,6 +72,9 @@ pub const InputHandler = struct {
             .toggle_overview => {
                 nav.toggleOverview();
             },
+            .toggle_execution => {
+                nav.toggleExecution();
+            },
             .execute_code => {
                 // Signal code execution request - the main loop will handle this
                 return false;

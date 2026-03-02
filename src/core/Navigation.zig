@@ -12,6 +12,8 @@ pub const Navigation = struct {
     show_help: bool = false,
     /// Whether we're in slide overview mode
     show_overview: bool = false,
+    /// Whether execution output is visible
+    show_execution: bool = false,
     /// Jump input buffer (for "go to slide N")
     jump_buffer: ?[]const u8 = null,
     /// Message to display (temporary status)
@@ -89,6 +91,21 @@ pub const Navigation = struct {
     /// Toggle overview mode
     pub fn toggleOverview(self: *Self) void {
         self.show_overview = !self.show_overview;
+    }
+
+    /// Toggle execution output display
+    pub fn toggleExecution(self: *Self) void {
+        self.show_execution = !self.show_execution;
+    }
+
+    /// Show execution output
+    pub fn showExecution(self: *Self) void {
+        self.show_execution = true;
+    }
+
+    /// Hide execution output
+    pub fn hideExecution(self: *Self) void {
+        self.show_execution = false;
     }
 
     /// Set a temporary message
