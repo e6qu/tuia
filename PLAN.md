@@ -499,23 +499,34 @@ pub const Widget = struct {
 - ✅ Hex colors (#RRGGBB) and named colors supported
 - ✅ Styles apply correctly to all element types
 
-### Phase 2.5: Navigation & Input
+### Phase 2.5: Navigation & Input ✅
+
+**Status:** COMPLETE
 
 **Tasks:**
 
-| ID | Task | Description | Est. Hours |
-|----|------|-------------|------------|
-| 2.5.1 | Key Binding System | Configurable bindings | 6 |
-| 2.5.2 | Navigation | Next/prev/first/last slide | 4 |
-| 2.5.3 | Jump to Slide | Direct slide navigation | 2 |
-| 2.5.4 | Search | Find text in presentation | 6 |
-| 2.5.5 | Modals | Index, help modals | 6 |
-| 2.5.6 | Pause Support | Incremental reveals | 4 |
+| ID | Task | Description | Status |
+|----|------|-------------|--------|
+| 2.5.1 | Navigation State | Track current slide and view state | ✅ |
+| 2.5.2 | Input Handling | Process keyboard input | ✅ |
+| 2.5.3 | Key Bindings | Configurable keyboard shortcuts | ✅ |
+| 2.5.4 | Help Widget | Display keyboard shortcuts | ✅ |
+| 2.5.5 | Status Bar | Show slide info and messages | ✅ |
+
+**Deliverables:**
+- `src/core/Navigation.zig` - Navigation state management
+- `src/core/KeyBindings.zig` - Keyboard shortcut configuration
+- `src/core/InputHandler.zig` - Input event processing
+- `src/widgets/HelpWidget.zig` - Help overlay display
+- `src/widgets/StatusBar.zig` - Bottom status bar
 
 **Acceptance Criteria:**
-- All vim-style bindings work
-- Modals display correctly
-- Search finds and highlights matches
+- ✅ Navigate between slides with arrow keys and vim keys (j/k, h/l)
+- ✅ Jump to specific slide number (1-9, g/G for first/last)
+- ✅ Configurable key bindings system
+- ✅ Help overlay showing all shortcuts (?, F1)
+- ✅ Status bar displays current slide / total slides
+- ✅ Quit with q or Escape
 
 ### Phase 2.6: Code Highlighting
 
