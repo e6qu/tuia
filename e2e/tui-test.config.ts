@@ -14,31 +14,15 @@ export default defineConfig({
   trace: true,
   
   // Reporter configuration
-  reporter: [
-    ['list'],
-    ['html', { outputFolder: 'test-results/html-report' }]
-  ],
+  reporter: 'list',
   
   // Snapshot configuration
   snapshotDir: 'snapshots',
   
-  // Projects for different shells/platforms
-  projects: [
-    {
-      name: 'bash',
-      use: {
-        shell: 'bash',
-        cols: 80,
-        rows: 24,
-      }
-    },
-    {
-      name: 'zsh',
-      use: {
-        shell: 'zsh',
-        cols: 80,
-        rows: 24,
-      }
-    }
-  ]
+  // Terminal settings
+  use: {
+    shell: 'bash',
+    cols: 80,
+    rows: 24,
+  },
 });
