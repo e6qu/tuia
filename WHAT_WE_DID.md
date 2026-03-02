@@ -105,10 +105,30 @@
 
 ---
 
+## Milestone 3: Advanced Features 🔄
+
+### Phase 3.1: Speaker Notes ✅
+
+**Date:** 2026-03-02
+
+- **Note.zig**: Speaker note model
+  - Note struct with content storage
+  - NotesCollection for managing notes per slide
+- **NoteParser.zig**: Parser for extracting notes from markdown
+  - Support for `<!-- note: ... -->` syntax
+  - Support for `<!-- note --> ... <!-- endnote -->` syntax
+  - Per-slide note extraction
+- **NoteWidget.zig**: Widget for displaying speaker notes
+  - Themed note display with border
+  - Word-wrapped content rendering
+  - Empty state handling
+
+---
+
 ## Current State
 
 - **Binary:** `tuia` (~2.9MB)
-- **Tests:** 40+ passing
+- **Tests:** 45+ passing
 - **Build:** Cross-compilation working
 - **CI:** All workflows passing
 
@@ -116,4 +136,4 @@
 
 ## Next Phase
 
-**Phase 3.1: Speaker Notes** - See `DO_NEXT.md`
+**Phase 3.2: Export Formats** - See `DO_NEXT.md`

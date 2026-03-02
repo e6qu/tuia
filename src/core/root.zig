@@ -7,6 +7,7 @@ pub const Presentation = @import("Presentation.zig");
 pub const Navigation = @import("Navigation.zig");
 pub const KeyBindings = @import("KeyBindings.zig");
 pub const InputHandler = @import("InputHandler.zig");
+pub const Note = @import("Note.zig");
 
 test {
     std.testing.refAllDecls(@This());
