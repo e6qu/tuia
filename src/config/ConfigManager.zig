@@ -35,6 +35,9 @@ pub const ConfigManager = struct {
     }
 
     pub fn deinit(self: *Self) void {
+        // Clean up config allocations
+        self.config.deinit(self.allocator);
+        // Clean up loaded paths
         for (self.loaded_paths.items) |path| {
             self.allocator.free(path);
         }

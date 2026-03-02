@@ -44,9 +44,19 @@ pub const Config = struct {
         return copy;
     }
 
-    /// Free allocated memory
+    /// Free allocated memory (for values that were allocated from parsing)
     pub fn deinit(self: *Self, allocator: std.mem.Allocator) void {
-        allocator.free(self.theme.name);
+        // Free theme name if it's not the default static string
+        // We check by comparing pointer values - if different from "dark" literal, it was allocated
+        const default_name = "dark";
+        if (self.theme.name.ptr != default_name.ptr) {
+            allocator.free(self.theme.name);
+        }
+        // Free custom theme path if set
+        if (self.theme.custom_theme_path) |path| {
+            allocator.free(path);
+        }
+        // Note: export_config.output_dir is not typically allocated during parsing
     }
 
     /// Get default configuration

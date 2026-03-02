@@ -219,7 +219,8 @@ test "ConfigParser basic" {
         "executor:\n" ++
         "  timeout_seconds: 60\n";
 
-    const config = try parser.parseString(yaml);
+    var config = try parser.parseString(yaml);
+    defer config.deinit(allocator);
 
     try testing.expect(config.presentation.loop);
     try testing.expect(!config.presentation.show_slide_numbers);
@@ -246,7 +247,8 @@ test "ConfigParser all sections" {
         "  enabled: false\n" ++
         "  debounce_ms: 500\n";
 
-    const config = try parser.parseString(yaml);
+    var config = try parser.parseString(yaml);
+    defer config.deinit(allocator);
 
     try testing.expectEqual(@as(u32, 10), config.presentation.auto_advance_seconds);
     try testing.expect(config.presentation.loop);
