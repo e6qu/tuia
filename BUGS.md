@@ -176,23 +176,36 @@ list.items[0].children = List{ // nested list
 
 ---
 
-### MED-3: Tables Not Supported
-**Status:** 🔴 Open  
-**Component:** Scanner/Parser  
+### ✅ MED-3: Tables Not Supported
+**Status:** 🟢 Fixed  
+**Component:** Scanner/Parser/Core  
 **Impact:** Medium
 
 **Description:**  
-Markdown tables are not recognized:
+Markdown tables were not recognized.
+
+**Fix:**
+- Added `table_row` and `table_separator` token types
+- Added `isTableSeparator()` helper to Scanner
+- Added `Table`, `TableCell`, and `Alignment` types to AST
+- Added `parseTable()`, `parseTableRow()`, `parseTableAlignments()`, `parseTableCells()` functions
+- Updated `parseBlockElement()` to handle table rows
+- Added core `Table` type with HTML export support
+- Added basic widget support (placeholder)
+
+**Example:**
 ```markdown
-| Column 1 | Column 2 |
-|----------|----------|
-| Data 1   | Data 2   |
+| Name | Age |
+|------|-----|
+| John | 30  |
 ```
 
-**Note:** This is not in the current AST or Token definitions.
-
-**Expected Behavior:**  
-Tables should be parsed and renderable.
+**Parsed Result:**
+```zig
+table.headers = ["Name", "Age"]
+table.rows = [["John", "30"]]
+table.alignments = [.default, .default]
+```
 
 **Workaround:** Use code blocks or lists to represent tabular data
 
@@ -329,7 +342,7 @@ zig build && ./zig-out/bin/tuia examples/feature-showcase.md
 | Images | ✅ | ✅ | ✅ | ⚠️ | Parsed, needs render |
 | Speaker notes | ✅ | ✅ | ✅ | ⚠️ | Parsed (needs display UI) |
 | Nested lists | ✅ | ✅ | ✅ | ⚠️ | Parsed (widget needs update) |
-| Tables | ❌ | ❌ | ❌ | ❌ | Not in spec |
+| Tables | ✅ | ✅ | ✅ | ⚠️ | Parsed (widget needs work) |
 | Hard breaks | ❌ | ❌ | ❌ | ❌ | Not implemented |
 
 Legend: ✅ Complete | ⚠️ Partial/Buggy | ❌ Missing

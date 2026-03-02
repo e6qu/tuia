@@ -170,6 +170,26 @@ pub const HtmlExporter = struct {
             .image => |img| {
                 try writer.print("<img src=\"{s}\" alt=\"{s}\">\n", .{ img.url, img.alt });
             },
+            .table => |t| {
+                try writer.writeAll("<table>\n");
+                // Headers
+                try writer.writeAll("<thead><tr>\n");
+                for (t.headers) |header| {
+                    try writer.print("<th>{s}</th>\n", .{header});
+                }
+                try writer.writeAll("</tr></thead>\n");
+                // Body
+                try writer.writeAll("<tbody>\n");
+                for (t.rows) |row| {
+                    try writer.writeAll("<tr>\n");
+                    for (row) |cell| {
+                        try writer.print("<td>{s}</td>\n", .{cell.text});
+                    }
+                    try writer.writeAll("</tr>\n");
+                }
+                try writer.writeAll("</tbody>\n");
+                try writer.writeAll("</table>\n");
+            },
         }
     }
 };

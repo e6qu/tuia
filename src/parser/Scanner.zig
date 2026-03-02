@@ -95,6 +95,22 @@ pub const Scanner = struct {
             }
         }
 
+        // Table row (starts with |)
+        if (c == '|') {
+            // Consume the entire line
+            while (!self.isAtEnd() and self.peek() != '\n') {
+                _ = self.advance();
+            }
+            const line_text = self.source[start..self.pos];
+
+            // Check if this is a separator row (|-----|-----|)
+            if (isTableSeparator(line_text)) {
+                return self.makeToken(.table_separator, start, line, col, indent);
+            }
+
+            return self.makeToken(.table_row, start, line, col, indent);
+        }
+
         // Blank line
         if (c == '\n') {
             return self.makeToken(.blank_line, start, line, col, indent);
@@ -212,6 +228,31 @@ pub const Scanner = struct {
         return indent;
     }
 };
+
+/// Check if a line is a table separator (|-----|-----|)
+fn isTableSeparator(text: []const u8) bool {
+    // Must start with |
+    if (text.len < 2 or text[0] != '|') return false;
+
+    var has_dash = false;
+    for (text[1..]) |c| {
+        if (c == '|') {
+            // Found another pipe, continue
+            continue;
+        } else if (c == '-' or c == ':' or c == ' ') {
+            // Separator characters
+            if (c == '-') has_dash = true;
+        } else if (c == '\n' or c == '\r') {
+            // End of line
+            break;
+        } else {
+            // Found non-separator character
+            return false;
+        }
+    }
+
+    return has_dash;
+}
 
 // Tests
 test "Scanner basic tokens" {

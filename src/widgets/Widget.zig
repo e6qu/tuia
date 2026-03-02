@@ -109,6 +109,7 @@ pub const WidgetFactory = struct {
             .list => |l| self.createListWidget(l),
             .blockquote => |bq| self.createBlockquoteWidget(bq),
             .image => |img| self.createImageWidget(img),
+            .table => |t| self.createTableWidget(t),
             .thematic_break => self.createThematicBreakWidget(),
         };
     }
@@ -152,6 +153,14 @@ pub const WidgetFactory = struct {
     fn createThematicBreakWidget(self: Self) !Widget {
         const TextWidget = @import("TextWidget.zig").TextWidget;
         const widget = try TextWidget.initThematicBreak(self.allocator);
+        return Widget.init(widget);
+    }
+
+    fn createTableWidget(self: Self, table: @import("../core/Element.zig").Table) !Widget {
+        // For now, render as text representation
+        _ = table;
+        const TextWidget = @import("TextWidget.zig").TextWidget;
+        const widget = try TextWidget.initParagraph(self.allocator, "[Table: render not yet implemented]");
         return Widget.init(widget);
     }
 };

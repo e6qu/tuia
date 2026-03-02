@@ -139,6 +139,12 @@ pub const Parser = struct {
             .blockquote => return try self.parseBlockquote(),
             .list_item => return try self.parseList(false),
             .ordered_list_item => return try self.parseList(true),
+            .table_row => return try self.parseTable(),
+            .table_separator => {
+                // Skip orphan separator (no preceding table row)
+                self.advance();
+                return null;
+            },
             .thematic_break => {
                 self.advance();
                 return .thematic_break;
@@ -321,6 +327,46 @@ pub const Parser = struct {
         }
 
         return try content.toOwnedSlice(self.allocator);
+    }
+
+    fn parseTable(self: *Self) !AST.Element {
+        // Parse header row
+        const header_row = self.current.text;
+        const headers = try parseTableRow(self.allocator, header_row);
+        self.advance();
+
+        // Parse alignment row (separator)
+        var alignments: std.ArrayList(AST.Table.Alignment) = .empty;
+        defer alignments.deinit(self.allocator);
+
+        if (self.current.type == .table_separator) {
+            alignments = try parseTableAlignments(self.allocator, self.current.text);
+            self.advance();
+        }
+
+        // Parse data rows
+        var rows: std.ArrayList([]AST.Table.TableCell) = .empty;
+        defer {
+            for (rows.items) |row| {
+                for (row) |*cell| {
+                    cell.deinit(self.allocator);
+                }
+                self.allocator.free(row);
+            }
+            rows.deinit(self.allocator);
+        }
+
+        while (self.current.type == .table_row) {
+            const cells = try parseTableCells(self.allocator, self.current.text);
+            try rows.append(self.allocator, cells);
+            self.advance();
+        }
+
+        return .{ .table = .{
+            .headers = headers,
+            .rows = try rows.toOwnedSlice(self.allocator),
+            .alignments = try alignments.toOwnedSlice(self.allocator),
+        } };
     }
 
     fn advance(self: *Self) void {
@@ -622,6 +668,146 @@ fn extractSpeakerNotes(text: []const u8, allocator: std.mem.Allocator) ![]const 
     }
 
     return try allocator.dupe(u8, text[start..end]);
+}
+
+/// Parse a table row and return headers (just the text content)
+fn parseTableRow(allocator: std.mem.Allocator, text: []const u8) ![][]const u8 {
+    var result: std.ArrayList([]const u8) = .empty;
+    defer result.deinit(allocator);
+
+    var i: usize = 0;
+
+    // Skip leading |
+    if (i < text.len and text[i] == '|') {
+        i += 1;
+    }
+
+    while (i < text.len) {
+        // Skip whitespace
+        while (i < text.len and (text[i] == ' ' or text[i] == '\t')) {
+            i += 1;
+        }
+
+        const start = i;
+
+        // Find next | or end of line
+        while (i < text.len and text[i] != '|' and text[i] != '\n') {
+            i += 1;
+        }
+
+        // Trim trailing whitespace and extract cell content
+        var end = i;
+        while (end > start and (text[end - 1] == ' ' or text[end - 1] == '\t')) {
+            end -= 1;
+        }
+
+        if (end > start) {
+            const cell = try allocator.dupe(u8, text[start..end]);
+            try result.append(allocator, cell);
+        }
+
+        // Skip the |
+        if (i < text.len and text[i] == '|') {
+            i += 1;
+        }
+    }
+
+    return try result.toOwnedSlice(allocator);
+}
+
+/// Parse table alignment row (|------|------|)
+fn parseTableAlignments(allocator: std.mem.Allocator, text: []const u8) !std.ArrayList(AST.Table.Alignment) {
+    var result: std.ArrayList(AST.Table.Alignment) = .empty;
+
+    var i: usize = 0;
+
+    // Skip leading |
+    if (i < text.len and text[i] == '|') {
+        i += 1;
+    }
+
+    while (i < text.len) {
+        // Skip whitespace
+        while (i < text.len and (text[i] == ' ' or text[i] == '\t')) {
+            i += 1;
+        }
+
+        const start = i;
+
+        // Find next | or end of line
+        while (i < text.len and text[i] != '|' and text[i] != '\n') {
+            i += 1;
+        }
+
+        const cell = text[start..i];
+
+        // Determine alignment based on : positions
+        const has_left = cell.len > 0 and cell[0] == ':';
+        const has_right = cell.len > 0 and cell[cell.len - 1] == ':';
+
+        const alignment: AST.Table.Alignment = if (has_left and has_right)
+            .center
+        else if (has_left)
+            .left
+        else if (has_right)
+            .right
+        else
+            .default;
+
+        try result.append(allocator, alignment);
+
+        // Skip the |
+        if (i < text.len and text[i] == '|') {
+            i += 1;
+        }
+    }
+
+    return result;
+}
+
+/// Parse table cells as inline content
+fn parseTableCells(allocator: std.mem.Allocator, text: []const u8) ![]AST.Table.TableCell {
+    var result: std.ArrayList(AST.Table.TableCell) = .empty;
+    defer result.deinit(allocator);
+
+    var i: usize = 0;
+
+    // Skip leading |
+    if (i < text.len and text[i] == '|') {
+        i += 1;
+    }
+
+    while (i < text.len) {
+        // Skip whitespace
+        while (i < text.len and (text[i] == ' ' or text[i] == '\t')) {
+            i += 1;
+        }
+
+        const start = i;
+
+        // Find next | or end of line
+        while (i < text.len and text[i] != '|' and text[i] != '\n') {
+            i += 1;
+        }
+
+        // Trim trailing whitespace and extract cell content
+        var end = i;
+        while (end > start and (text[end - 1] == ' ' or text[end - 1] == '\t')) {
+            end -= 1;
+        }
+
+        const cell_text = if (end > start) text[start..end] else "";
+        const inlines = try parseInlineContent(allocator, cell_text);
+
+        try result.append(allocator, .{ .content = inlines });
+
+        // Skip the |
+        if (i < text.len and text[i] == '|') {
+            i += 1;
+        }
+    }
+
+    return try result.toOwnedSlice(allocator);
 }
 
 // Tests
@@ -1010,4 +1196,45 @@ test "Parser deeply nested list" {
 
     const nested2 = nested1.items[0].children.?;
     try testing.expectEqual(@as(usize, 1), nested2.items.len);
+}
+
+test "Parser table" {
+    const testing = std.testing;
+    const allocator = testing.allocator;
+
+    const source =
+        \\# Table Test
+        \\| Name | Age | City |
+        \\|------|-----|------|
+        \\| John | 30  | NYC  |
+        \\| Jane | 25  | LA   |
+    ;
+
+    var parser = Parser.init(allocator, source);
+    var presentation = try parser.parse();
+    defer presentation.deinit();
+
+    try testing.expectEqual(@as(usize, 1), presentation.slides.len);
+    try testing.expectEqual(@as(usize, 2), presentation.slides[0].elements.len);
+
+    const table = presentation.slides[0].elements[1].table;
+    try testing.expectEqual(@as(usize, 3), table.headers.len);
+    try testing.expectEqualStrings("Name", table.headers[0]);
+    try testing.expectEqualStrings("Age", table.headers[1]);
+    try testing.expectEqualStrings("City", table.headers[2]);
+
+    try testing.expectEqual(@as(usize, 2), table.rows.len);
+    try testing.expectEqual(@as(usize, 3), table.rows[0].len);
+}
+
+test "Scanner table tokens" {
+    const testing = std.testing;
+
+    var scanner = Scanner.init("| col1 | col2 |\n");
+    const t1 = scanner.nextToken();
+    try testing.expectEqual(.table_row, t1.type);
+
+    var scanner2 = Scanner.init("|------|------|\n");
+    const t2 = scanner2.nextToken();
+    try testing.expectEqual(.table_separator, t2.type);
 }

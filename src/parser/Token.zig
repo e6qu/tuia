@@ -31,6 +31,8 @@ pub const Token = struct {
         // Special
         end_slide, // <!-- end_slide -->
         speaker_note, // <!-- Speaker note: ... -->
+        table_row, // | col1 | col2 |
+        table_separator, // |------|------|
         front_matter_marker, // ---
         eof,
         invalid,

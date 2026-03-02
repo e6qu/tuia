@@ -101,6 +101,9 @@ fn convertElement(allocator: std.mem.Allocator, ast_elem: AST.Element) !core.Ele
                 .text = try blockquoteToText(allocator, bq),
             },
         },
+        .table => |t| .{
+            .table = try convertTable(allocator, t),
+        },
         .thematic_break => .thematic_break,
     };
 }
@@ -203,6 +206,59 @@ fn convertListItems(allocator: std.mem.Allocator, items: []AST.ListItem) ![]core
     }
 
     return result;
+}
+
+/// Convert AST Table to core Table
+fn convertTable(allocator: std.mem.Allocator, ast_table: AST.Table) !ElementMod.Table {
+    // Convert headers
+    var headers = try allocator.alloc([]const u8, ast_table.headers.len);
+    errdefer allocator.free(headers);
+    for (ast_table.headers, 0..) |header, i| {
+        headers[i] = try allocator.dupe(u8, header);
+    }
+
+    // Convert alignments
+    var alignments = try allocator.alloc(ElementMod.Table.Alignment, ast_table.alignments.len);
+    errdefer allocator.free(alignments);
+    for (ast_table.alignments, 0..) |a, i| {
+        alignments[i] = switch (a) {
+            .left => .left,
+            .center => .center,
+            .right => .right,
+            .default => .default,
+        };
+    }
+
+    // Convert rows
+    var rows = try allocator.alloc([]ElementMod.Table.TableCell, ast_table.rows.len);
+    errdefer {
+        for (rows) |row| {
+            for (row) |cell| {
+                allocator.free(cell.text);
+            }
+            allocator.free(row);
+        }
+        allocator.free(rows);
+    }
+
+    for (ast_table.rows, 0..) |ast_row, i| {
+        var cells = try allocator.alloc(ElementMod.Table.TableCell, ast_row.len);
+        errdefer allocator.free(cells);
+
+        for (ast_row, 0..) |ast_cell, j| {
+            cells[j] = .{
+                .text = try inlineToText(allocator, ast_cell.content),
+            };
+        }
+
+        rows[i] = cells;
+    }
+
+    return .{
+        .headers = headers,
+        .alignments = alignments,
+        .rows = rows,
+    };
 }
 
 // ============================================================================

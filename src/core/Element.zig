@@ -8,6 +8,7 @@ pub const Element = union(enum) {
     list: List,
     blockquote: Blockquote,
     image: Image,
+    table: Table,
     thematic_break,
 
     pub fn deinit(self: Element, allocator: std.mem.Allocator) void {
@@ -18,6 +19,7 @@ pub const Element = union(enum) {
             .list => |l| l.deinit(allocator),
             .blockquote => |bq| bq.deinit(allocator),
             .image => |img| img.deinit(allocator),
+            .table => |t| t.deinit(allocator),
             else => {},
         }
     }
@@ -90,6 +92,38 @@ pub const Image = struct {
     pub fn deinit(self: Image, allocator: std.mem.Allocator) void {
         allocator.free(self.alt);
         allocator.free(self.url);
+    }
+};
+
+pub const Table = struct {
+    headers: [][]const u8,
+    rows: [][]TableCell,
+    alignments: []Alignment,
+
+    pub const Alignment = enum {
+        left,
+        center,
+        right,
+        default,
+    };
+
+    pub const TableCell = struct {
+        text: []const u8,
+    };
+
+    pub fn deinit(self: Table, allocator: std.mem.Allocator) void {
+        for (self.headers) |h| allocator.free(h);
+        allocator.free(self.headers);
+
+        for (self.rows) |row| {
+            for (row) |cell| {
+                allocator.free(cell.text);
+            }
+            allocator.free(row);
+        }
+        allocator.free(self.rows);
+
+        allocator.free(self.alignments);
     }
 };
 

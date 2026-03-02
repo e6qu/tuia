@@ -52,6 +52,7 @@ pub const Element = union(enum) {
     code_block: CodeBlock,
     list: List,
     blockquote: Blockquote,
+    table: Table,
     thematic_break,
 
     pub fn deinit(self: *Element, allocator: std.mem.Allocator) void {
@@ -61,6 +62,7 @@ pub const Element = union(enum) {
             .code_block => |*cb| cb.deinit(allocator),
             .list => |*l| l.deinit(allocator),
             .blockquote => |*bq| bq.deinit(allocator),
+            .table => |*t| t.deinit(allocator),
             else => {},
         }
     }
@@ -135,6 +137,45 @@ pub const Blockquote = struct {
             elem.deinit(allocator);
         }
         allocator.free(self.content);
+    }
+};
+
+pub const Table = struct {
+    headers: [][]const u8,
+    rows: [][]TableCell,
+    alignments: []Alignment,
+
+    pub const Alignment = enum {
+        left,
+        center,
+        right,
+        default,
+    };
+
+    pub const TableCell = struct {
+        content: []Inline,
+
+        pub fn deinit(self: TableCell, allocator: std.mem.Allocator) void {
+            for (self.content) |*inline_elem| {
+                inline_elem.deinit(allocator);
+            }
+            allocator.free(self.content);
+        }
+    };
+
+    pub fn deinit(self: *Table, allocator: std.mem.Allocator) void {
+        for (self.headers) |h| allocator.free(h);
+        allocator.free(self.headers);
+
+        for (self.rows) |row| {
+            for (row) |*cell| {
+                cell.deinit(allocator);
+            }
+            allocator.free(row);
+        }
+        allocator.free(self.rows);
+
+        allocator.free(self.alignments);
     }
 };
 
