@@ -194,7 +194,7 @@ pub const ExecutionWidget = struct {
 
         // Draw title at top
         var row: usize = 0;
-        win.writeCell(0, row, .{
+        win.writeCell(0, @intCast(row), .{
             .char = .{ .grapheme = title },
             .style = title_style,
         });
@@ -202,7 +202,7 @@ pub const ExecutionWidget = struct {
 
         // Draw separator line
         for (0..win.width) |col| {
-            win.writeCell(col, row, .{
+            win.writeCell(@intCast(col), @intCast(row), .{
                 .char = .{ .grapheme = "─" },
                 .style = style,
             });
@@ -223,11 +223,11 @@ pub const ExecutionWidget = struct {
 
             // Use different color for stderr
             const line_style = if (line.stream == .stderr)
-                .{ .fg = theme.error_color }
+                elementStyleToVaxis(theme.error_color)
             else
-                .{ .fg = theme.text_color };
+                elementStyleToVaxis(theme.paragraph);
 
-            win.writeCell(0, line_row, .{
+            win.writeCell(0, @intCast(line_row), .{
                 .char = .{ .grapheme = content },
                 .style = line_style,
             });
@@ -236,22 +236,21 @@ pub const ExecutionWidget = struct {
         // Draw status bar at bottom
         if (win.height > 2) {
             const status_row = win.height - 1;
-            const status = self.getStatusText() catch |err| blk: {
-                _ = err;
+            const status = self.getStatusText() catch blk: {
                 break :blk "Error";
             };
             defer self.allocator.free(status);
 
             for (0..win.width) |col| {
-                win.writeCell(col, status_row, .{
+                win.writeCell(@intCast(col), @intCast(status_row), .{
                     .char = .{ .grapheme = " " },
-                    .style = .{ .bg = theme.status_bg },
+                    .style = .{ .bg = .{ .rgb = .{ 40, 40, 40 } } },
                 });
             }
 
-            win.writeCell(0, status_row, .{
+            win.writeCell(0, @intCast(status_row), .{
                 .char = .{ .grapheme = status },
-                .style = .{ .bg = theme.status_bg, .fg = theme.status_fg },
+                .style = .{ .bg = .{ .rgb = .{ 40, 40, 40 } } },
             });
         }
     }
@@ -270,14 +269,36 @@ pub const ExecutionWidget = struct {
 
     /// Get style based on state
     fn getStateStyle(self: Self, theme: anytype) vaxis.Style {
-        return switch (self.state) {
-            .idle => .{ .fg = theme.text_color },
-            .executing => .{ .fg = theme.accent_color },
-            .success => .{ .fg = theme.success_color },
-            .failed => .{ .fg = theme.error_color },
-            .timeout => .{ .fg = theme.warning_color },
-            .language_not_available => .{ .fg = theme.error_color },
+        const element_style = switch (self.state) {
+            .idle => theme.paragraph,
+            .executing => theme.accent_color,
+            .success => theme.success_color,
+            .failed => theme.error_color,
+            .timeout => theme.warning_color,
+            .language_not_available => theme.error_color,
         };
+        return elementStyleToVaxis(element_style);
+    }
+
+    /// Convert ElementStyle to vaxis.Style
+    fn elementStyleToVaxis(es: @import("../render/Theme.zig").ElementStyle) vaxis.Style {
+        var style: vaxis.Style = .{};
+        if (es.fg) |fg| {
+            if (@import("../render/Theme.zig").Theme.toRgb(fg)) |rgb| {
+                style.fg = .{ .rgb = rgb };
+            }
+        }
+        if (es.bg) |bg| {
+            if (@import("../render/Theme.zig").Theme.toRgb(bg)) |rgb| {
+                style.bg = .{ .rgb = rgb };
+            }
+        }
+        style.bold = es.bold orelse false;
+        style.italic = es.italic orelse false;
+        if (es.underline orelse false) {
+            style.ul_style = .single;
+        }
+        return style;
     }
 
     /// Get status bar text
@@ -285,7 +306,7 @@ pub const ExecutionWidget = struct {
         var parts: std.ArrayList(u8) = .empty;
         defer parts.deinit(self.allocator);
 
-        const writer = parts.writer();
+        const writer = parts.writer(self.allocator);
 
         // State
         const state_str = try self.getStateDisplay(self.allocator);

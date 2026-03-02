@@ -5,6 +5,7 @@ const vaxis = @import("vaxis");
 const core = @import("core/root.zig");
 const parser = @import("parser/root.zig");
 const widgets = @import("widgets/root.zig");
+const render = @import("render/root.zig");
 const executor = @import("features/executor/root.zig");
 
 const Presentation = core.Presentation;
@@ -12,10 +13,12 @@ const PresentationBuilder = core.PresentationBuilder;
 const Navigation = core.Navigation;
 const InputHandler = @import("core/InputHandler.zig").InputHandler;
 const ExecutionWidget = @import("widgets/ExecutionWidget.zig").ExecutionWidget;
+const HelpWidget = @import("widgets/HelpWidget.zig").HelpWidget;
 const CodeExecutor = executor.CodeExecutor;
 const ExecutionConfig = executor.ExecutionConfig;
 const ExecutorRegistry = executor.ExecutorRegistry;
 const Language = executor.Language;
+const Renderer = render.Renderer;
 
 const Event = union(enum) {
     key: vaxis.Key,
@@ -33,6 +36,10 @@ pub const App = struct {
     presentation: ?Presentation = null,
     navigation: ?Navigation = null,
     input_handler: InputHandler,
+
+    // Rendering
+    renderer: Renderer,
+    help_widget: HelpWidget,
 
     // Code execution
     execution_widget: ExecutionWidget,
@@ -63,6 +70,8 @@ pub const App = struct {
             .loop = loop,
             .input_handler = InputHandler.init(allocator),
             .execution_widget = ExecutionWidget.init(allocator),
+            .help_widget = HelpWidget.init(allocator),
+            .renderer = Renderer.init(allocator),
         };
     }
 
@@ -77,7 +86,9 @@ pub const App = struct {
         if (self.presentation) |*pres| {
             pres.deinit();
         }
+        self.renderer.deinit();
         self.execution_widget.deinit();
+        self.help_widget.deinit();
         self.input_handler.deinit();
         self.loop.stop();
         self.vx.deinit(self.allocator, self.tty.writer());
@@ -207,59 +218,18 @@ pub const App = struct {
         try nav.setMessage(self.allocator, msg, 120);
     }
 
-    /// Render the UI
+    /// Render the UI using the Renderer
     fn render(self: *Self) !void {
         const win = self.vx.window();
-        win.clear();
 
-        if (self.navigation == null or self.presentation == null) {
-            // Show welcome screen
-            const msg = "Welcome to tuia! Open a presentation file to begin.";
-            const col = if (win.width > msg.len) @divTrunc(win.width - @as(u16, @intCast(msg.len)), 2) else 0;
-            const row = @divTrunc(win.height, 2);
-            win.writeCell(col, row, .{ .char = .{ .grapheme = msg } });
-        } else {
-            const nav = self.navigation.?;
-
-            // TODO: Render actual slide content
-            // For now just show slide info
-            const slide_info = try std.fmt.allocPrint(self.allocator, "Slide {d}/{d}", .{
-                nav.currentSlideNumber(),
-                nav.total_slides,
-            });
-            defer self.allocator.free(slide_info);
-
-            win.writeCell(0, 0, .{ .char = .{ .grapheme = slide_info } });
-
-            // Render execution widget if visible
-            if (nav.show_execution and self.execution_widget.isVisible()) {
-                // Create a sub-window for execution output (bottom 40%)
-                const exec_height = @divTrunc(win.height * 40, 100);
-                const exec_win = win.child(.{
-                    .y_off = win.height - exec_height,
-                    .height = exec_height,
-                });
-
-                // TODO: Pass theme to draw method
-                // self.execution_widget.draw(exec_win, theme);
-
-                // For now, just show status
-                const status = try self.execution_widget.getStateDisplay(self.allocator);
-                defer self.allocator.free(status);
-                exec_win.writeCell(0, 0, .{ .char = .{ .grapheme = status } });
-            }
-
-            // Render help if visible
-            if (nav.show_help) {
-                const help_text = "Help: j/k=nav, e=exec, E=toggle output, q=quit";
-                win.writeCell(0, win.height - 1, .{ .char = .{ .grapheme = help_text } });
-            }
-
-            // Render message if any
-            if (nav.message) |msg| {
-                win.writeCell(0, win.height - 2, .{ .char = .{ .grapheme = msg } });
-            }
-        }
+        // Use renderer to render everything
+        try self.renderer.render(
+            win,
+            self.presentation,
+            self.navigation,
+            if (self.navigation) |nav| if (nav.show_execution) &self.execution_widget else null else null,
+            if (self.navigation) |nav| if (nav.show_help) &self.help_widget else null else null,
+        );
 
         try self.vx.render(self.tty.writer());
     }

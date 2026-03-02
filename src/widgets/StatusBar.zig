@@ -56,13 +56,28 @@ pub const StatusBar = struct {
         };
 
         // Draw background for entire row
+        const bg_color = if (theme.code_block.bg) |c|
+            if (@import("../render/Theme.zig").Theme.toRgb(c)) |rgb|
+                @import("vaxis").Cell.Color{ .rgb = rgb }
+            else
+                .default
+        else
+            .default;
+
+        const fg_color = if (theme.code_block.fg) |c|
+            if (@import("../render/Theme.zig").Theme.toRgb(c)) |rgb|
+                @import("vaxis").Cell.Color{ .rgb = rgb }
+            else
+                .default
+        else
+            .default;
+
         for (0..win.width) |col| {
-            const cell = win.cellIndex(.{ .row = @intCast(row), .col = @intCast(col) });
-            win.setCell(cell, .{
+            _ = win.writeCell(@intCast(col), @intCast(row), .{
                 .char = .{ .grapheme = " " },
                 .style = .{
-                    .fg = theme.code_block.fg,
-                    .bg = theme.code_block.bg,
+                    .fg = fg_color,
+                    .bg = bg_color,
                 },
             });
         }
@@ -70,12 +85,11 @@ pub const StatusBar = struct {
         // Draw status text
         for (status, 0..) |char, col| {
             if (col >= win.width) break;
-            const cell = win.cellIndex(.{ .row = @intCast(row), .col = @intCast(col) });
-            win.setCell(cell, .{
+            _ = win.writeCell(@intCast(col), @intCast(row), .{
                 .char = .{ .grapheme = &[_]u8{char} },
                 .style = .{
-                    .fg = theme.code_block.fg,
-                    .bg = theme.code_block.bg,
+                    .fg = fg_color,
+                    .bg = bg_color,
                 },
             });
         }

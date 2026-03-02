@@ -85,10 +85,18 @@ pub const HelpWidget = struct {
             for (0..max_width + 4) |col| {
                 const c = start_col + col - 2;
                 if (c >= win.width) continue;
-                const cell = win.cellIndex(.{ .row = @intCast(r), .col = @intCast(c) });
-                win.setCell(cell, .{
+                const bg_color = if (theme.code_block.bg) |color|
+                    if (@import("../render/Theme.zig").Theme.toRgb(color)) |rgb|
+                        @import("vaxis").Cell.Color{ .rgb = rgb }
+                    else
+                        .default
+                else
+                    .default;
+
+                _ = win.writeCell(@intCast(c), @intCast(r), .{
+                    .char = .{ .grapheme = " " },
                     .style = .{
-                        .bg = theme.code_block.bg,
+                        .bg = bg_color,
                     },
                 });
             }
@@ -105,11 +113,18 @@ pub const HelpWidget = struct {
                 const c = start_col + col;
                 if (c >= win.width) break;
 
-                const cell = win.cellIndex(.{ .row = @intCast(r), .col = @intCast(c) });
-                win.setCell(cell, .{
+                const fg_color = if (theme.code_block.fg) |color|
+                    if (@import("../render/Theme.zig").Theme.toRgb(color)) |rgb|
+                        @import("vaxis").Cell.Color{ .rgb = rgb }
+                    else
+                        .default
+                else
+                    .default;
+
+                _ = win.writeCell(@intCast(c), @intCast(r), .{
                     .char = .{ .grapheme = &[_]u8{char} },
                     .style = .{
-                        .fg = theme.code_block.fg,
+                        .fg = fg_color,
                     },
                 });
             }

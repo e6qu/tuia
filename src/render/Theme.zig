@@ -74,6 +74,12 @@ pub const Theme = struct {
     // Syntax highlighting colors
     syntax: SyntaxColors = .{},
 
+    // Status/UI colors
+    accent_color: ElementStyle = .{ .fg = .cyan },
+    success_color: ElementStyle = .{ .fg = .green },
+    error_color: ElementStyle = .{ .fg = .red },
+    warning_color: ElementStyle = .{ .fg = .yellow },
+
     pub fn deinit(self: Theme, allocator: std.mem.Allocator) void {
         allocator.free(self.name);
         if (self.author) |a| allocator.free(a);
