@@ -141,12 +141,40 @@
   - Scroll-snap for slide transitions
   - Print-friendly CSS
 
+### Phase 3.3: Image Support ✅
+
+**Date:** 2026-03-02
+
+- **ImageLoader.zig**: Image loading and caching
+  - Support for PNG, JPEG, GIF, BMP formats
+  - Format detection from magic bytes
+  - LRU cache for loaded images
+- **KittyGraphics.zig**: Kitty graphics protocol
+  - Full Kitty terminal graphics support
+  - Base64-encoded image data
+  - Image placement options
+- **ITerm2Graphics.zig**: iTerm2 inline images
+  - iTerm2 image protocol support
+  - WezTerm compatibility
+  - Dimension controls
+- **SixelGraphics.zig**: Sixel graphics
+  - Sixel protocol implementation
+  - 6-pixel vertical encoding
+  - Color palette support
+- **AsciiArt.zig**: ASCII fallback
+  - Luminance-based ASCII conversion
+  - Unicode block character mode
+  - Configurable dimensions
+- **ImageRenderer.zig**: Unified renderer
+  - Automatic protocol detection
+  - Fallback chain: Kitty → iTerm2 → Sixel → ASCII
+
 ---
 
 ## Current State
 
 - **Binary:** `tuia` (~2.9MB)
-- **Tests:** 50+ passing
+- **Tests:** 55+ passing
 - **Build:** Cross-compilation working
 - **CI:** All workflows passing
 
@@ -154,4 +182,4 @@
 
 ## Next Phase
 
-**Phase 3.3: Image Support** - See `DO_NEXT.md`
+**Phase 3.4: Code Execution** - See `DO_NEXT.md`
