@@ -4,31 +4,31 @@
 
 ---
 
-## Current Phase: 3.4 - Code Execution
+## Current Phase: 3.5 - Configuration System
 
-**Goal:** Implement code block execution
+**Goal:** Implement user configuration system
 
 ### Tasks
 
 | ID | Task | Description | Est. Hours |
 |----|------|-------------|------------|
-| 3.4.1 | Executor Engine | Run code in subprocess | 6 |
-| 3.4.2 | Language Support | Support multiple languages | 4 |
-| 3.4.3 | Output Capture | Display execution results | 4 |
-| 3.4.4 | Security | Sandboxing and timeouts | 4 |
+| 3.5.1 | Config Parser | Parse config files | 4 |
+| 3.5.2 | Config Manager | Manage user settings | 4 |
+| 3.5.3 | CLI Integration | Connect config to CLI | 3 |
+| 3.5.4 | Config Defaults | Sensible defaults | 2 |
 
 ### Deliverables
 
-- Code execution engine
-- Language runner modules
-- Output display widget
+- Configuration file parser
+- Config manager module
+- CLI integration
 
 ### Acceptance Criteria
 
-- [ ] Execute code blocks
-- [ ] Support Python, Zig, Bash
-- [ ] Display stdout/stderr
-- [ ] Configurable timeouts
+- [ ] Read config from file
+- [ ] Override with CLI args
+- [ ] Sensible defaults
+- [ ] Hot reload support
 
 ---
 

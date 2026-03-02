@@ -169,12 +169,37 @@
   - Automatic protocol detection
   - Fallback chain: Kitty → iTerm2 → Sixel → ASCII
 
+### Phase 3.4: Code Execution ✅
+
+**Date:** 2026-03-02
+
+- **CodeExecutor.zig**: Core execution engine
+  - Execute code blocks in sandboxed processes
+  - Configurable timeout with automatic termination
+  - stdout/stderr capture with size limits
+  - Fork/exec-based process management
+- **LanguageRunner.zig**: Language-specific runners
+  - Support for Bash, Python, JavaScript, Zig, Rust, Go, Lua, Ruby
+  - Language detection from string identifiers
+  - Runtime availability checking
+  - Default code templates per language
+- **OutputCapture.zig**: Output handling
+  - Line-by-line output collection
+  - Stream type tracking (stdout/stderr)
+  - Output formatting with color codes
+  - Scrollable output widget
+  - Statistics (line count, byte count)
+- **ExecutorRegistry.zig**: Execution management
+  - Centralized executor registry
+  - Language availability queries
+  - Execution result caching
+
 ---
 
 ## Current State
 
 - **Binary:** `tuia` (~2.9MB)
-- **Tests:** 55+ passing
+- **Tests:** 60+ passing
 - **Build:** Cross-compilation working
 - **CI:** All workflows passing
 
@@ -182,4 +207,4 @@
 
 ## Next Phase
 
-**Phase 3.4: Code Execution** - See `DO_NEXT.md`
+**Phase 3.5: Configuration System** - See `DO_NEXT.md`
