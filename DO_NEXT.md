@@ -4,44 +4,41 @@
 
 ---
 
-## Current Phase: 2.6 - Code Highlighting
+## Current Phase: 3.1 - Speaker Notes
 
-**Goal:** Implement syntax highlighting for code blocks
+**Goal:** Implement speaker notes display
 
 ### Tasks
 
 | ID | Task | Description | Est. Hours |
 |----|------|-------------|------------|
-| 2.6.1 | Syntax Parser | Parse code into tokens | 8 |
-| 2.6.2 | Language Support | Support top languages | 6 |
-| 2.6.3 | Highlight Rules | Define color rules | 6 |
-| 2.6.4 | Integration | Apply highlighting to CodeWidget | 4 |
+| 3.1.1 | Note Parser | Parse speaker notes from markdown | 4 |
+| 3.1.2 | Note Display | Display notes in terminal | 4 |
+| 3.1.3 | Separate Window | Support separate note window | 6 |
 
 ### Deliverables
 
-- Syntax highlighter module
-- Language definitions (Zig, Python, JS, etc.)
-- Highlight theme integration
-- Updated CodeWidget with colors
+- Speaker note parser
+- Note display widget
+- Dual-window support
 
 ### Acceptance Criteria
 
-- [ ] Code blocks show syntax highlighting
-- [ ] Multiple languages supported
-- [ ] Highlighting matches theme colors
-- [ ] Performance <10ms for 100 lines
+- [ ] Notes parsed from <!-- note --> comments
+- [ ] Notes display in presentation
+- [ ] Separate terminal window for notes
 
 ---
 
 ## Upcoming Phases
 
-### Phase 3.1: Speaker Notes
-- Note display in terminal
-- Separate note window support
-
 ### Phase 3.2: Export Formats
 - Static HTML export
 - PDF generation
+
+### Phase 3.3: Image Support
+- Kitty graphics protocol
+- iTerm2 inline images
 
 ---
 

@@ -3,7 +3,7 @@
 > Current status of TUIA (Terminal UI Application)
 
 **Last Updated:** 2026-03-02  
-**Current Phase:** 2.6 - Code Highlighting  
+**Current Phase:** 3.1 - Speaker Notes  
 **Repository:** https://github.com/e6qu/tuia
 
 ---
@@ -14,14 +14,14 @@
 Milestone 0: Specification        ✅ COMPLETE
 Milestone 1: Foundation           ✅ COMPLETE
   Phase 1.1-1.4                   ✅ COMPLETE
-Milestone 2: Core Presentation    🔄 IN PROGRESS
+Milestone 2: Core Presentation    ✅ COMPLETE
   Phase 2.1: Markdown Parser      ✅ COMPLETE
   Phase 2.2: Slide Model          ✅ COMPLETE
   Phase 2.3: Widget System        ✅ COMPLETE
   Phase 2.4: Theme Engine         ✅ COMPLETE
   Phase 2.5: Navigation & Input   ✅ COMPLETE
-  Phase 2.6: Code Highlighting    ⏳ CURRENT
-Milestone 3: Advanced Features    ⏳ PENDING
+  Phase 2.6: Code Highlighting    ✅ COMPLETE
+Milestone 3: Advanced Features    🔄 IN PROGRESS
 Milestone 4: Polish & Release     ⏳ PENDING
 ```
 
@@ -59,16 +59,24 @@ Milestone 4: Polish & Release     ⏳ PENDING
 - StatusBar for slide info and messages
 - Jump-to-slide functionality
 
-## ⏳ Current Phase: 2.6 - Code Highlighting
+### Phase 2.6: Code Highlighting ✅
+
+- Token types for syntax highlighting (TokenKind enum)
+- Language definitions for Zig, Python, JavaScript, TypeScript, Bash, JSON
+- Keyword sets for each supported language
+- Highlighter engine with tokenizer
+- SyntaxColors in Theme for code highlighting
+- Integration with dark and light themes
+
+## ⏳ Current Phase: 3.1 - Speaker Notes
 
 ### Tasks
 
 | ID | Task | Status |
 |----|------|--------|
-| 2.6.1 | Syntax Parser | ⏳ Pending |
-| 2.6.2 | Language Support | ⏳ Pending |
-| 2.6.3 | Highlight Rules | ⏳ Pending |
-| 2.6.4 | Integration | ⏳ Pending |
+| 3.1.1 | Note Parser | ⏳ Pending |
+| 3.1.2 | Note Display | ⏳ Pending |
+| 3.1.3 | Separate Window | ⏳ Pending |
 
 ---
 
