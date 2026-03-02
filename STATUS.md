@@ -3,7 +3,7 @@
 > Current status of TUIA (Terminal UI Application)
 
 **Last Updated:** 2026-03-02  
-**Current Phase:** 4.1 - Documentation  
+**Current Phase:** 4.2 - Polish & Release  
 **Repository:** https://github.com/e6qu/tuia
 
 ---
@@ -28,7 +28,8 @@ Milestone 3: Advanced Features    ✅ COMPLETE
   Phase 3.4: Code Execution       ✅ COMPLETE
   Phase 3.5: Configuration System ✅ COMPLETE
 Milestone 4: Polish & Release     🔄 IN PROGRESS
-  Phase 4.1: Documentation        ⏳ PENDING
+  Phase 4.1: Documentation        ✅ COMPLETE
+  Phase 4.2: Polish & Release     ⏳ PENDING
 ```
 
 ---
@@ -113,18 +114,26 @@ Milestone 4: Polish & Release     🔄 IN PROGRESS
 - Sample configuration generation
 - Support for system, user, and project-level configs
 
+### Phase 4.1: Documentation ✅
+
+- Comprehensive User Guide (docs/USER_GUIDE.md)
+- Updated README with current features and quick start
+- Three example presentations (demo, tutorial, cheatsheet)
+- API documentation for library users (docs/API.md)
+- Complete documentation coverage
+
 ---
 
-## ⏳ Current Phase: 4.1 - Documentation
+## ⏳ Current Phase: 4.2 - Polish & Release
 
 ### Tasks
 
 | ID | Task | Status |
 |----|------|--------|
-| 4.1.1 | User Guide | ⏳ Pending |
-| 4.1.2 | API Docs | ⏳ Pending |
-| 4.1.3 | Examples | ⏳ Pending |
-| 4.1.4 | README | ⏳ Pending |
+| 4.2.1 | Performance Optimization | ⏳ Pending |
+| 4.2.2 | Final Testing | ⏳ Pending |
+| 4.2.3 | Release Packaging | ⏳ Pending |
+| 4.2.4 | GitHub Release | ⏳ Pending |
 
 ---
 
@@ -135,6 +144,7 @@ Milestone 4: Polish & Release     🔄 IN PROGRESS
 | Binary size | ~3MB | <5MB ✅ |
 | Test count | 70+ | 100+ 🔄 |
 | Cross-compile | 5 targets | 5 targets ✅ |
+| Documentation | Complete | Complete ✅ |
 
 ---
 
@@ -150,4 +160,4 @@ Milestone 4: Polish & Release     🔄 IN PROGRESS
 
 ---
 
-*Ready for Phase 4.1: Documentation*
+*Ready for Phase 4.2: Polish & Release*

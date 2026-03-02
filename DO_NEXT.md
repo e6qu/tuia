@@ -4,41 +4,44 @@
 
 ---
 
-## Current Phase: 4.1 - Documentation
+## Current Phase: 4.2 - Polish & Release
 
-**Goal:** Create comprehensive user and developer documentation
+**Goal:** Final optimizations and release preparation
 
 ### Tasks
 
 | ID | Task | Description | Est. Hours |
 |----|------|-------------|------------|
-| 4.1.1 | User Guide | Write user documentation | 4 |
-| 4.1.2 | API Docs | Document public APIs | 3 |
-| 4.1.3 | Examples | Create example presentations | 2 |
-| 4.1.4 | README | Update main README | 2 |
+| 4.2.1 | Performance | Profile and optimize | 3 |
+| 4.2.2 | Testing | Final test pass | 2 |
+| 4.2.3 | Packaging | Release builds | 2 |
+| 4.2.4 | Release | GitHub release | 1 |
 
 ### Deliverables
 
-- User guide with examples
-- API documentation
-- Example presentations
-- Updated README
+- Optimized binary
+- All tests passing
+- Release packages
+- GitHub release
 
 ### Acceptance Criteria
 
-- [ ] Complete user guide
-- [ ] API docs for all public modules
-- [ ] Example presentations
-- [ ] README with badges and quickstart
+- [ ] Binary size < 5MB
+- [ ] Startup < 50ms
+- [ ] All CI checks pass
+- [ ] Release notes
+- [ ] Installation instructions
 
 ---
 
-## Upcoming Phases
+## Release Checklist
 
-### Phase 4.2: Polish & Release
-- Performance optimization
-- Final testing
-- Release packaging
+- [ ] Update version in source
+- [ ] Create Git tag
+- [ ] Build release binaries for all platforms
+- [ ] Write release notes
+- [ ] Update changelog
+- [ ] Create GitHub release
 
 ---
 

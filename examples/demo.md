@@ -1,77 +1,117 @@
+# TUIA Demo
+
+A showcase of TUIA features
+
+<!-- note: Welcome to the TUIA demo! This presentation showcases all the major features. -->
+
 ---
-title: "tuia Demo"
-author: "tuia Team"
-date: "2026-03-01"
-theme: "dark"
+
+## Text Formatting
+
+**Bold text** for emphasis
+
+*Italic text* for style
+
+~~Strikethrough~~ for corrections
+
+`Inline code` for technical terms
+
 ---
 
-Welcome to tuia
-================
+## Lists
 
-A fast, lightweight terminal presentation tool written in **Zig**.
-
-<!-- end_slide -->
-
-Features
-========
-
-- 📝 **Markdown-based** - Write in familiar Markdown
-- 🎨 **Themes** - Beautiful built-in themes
-- 🖼️ **Images** - Display images in terminal
-- 💻 **Code execution** - Run code snippets live
-- 🎯 **Syntax highlighting** - 20+ languages
-- ⚡ **Fast** - <50ms startup
-
-<!-- end_slide -->
-
-Code Example
-============
-
-```zig
-const std = @import("std");
-
-pub fn main() void {
-    std.debug.print("Hello from tuia!\n", .{});
-}
-```
-
-<!-- end_slide -->
-
-Lists
-=====
-
-**Unordered:**
+Unordered lists:
 
 - First item
 - Second item
+  - Nested item A
+  - Nested item B
 - Third item
 
-**Ordered:**
+Ordered lists:
 
 1. Step one
 2. Step two
 3. Step three
 
-<!-- end_slide -->
+---
 
-Incremental Reveal
-==================
+## Code Highlighting
 
-This is shown first.
+### Zig
 
-<!-- pause -->
+```zig
+const std = @import("std");
 
-This appears after pressing next.
+pub fn main() !void {
+    const stdout = std.io.getStdOut().writer();
+    try stdout.print("Hello, {s}!\n", .{"World"});
+}
+```
 
-<!-- pause -->
+---
 
-And this appears last.
+## More Languages
 
-<!-- end_slide -->
+### Python
 
-The End
-=======
+```python
+def fibonacci(n):
+    if n <= 1:
+        return n
+    return fibonacci(n-1) + fibonacci(n-2)
 
-Thank you for trying **tuia**!
+print(f"Fib(10) = {fibonacci(10)}")
+```
 
-Questions?
+### JavaScript
+
+```javascript
+const greet = (name) => {
+    console.log(`Hello, ${name}!`);
+};
+
+greet("World");
+```
+
+---
+
+## Blockquotes
+
+> "The best way to predict the future is to invent it."
+>
+> — Alan Kay
+
+> Simplicity is the ultimate sophistication.
+
+---
+
+## Speaker Notes
+
+This slide has speaker notes!
+
+<!-- note: These are speaker notes. Press 'n' (configurable) to view them during the presentation. They're great for reminders and additional context that you don't want on the slide itself. -->
+
+---
+
+## Navigation Help
+
+| Key | Action |
+|-----|--------|
+| j, ↓, Space | Next slide |
+| k, ↑, Backspace | Previous slide |
+| g | First slide |
+| G | Last slide |
+| 1-9 | Jump to slide |
+| ? | Show help |
+| q | Quit |
+
+---
+
+## The End
+
+Thanks for trying TUIA!
+
+**GitHub:** https://github.com/e6qu/tuia
+
+<!-- note: Thank the audience and mention where to find more information. -->

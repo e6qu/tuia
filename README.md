@@ -1,182 +1,295 @@
-# tuia
+# TUIA
 
 > A fast, lightweight terminal presentation tool written in Zig.
 
 [![CI](https://github.com/e6qu/tuia/workflows/CI/badge.svg)](https://github.com/e6qu/tuia/actions)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
+[![Zig Version](https://img.shields.io/badge/Zig-0.15.2-orange.svg)](https://ziglang.org)
 
-**Status:** 🚧 In Development (Milestone 1: Foundation)
+**Status:** ✅ Feature Complete (Pre-release)
+
+---
 
 ## Features
 
 - 📝 **Markdown-based** - Write presentations in familiar Markdown
 - 🎨 **Themes** - Built-in dark/light themes, custom theme support
-- 🖼️ **Images** - Kitty, iTerm2, and Sixel image protocols
-- 💻 **Code execution** - Run code snippets directly in presentations
-- 🎯 **Syntax highlighting** - 20+ programming languages
-- 📦 **Single binary** - No dependencies, easy to distribute
-- ⚡ **Fast** - <50ms startup, smooth 60fps rendering
+- 🖼️ **Images** - Kitty, iTerm2, Sixel, and ASCII art fallbacks
+- 💻 **Code Execution** - Run code snippets in 8+ languages
+- 🎯 **Syntax Highlighting** - 10+ programming languages
+- 📤 **Export** - Self-contained HTML export
+- 🗒️ **Speaker Notes** - Hidden notes for presenters
+- ⚡ **Fast** - ~3MB binary, smooth rendering
+- 🔧 **Configurable** - YAML configuration, CLI overrides
 
-## Current Status
-
-**Milestone 1: Foundation** - In Progress
-
-- ✅ Project structure
-- ✅ Build system
-- ✅ Basic CLI
-- 🔄 TUI integration (next)
+---
 
 ## Installation
 
-### From Source
+### Requirements
 
-Requirements: Zig 0.15.0+
+- Zig 0.15.2+ (for building)
+- Terminal with Unicode support (recommended)
+
+### From Source
 
 ```bash
 # Clone repository
 git clone https://github.com/e6qu/tuia.git
 cd tuia
 
-# Build
-zig build -Doptimize=ReleaseFast
+# Build optimized binary
+zig build -Doptimize=ReleaseSafe
 
-# Install (optional)
-cp zig-out/bin/tuia ~/.local/bin/
+# Install to PATH
+sudo cp zig-out/bin/tuia /usr/local/bin/
 ```
 
-### Development Build
+### Pre-built Binaries
 
-```bash
-# Debug build
-zig build
+Download from [Releases](https://github.com/e6qu/tuia/releases) (coming soon)
 
-# Run
-zig build run -- examples/demo.md
-
-# Test
-zig build test
-
-# Verify (format + tests)
-zig build verify
-```
+---
 
 ## Quick Start
 
-Create `presentation.md`:
+Create a presentation:
 
-```markdown
+```bash
+cat > hello.md << 'EOF'
+# Hello World
+
+Welcome to **TUIA**!
+
 ---
-title: "My Talk"
-author: "Jane Doe"
+
+## Features
+
+- Fast & lightweight
+- Markdown-based
+- Live reload
+
 ---
 
-Welcome
-=======
-
-This is my presentation!
-
-<!-- end_slide -->
-
-Code Example
-============
+## Code Example
 
 ```zig
 const std = @import("std");
 
 pub fn main() void {
-    std.debug.print("Hello, world!\n", .{});
+    std.debug.print("Hello!\n", .{});
 }
 ```
-
-<!-- end_slide -->
-
-The End
-=======
-
-Thank you!
+EOF
 ```
 
 Present it:
 
 ```bash
-tuia presentation.md
+tuia hello.md
 ```
+
+**Navigation:**
+- `j`/`k` or `↑`/`↓` - Navigate slides
+- `g`/`G` - First/last slide
+- `1-9` - Jump to slide
+- `?` - Help
+- `q` - Quit
+
+---
 
 ## Usage
 
 ```bash
-# Present a file
+# Basic usage
 tuia presentation.md
+
+# With custom theme
+tuia -t light presentation.md
+
+# Export to HTML
+tuia -e html -o output/ presentation.md
+
+# Create sample config
+tuia --init > tuia.yaml
 
 # Show help
 tuia --help
-
-# Show version
-tuia --version
 ```
 
-## Project Structure
+### Command-Line Options
 
+| Option | Description |
+|--------|-------------|
+| `-c, --config <FILE>` | Use specific config file |
+| `-t, --theme <THEME>` | Set theme (dark, light, custom) |
+| `--loop` | Loop presentation |
+| `--auto-advance <SEC>` | Auto-advance slides |
+| `--timeout <SEC>` | Code execution timeout |
+| `-e, --export <FORMAT>` | Export to format (html) |
+| `-o, --output <DIR>` | Output directory for export |
+| `--init` | Generate sample config |
+| `-h, --help` | Show help |
+| `-V, --version` | Show version |
+
+---
+
+## Markdown Format
+
+TUIA uses standard Markdown with `---` slide separators:
+
+```markdown
+# Title Slide
+
+Welcome to my presentation!
+
+---
+
+## Code Slide
+
+```python
+def hello():
+    print("Hello, World!")
 ```
-tuia/
-├── specs/           # Specifications
-├── src/             # Source code
-│   ├── main.zig     # Entry point
-│   ├── core/        # Data models
-│   ├── parser/      # Markdown parser
-│   ├── render/      # Rendering engine
-│   ├── widgets/     # UI components
-│   └── features/    # Images, execution, etc.
-├── tests/           # Tests
-├── examples/        # Example presentations
-└── docs/            # Documentation
+
+---
+
+## List Slide
+
+- Point one
+- Point two
+- Point three
+
+---
+
+## The End
+
+Thank you!
 ```
 
-## Documentation
+### Supported Elements
 
-- [Project Plan](PLAN.md) - Roadmap and milestones
-- [Specification Index](specs/README.md) - All specifications
-- [Development Guide](docs/DEVELOPMENT.md) - Contributing
-- [Architecture](specs/architecture/ARCHITECTURE.md) - System design
-- [File Format](specs/formats/FILE_FORMAT.md) - Markdown format
+- Headings (`#`, `##`, `###`)
+- Text formatting (**bold**, *italic*, ~~strikethrough~~)
+- Lists (ordered and unordered)
+- Code blocks with syntax highlighting
+- Images (PNG, JPEG, GIF, BMP)
+- Blockquotes
+- Speaker notes (`<!-- note: ... -->`)
 
-## Development
+See [User Guide](docs/USER_GUIDE.md) for complete documentation.
 
-### Setup
+---
+
+## Configuration
+
+Create `~/.config/tuia/tuia.yaml`:
+
+```yaml
+theme:
+  name: dark
+
+presentation:
+  loop: false
+  show_slide_numbers: true
+
+keys:
+  next_slide: j
+  prev_slide: k
+  quit: q
+
+display:
+  truecolor: true
+  mouse: true
+
+executor:
+  timeout_seconds: 30
+```
+
+Generate a sample config:
 
 ```bash
-# Install Zig 0.15.0+
-# https://ziglang.org/download/
-
-# Clone
-git clone https://github.com/e6qu/tuia.git
-cd tuia
-
-# Build
-zig build
-
-# Run tests
-zig build test
+tuia --init > ~/.config/tuia/tuia.yaml
 ```
 
-### Project Phases
+---
+
+## Project Status
 
 | Milestone | Status | Description |
 |-----------|--------|-------------|
 | 0: Specification | ✅ Complete | All specs written |
-| 1: Foundation | 🔄 In Progress | Build system, TUI setup |
-| 2: Core | ⏳ Planned | Parser, widgets, themes |
-| 3: Features | ⏳ Planned | Images, execution, export |
-| 4: Polish | ⏳ Planned | Docs, packaging, release |
+| 1: Foundation | ✅ Complete | Build system, TUI, testing |
+| 2: Core | ✅ Complete | Parser, widgets, themes, highlighting |
+| 3: Features | ✅ Complete | Images, execution, export, config |
+| 4: Polish | 🔄 In Progress | Documentation, packaging |
 
 See [PLAN.md](PLAN.md) for detailed roadmap.
 
-## License
+---
 
-AGPL-3.0 License - see [LICENSE](LICENSE) file.
+## Documentation
+
+- **[User Guide](docs/USER_GUIDE.md)** - Complete usage guide
+- **[PLAN.md](PLAN.md)** - Project roadmap and milestones
+- **[STATUS.md](STATUS.md)** - Current development status
+- **[WHAT_WE_DID.md](WHAT_WE_DID.md)** - Completed work log
+
+---
+
+## Development
+
+```bash
+# Build
+cd tuia
+zig build
+
+# Run with example
+zig build run -- examples/demo.md
+
+# Run tests
+zig build test
+
+# Format check + tests
+zig build verify
+```
+
+### Project Structure
+
+```
+tuia/
+├── src/
+│   ├── main.zig          # Entry point
+│   ├── cli.zig           # CLI parsing
+│   ├── config/           # Configuration system
+│   ├── core/             # Data models (Slide, Presentation)
+│   ├── parser/           # Markdown parser
+│   ├── render/           # Theme & styling
+│   ├── widgets/          # UI components
+│   ├── features/         # Images, execution, export
+│   ├── highlight/        # Syntax highlighting
+│   └── infra/            # File watching, logging
+├── tests/                # Test suite
+├── examples/             # Example presentations
+├── docs/                 # Documentation
+└── themes/               # Built-in themes
+```
+
+---
 
 ## Acknowledgments
 
 - Inspired by [presenterm](https://github.com/mfontanini/presenterm)
 - Built with [Zig](https://ziglang.org/)
-- Uses [libvaxis](https://github.com/rockorager/libvaxis) for TUI
+- TUI powered by [libvaxis](https://github.com/rockorager/libvaxis)
+- Image support via [zigimg](https://github.com/zigimg/zigimg)
+
+---
+
+## License
+
+AGPL-3.0 License - see [LICENSE](LICENSE) file.
+
+---
+
+<p align="center">Made with ❤️ and Zig</p>
