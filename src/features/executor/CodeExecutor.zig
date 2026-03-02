@@ -112,8 +112,11 @@ pub const CodeExecutor = struct {
         return file_name;
     }
 
-    /// Run command with timeout
+    /// Run command with timeout (POSIX only)
     fn runWithTimeout(self: Self, cmd: []const [:0]const u8) !ExecutionResult {
+        if (@import("builtin").os.tag == .windows) {
+            return error.NotSupported;
+        }
         const start_time = std.time.milliTimestamp();
 
         // Create pipes for stdout/stderr
