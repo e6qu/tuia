@@ -34,6 +34,8 @@ pub fn build(b: *std.Build) void {
         .name = "tuia",
         .root_module = exe_module,
     });
+    // Link libc for CodeExecutor (fork, execvp, waitpid, etc.)
+    exe.linkLibC();
     b.installArtifact(exe);
 
     // Run command
