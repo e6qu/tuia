@@ -3,7 +3,7 @@
 > This document tracks bugs and missing features discovered during testing.
 
 **Last Updated:** 2026-03-03
-**Open Bug Count:** 5 (1 High, 1 Medium, 3 Low)  
+**Open Bug Count:** 1 (1 Low)  
 **Status:** Active Development
 
 ---
@@ -17,13 +17,13 @@
 | Medium | 1 | 5 | 6 |
 | Low | 1 | 2 | 3 |
 
-**Note:** HIGH-4 was verified as already protected by errdefer. LOW-2 and LOW-3 fixed in Phase 10.
+**Note:** HIGH-4 was verified as already protected by errdefer. LOW-2 and LOW-3 fixed in Phase 10. MED-2 is a known limitation in Zig 0.15.2.
 
 **Recent Bug Hunts:** Phase 1-9 completed (17 critical bugs fixed)
 
 ---
 
-## 🔴 Open Bugs (2 Remaining)
+## 🔴 Open Bugs (1 Remaining)
 
 ### HIGH-4: Memory Leak in FrontMatter.parseWithContent()
 **Status:** ✅ Fixed (Code Review)  
@@ -43,14 +43,20 @@ Initial analysis suggested a memory leak in error paths, but code review reveale
 ---
 
 ### MED-2: RemoteServer Does Not Handle HTTP Keep-Alive
-**Status:** 🟡 Minor  
+**Status:** 🟡 Known Limitation  
 **Component:** Remote Control  
 **Impact:** Low
 
 **Description:**  
-The RemoteServer sends `Connection: close` headers but does not properly handle connection shutdown. Modern browsers may try to reuse connections which could cause issues.
+The RemoteServer sends `Connection: close` headers but cannot properly shut down the write side of the connection before closing. In Zig 0.15.2, `net.Stream` does not expose a `shutdown()` method.
 
-**Location:** `src/features/remote/RemoteServer.zig:168-174`
+**Workaround:**  
+The server sends `Connection: close` header to indicate the connection should not be reused. Most browsers handle this correctly. The `defer conn.stream.close()` in the server loop ensures connections are closed after handling.
+
+**Future Fix:**  
+When Zig's net.Stream adds shutdown support (or we implement posix.shutdown directly), add proper connection shutdown before close.
+
+**Location:** `src/features/remote/RemoteServer.zig:75` (defer close)
 
 ---
 
