@@ -11,7 +11,7 @@ const Finding = struct {
     severity: Severity,
 
     const Severity = enum {
-        error,
+        err,
         warning,
         info,
     };
@@ -24,12 +24,12 @@ const Linter = struct {
     fn init(allocator: std.mem.Allocator) Linter {
         return .{
             .allocator = allocator,
-            .findings = std.ArrayList(Finding).init(allocator),
+            .findings = .empty,
         };
     }
 
     fn deinit(self: *Linter) void {
-        self.findings.deinit();
+        self.findings.deinit(self.allocator);
     }
 
     fn lintFile(self: *Linter, file_path: []const u8, source: []const u8) !void {
@@ -40,8 +40,8 @@ const Linter = struct {
         try self.checkNullSafety(file_path, source);
     }
 
-    fn checkBoundsIssues(self: *Linter, file_path: []const u8, source: []const u8) !void {
-        var lines = std.mem.split(u8, source, "\n");
+    fn checkBoundsIssues(_: *Linter, _: []const u8, source: []const u8) !void {
+        var lines = std.mem.splitScalar(u8, source, '\n');
         var line_num: u32 = 0;
 
         while (lines.next()) |line| : (line_num += 1) {
@@ -67,7 +67,7 @@ const Linter = struct {
     }
 
     fn checkIntegerSafety(self: *Linter, file_path: []const u8, source: []const u8) !void {
-        var lines = std.mem.split(u8, source, "\n");
+        var lines = std.mem.splitScalar(u8, source, '\n');
         var line_num: u32 = 0;
 
         while (lines.next()) |line| : (line_num += 1) {
@@ -76,17 +76,17 @@ const Linter = struct {
                 std.mem.indexOf(u8, line, "- 1") != null)
             {
                 // Check if there's a guard
-                var has_guard = false;
+                const has_guard = false;
                 // Look at previous 3 lines for guard
                 // (simplified - would need proper multi-line analysis)
 
                 if (!has_guard) {
-                    try self.findings.append(.{
+                    try self.findings.append(self.allocator, .{
                         .file = file_path,
                         .line = line_num,
                         .column = 0,
                         .message = "Potential integer underflow: total_slides - 1 without zero check",
-                        .severity = .error,
+                        .severity = .err,
                     });
                 }
             }
@@ -102,7 +102,7 @@ const Linter = struct {
     }
 
     fn checkMemorySafety(self: *Linter, file_path: []const u8, source: []const u8) !void {
-        var lines = std.mem.split(u8, source, "\n");
+        var lines = std.mem.splitScalar(u8, source, '\n');
         var line_num: u32 = 0;
 
         while (lines.next()) |line| : (line_num += 1) {
@@ -111,12 +111,12 @@ const Linter = struct {
                 std.mem.indexOf(u8, line, ".free(") != null)
             {
                 if (std.mem.indexOf(u8, line, "\"") != null) {
-                    try self.findings.append(.{
+                    try self.findings.append(self.allocator, .{
                         .file = file_path,
                         .line = line_num,
                         .column = 0,
                         .message = "Potential free of string literal - verify this is heap-allocated",
-                        .severity = .error,
+                        .severity = .err,
                     });
                 }
             }
@@ -132,7 +132,7 @@ const Linter = struct {
     }
 
     fn checkNullSafety(self: *Linter, file_path: []const u8, source: []const u8) !void {
-        var lines = std.mem.split(u8, source, "\n");
+        var lines = std.mem.splitScalar(u8, source, '\n');
         var line_num: u32 = 0;
 
         while (lines.next()) |line| : (line_num += 1) {
@@ -141,7 +141,7 @@ const Linter = struct {
                 // Skip if in if condition
                 if (std.mem.indexOf(u8, line, "if (") != null) continue;
 
-                try self.findings.append(.{
+                try self.findings.append(self.allocator, .{
                     .file = file_path,
                     .line = line_num,
                     .column = 0,
@@ -153,34 +153,34 @@ const Linter = struct {
     }
 
     fn report(self: *Linter) void {
-        const stderr = std.io.getStdErr().writer();
+        // Use std.debug.print for output
 
         var errors: u32 = 0;
         var warnings: u32 = 0;
 
         for (self.findings.items) |finding| {
             const severity_str = switch (finding.severity) {
-                .error => "ERROR",
+                .err => "ERROR",
                 .warning => "WARNING",
                 .info => "INFO",
             };
 
-            stderr.print("{s}:{d}:{d}: {s}: {s}\n", .{
+            std.debug.print("{s}:{d}:{d}: {s}: {s}\n", .{
                 finding.file,
                 finding.line + 1,
                 finding.column + 1,
                 severity_str,
                 finding.message,
-            }) catch {};
+            });
 
             switch (finding.severity) {
-                .error => errors += 1,
+                .err => errors += 1,
                 .warning => warnings += 1,
                 .info => {},
             }
         }
 
-        stderr.print("\nTotal: {d} errors, {d} warnings\n", .{ errors, warnings }) catch {};
+        std.debug.print("\nTotal: {d} errors, {d} warnings\n", .{ errors, warnings });
     }
 };
 
@@ -224,7 +224,7 @@ pub fn main() !void {
 
     // Exit with error code if there are errors
     for (linter.findings.items) |finding| {
-        if (finding.severity == .error) {
+        if (finding.severity == .err) {
             std.process.exit(1);
         }
     }

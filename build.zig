@@ -4,9 +4,6 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    // Sanitizer option
-    const sanitize = b.option(bool, "sanitize", "Build with AddressSanitizer") orelse false;
-
     // Get vaxis dependency
     const vaxis_dep = b.dependency("vaxis", .{
         .target = target,
