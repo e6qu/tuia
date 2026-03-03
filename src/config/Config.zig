@@ -60,6 +60,8 @@ pub const Config = struct {
         if (self.theme.custom_theme_path) |path| {
             allocator.free(path);
         }
+        // Free key bindings if they were allocated
+        self.keys.deinit(allocator);
         // Note: export_config.output_dir is not typically allocated during parsing
     }
 
@@ -159,6 +161,17 @@ pub const KeyConfig = struct {
         if (other.last_slide.len > 0) self.last_slide = other.last_slide;
         if (other.quit.len > 0) self.quit = other.quit;
         if (other.help.len > 0) self.help = other.help;
+    }
+
+    /// Free allocated memory
+    pub fn deinit(self: *KeyConfig, allocator: std.mem.Allocator) void {
+        // Free key strings if they're not the default static strings
+        if (self.next_slide.ptr != "j".ptr) allocator.free(self.next_slide);
+        if (self.prev_slide.ptr != "k".ptr) allocator.free(self.prev_slide);
+        if (self.first_slide.ptr != "gg".ptr) allocator.free(self.first_slide);
+        if (self.last_slide.ptr != "G".ptr) allocator.free(self.last_slide);
+        if (self.quit.ptr != "q".ptr) allocator.free(self.quit);
+        if (self.help.ptr != "?".ptr) allocator.free(self.help);
     }
 };
 

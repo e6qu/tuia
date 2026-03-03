@@ -305,7 +305,8 @@ fn spawnMediaPlayer(allocator: std.mem.Allocator, path: []const u8, media_type: 
     try argv.append(allocator, path);
 
     const args = try argv.toOwnedSlice(allocator);
-    defer allocator.free(args);
+    // Note: args is NOT freed here - Child.init() stores the pointer
+    // The caller is responsible for managing the child's lifecycle
 
     return std.process.Child.init(args, allocator);
 }

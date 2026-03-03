@@ -178,7 +178,7 @@ pub const ConfigParser = struct {
 /// Parse boolean from string
 fn parseBool(value: []const u8) bool {
     // Check common true values (case-insensitive)
-    if (value.len > 16) return false;
+    if (value.len >= 16) return false;
 
     var lower_buf: [16]u8 = undefined;
     @memset(&lower_buf, 0);
