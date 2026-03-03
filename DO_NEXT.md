@@ -34,7 +34,7 @@ Potential enhancements for future versions:
 - ✅ Audio/video support
 
 ### Configuration
-- GUI config editor
+- ✅ GUI config editor
 - Theme preview
 - ✅ Live theme switching
 

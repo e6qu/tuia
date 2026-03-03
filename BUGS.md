@@ -2,14 +2,61 @@
 
 > This document tracks bugs and missing features discovered during testing.
 
-**Last Updated:** 2026-03-02  
+**Last Updated:** 2026-03-03  
 **Status:** Active Development
 
 ---
 
 ## 🐛 Critical Bugs
 
-### ✅ CRITICAL-1: Code Blocks Parsed as Paragraphs
+### 🔴 CRITICAL-1: Race Condition in RemoteServer.start()
+**Status:** 🔴 Open  
+**Component:** Remote Control  
+**Impact:** Medium
+
+**Description:**  
+In `src/features/remote/RemoteServer.zig`, the `start()` method has a TOCTOU (Time-of-Check-Time-of-Use) race condition. The `running` flag is checked before acquiring the mutex, but then set while holding the mutex. This allows two threads to potentially both pass the initial check before either acquires the lock, resulting in spawning two server threads.
+
+**Location:** `src/features/remote/RemoteServer.zig:32-40`
+
+**Fix:** Move the mutex lock before the `running` check:
+```zig
+pub fn start(self: *Self, navigation: *Navigation) !void {
+    self.mutex.lock();
+    defer self.mutex.unlock();
+    
+    if (self.running) return;
+    
+    self.navigation = navigation;
+    self.running = true;
+    
+    self.server_thread = try std.Thread.spawn(.{}, serverLoop, .{self});
+}
+```
+
+---
+
+### 🐛 CRITICAL-2: ConfigEditor Memory Leak
+**Status:** 🔴 Open  
+**Component:** Config Editor  
+**Impact:** Medium
+
+**Description:**  
+`ConfigEditor.deinit()` does not free the cloned theme name allocated in `init()`. The `config.theme.name` is duplicated with `allocator.dupe()` but never freed.
+
+**Location:** `src/config/ConfigEditor.zig:76,81-83`
+
+**Fix:** Add cleanup for theme name in `deinit()`:
+```zig
+pub fn deinit(self: *Self) void {
+    self.allocator.free(self.config.theme.name);
+    self.input_buffer.deinit(self.allocator);
+}
+```
+
+---
+
+### ✅ CRITICAL-3: Code Blocks Parsed as Paragraphs (Fixed)
 **Status:** 🟢 Fixed  
 **Component:** Parser  
 **Impact:** High
@@ -39,7 +86,61 @@ code_block.code = "const x = 42;"
 
 ## ⚠️ High Priority Issues
 
-### ✅ HIGH-1: Inline Formatting Not Parsed
+### 🔴 HIGH-1: MediaPlayer Thread Safety Issue
+**Status:** 🔴 Open  
+**Component:** Media Player  
+**Impact:** Medium
+
+**Description:**  
+In `src/features/media/MediaPlayer.zig`, the `MediaPlayback.monitorPlayback()` function modifies `self.state` and `self.process` without any synchronization. If the main thread calls `stop()` while the monitor thread is running, there's a race condition accessing these shared fields.
+
+**Location:** `src/features/media/MediaPlayer.zig:108-115`
+
+**Fix:** Add a mutex to protect shared state:
+```zig
+pub const MediaPlayback = struct {
+    // ... existing fields ...
+    mutex: std.Thread.Mutex = .{},
+    
+    fn monitorPlayback(self: *Self) void {
+        if (self.process) |*proc| {
+            _ = proc.wait() catch {};
+        }
+        
+        self.mutex.lock();
+        self.state = .stopped;
+        self.process = null;
+        self.mutex.unlock();
+    }
+}
+```
+
+---
+
+### 🟡 HIGH-2: PdfExporter Path Extension Handling Bug
+**Status:** 🟡 Minor  
+**Component:** PDF Export  
+**Impact:** Low
+
+**Description:**  
+In `PdfExporter.getTexPath()`, if the input path contains `.pdf` anywhere in the path (not just at the end), it will incorrectly replace it. For example, `/my.pdf.files/doc.pdf` becomes `/my.tex.files/doc.tex` instead of `/my.pdf.files/doc.tex`.
+
+**Location:** `src/export/PdfExporter.zig:99-103`
+
+**Fix:** Use `std.mem.endsWith()` check instead of checking the whole string:
+```zig
+fn getTexPath(self: Self, pdf_path: []const u8) ![]const u8 {
+    if (std.mem.endsWith(u8, pdf_path, ".pdf")) {
+        const base = pdf_path[0 .. pdf_path.len - 4];
+        return try std.mem.concat(self.allocator, u8, &.{ base, ".tex" });
+    }
+    return try std.mem.concat(self.allocator, u8, &.{ pdf_path, ".tex" });
+}
+```
+
+---
+
+### ✅ HIGH-3: Inline Formatting Not Parsed (Fixed)
 **Status:** 🟢 Fixed  
 **Component:** Parser  
 **Impact:** High
@@ -118,7 +219,39 @@ Content here
 
 ## 📝 Medium Priority Issues
 
-### ✅ MED-1: Ordered Lists Marked as Unordered
+### 🔴 MED-1: ConfigEditor Incomplete Implementation
+**Status:** 🔴 Open  
+**Component:** Config Editor  
+**Impact:** Medium
+
+**Description:**  
+`ConfigEditor` has incomplete functionality:
+1. Only the `theme` and `presentation` sections have editable fields implemented in `confirmEdit()` - `display` and `transitions` sections do nothing when edited.
+2. `getFieldCount()` returns hardcoded values but not all fields are actually editable.
+3. Boolean fields show "yes/no" but can only be edited by typing numbers (for auto_advance_seconds).
+4. No way to persist changes to config file - `dirty` flag is set but never used to save.
+
+**Location:** `src/config/ConfigEditor.zig:145-164`
+
+**Workaround:** None - the editor is for viewing only in practice.
+
+---
+
+### 🟡 MED-2: RemoteServer Does Not Handle HTTP Keep-Alive
+**Status:** 🟡 Minor  
+**Component:** Remote Control  
+**Impact:** Low
+
+**Description:**  
+The RemoteServer sends `Connection: close` headers but does not properly handle connection shutdown. Modern browsers may try to reuse connections which could cause issues.
+
+**Location:** `src/features/remote/RemoteServer.zig:168-174`
+
+**Fix:** Properly close connection or implement HTTP/1.1 keep-alive handling.
+
+---
+
+### ✅ MED-3: Ordered Lists Marked as Unordered (Fixed)
 **Status:** 🟢 Fixed  
 **Component:** Parser/Scanner  
 **Impact:** Medium
