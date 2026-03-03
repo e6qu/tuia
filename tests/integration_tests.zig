@@ -79,7 +79,10 @@ test "all modules compile" {
     _ = tuia.export_;
 }
 
-// Import export tests - DISABLED: Tests hang indefinitely (Issue #29)
+// Import export tests - DISABLED: Tests hang due to Parser infinite loop bug
+// See issue: Parser hangs on certain markdown patterns in e2e tests
+// The unit tests in src/export/* work correctly, but the integration tests
+// with full markdown parsing cause an infinite loop somewhere in Parser.zig
 // comptime {
 //     _ = @import("integration/export_tests.zig");
 // }
