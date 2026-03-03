@@ -3,8 +3,8 @@
 > This document tracks bugs and missing features discovered during testing.
 
 **Last Updated:** 2026-03-03
-**Open Bug Count:** 1 (1 Low)  
-**Status:** Active Development
+**Open Bug Count:** 0  
+**Status:** All Known Bugs Fixed
 
 ---
 
@@ -14,16 +14,18 @@
 |----------|------|----------------|-------|
 | Critical | 0 | 17 | 17 |
 | High | 0 | 6 | 6 |
-| Medium | 1 | 5 | 6 |
-| Low | 1 | 2 | 3 |
+| Medium | 0 | 6 | 6 |
+| Low | 0 | 3 | 3 |
 
-**Note:** HIGH-4 was verified as already protected by errdefer. LOW-2 and LOW-3 fixed in Phase 10. MED-2 is a known limitation in Zig 0.15.2.
+**Note:** HIGH-4 was verified as already protected by errdefer. LOW-2 and LOW-3 fixed in Phase 10. LOW-1 and MED-2 fixed in Phase 12.
 
 **Recent Bug Hunts:** Phase 1-9 completed (17 critical bugs fixed)
 
 ---
 
-## 🔴 Open Bugs (1 Remaining)
+## 🔴 Open Bugs (0 Remaining)
+
+**All known bugs have been fixed!**
 
 ### HIGH-4: Memory Leak in FrontMatter.parseWithContent()
 **Status:** ✅ Fixed (Code Review)  
@@ -43,33 +45,37 @@ Initial analysis suggested a memory leak in error paths, but code review reveale
 ---
 
 ### MED-2: RemoteServer Does Not Handle HTTP Keep-Alive
-**Status:** 🟡 Known Limitation  
+**Status:** ✅ Fixed  
 **Component:** Remote Control  
 **Impact:** Low
 
 **Description:**  
-The RemoteServer sends `Connection: close` headers but cannot properly shut down the write side of the connection before closing. In Zig 0.15.2, `net.Stream` does not expose a `shutdown()` method.
+The RemoteServer sent `Connection: close` headers but did not properly shut down the write side of the connection before closing.
 
-**Workaround:**  
-The server sends `Connection: close` header to indicate the connection should not be reused. Most browsers handle this correctly. The `defer conn.stream.close()` in the server loop ensures connections are closed after handling.
+**Fix:**  
+Used `posix.shutdown()` directly on the socket handle to shut down the send side of the connection after handling each request. This properly signals to clients that the server has finished sending data.
 
-**Future Fix:**  
-When Zig's net.Stream adds shutdown support (or we implement posix.shutdown directly), add proper connection shutdown before close.
-
-**Location:** `src/features/remote/RemoteServer.zig:75` (defer close)
+**Location:** `src/features/remote/RemoteServer.zig:131-134` (posix.shutdown call)
 
 ---
 
 ## 🔧 Low Priority Issues
 
 ### LOW-1: Hard Line Breaks Not Supported
-**Status:** 🟡 Partial (Deferred)  
+**Status:** ✅ Fixed  
 **Component:** Parser  
 **Impact:** Low
 
-Hard line breaks (two spaces + newline, or `<br/>`) are not converted to line breaks.
+Hard line breaks (two spaces + newline, or `<br/>`) were not converted to line breaks.
 
-**Note:** Full implementation requires parser changes. The Token type has `line_break` support, but parsing logic needs updates to handle hard breaks within paragraphs.
+**Fix:** 
+1. Scanner now detects two spaces at end of line and emits `line_break` token
+2. Parser now handles `<br>`, `<br/>`, and `<br />` HTML tags as line breaks
+3. Added `pending_line_break` state to Scanner for proper token sequencing
+
+**Location:** 
+- `src/parser/Scanner.zig` - Hard break detection (two spaces)
+- `src/parser/Parser.zig` - HTML `<br>` tag parsing
 
 ---
 

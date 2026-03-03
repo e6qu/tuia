@@ -7,6 +7,7 @@ pub const Scanner = struct {
     pos: usize,
     line: usize,
     col: usize,
+    pending_line_break: bool, // LOW-1: track hard line breaks (two spaces at EOL)
 
     const Self = @This();
 
@@ -16,10 +17,21 @@ pub const Scanner = struct {
             .pos = 0,
             .line = 1,
             .col = 1,
+            .pending_line_break = false,
         };
     }
 
     pub fn nextToken(self: *Self) Token {
+        // LOW-1 fix: If we have a pending line break from two spaces, emit it now
+        if (self.pending_line_break) {
+            self.pending_line_break = false;
+            // Consume the newline that follows the two spaces
+            if (!self.isAtEnd() and self.source[self.pos] == @as(u8, '\n')) {
+                _ = self.advance(); // consume newline
+            }
+            return self.makeToken(.line_break, self.pos, self.line, self.col, 0);
+        }
+
         // Calculate indentation at start of line before skipping whitespace
         const indent = self.calculateIndent();
 
@@ -138,6 +150,30 @@ pub const Scanner = struct {
         // Regular text - consume until end of line
         while (!self.isAtEnd() and self.peek() != '\n') {
             _ = self.advance();
+        }
+
+        // LOW-1 fix: Check for hard line break (two spaces at end of line)
+        const text_end = self.pos;
+        const has_hard_break = text_end >= start + 2 and
+            self.source[text_end - 1] == ' ' and
+            self.source[text_end - 2] == ' ';
+
+        if (has_hard_break) {
+            // Count trailing spaces (need at least 2)
+            var space_count: usize = 0;
+            var i = text_end;
+            while (i > start and self.source[i - 1] == ' ') {
+                space_count += 1;
+                i -= 1;
+            }
+
+            if (space_count >= 2) {
+                // Move position back to before the trailing spaces
+                self.pos = text_end - space_count;
+                self.col -= space_count;
+                self.pending_line_break = true;
+                return self.makeToken(.text, start, line, col, indent);
+            }
         }
 
         return self.makeToken(.text, start, line, col, indent);
@@ -347,4 +383,22 @@ test "Scanner thematic break variations" {
     var scanner3 = Scanner.init("___");
     const t3 = scanner3.nextToken();
     try testing.expectEqual(.thematic_break, t3.type);
+}
+
+test "Scanner hard line break (two spaces)" {
+    const testing = std.testing;
+
+    // Test hard line break with two spaces at end of line (LOW-1 fix)
+    var scanner = Scanner.init("Line one  \nLine two");
+
+    const t1 = scanner.nextToken();
+    try testing.expectEqual(.text, t1.type);
+    try testing.expectEqualStrings("Line one", t1.text);
+
+    const t2 = scanner.nextToken();
+    try testing.expectEqual(.line_break, t2.type);
+
+    const t3 = scanner.nextToken();
+    try testing.expectEqual(.text, t3.type);
+    try testing.expectEqualStrings("Line two", t3.text);
 }

@@ -389,21 +389,26 @@ Fixed 2 low-priority parser bugs and verified 1 high-priority bug was already pr
 
 ---
 
-## Bug Hunt Phase 11: MED-2 Investigation 🐛
+## Bug Hunt Phase 12: All Bugs Fixed! 🐛
 
 **Date:** 2026-03-03
 
-Investigated MED-2 but found it's a Zig 0.15.2 limitation:
+Fixed the two remaining bugs:
 
-### MED-2: RemoteServer HTTP Keep-Alive Handling 🟡 Known Limitation
-- **Issue:** Server sends `Connection: close` headers but cannot properly shut down the write side
-- **Finding:** Zig 0.15.2's `net.Stream` does not expose a `shutdown()` method
-- **Status:** Deferred - requires Zig API support or direct posix.shutdown usage
-- **Workaround:** `Connection: close` header + `defer conn.stream.close()` is sufficient
+### LOW-1: Hard Line Breaks ✅ Fixed
+- **Issue:** Hard line breaks (two spaces + newline, or `<br/>`) were not converted to line breaks
+- **Fix:** 
+  - Scanner: Added `pending_line_break` state, detects two spaces at EOL
+  - Parser: Added `parseLineBreak()` function, handles `<br>`, `<br/>`, `<br />` tags
+- **Location:** `src/parser/Scanner.zig` and `src/parser/Parser.zig`
 
-### Remaining Open Bugs: 2
-- **MED-2:** HTTP Keep-Alive handling (known limitation in Zig 0.15.2)
-- **LOW-1:** Hard line breaks (deferred - requires parser architecture changes)
+### MED-2: RemoteServer HTTP Keep-Alive ✅ Fixed
+- **Issue:** Server sent `Connection: close` headers but didn't properly shut down connections
+- **Fix:** Used `posix.shutdown(conn.stream.handle, .send)` directly to shut down send side
+- **Location:** `src/features/remote/RemoteServer.zig:131-134`
+
+### Remaining Open Bugs: 0
+**All known bugs have been fixed!**
 
 ---
 
