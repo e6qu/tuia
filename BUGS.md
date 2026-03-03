@@ -9,6 +9,28 @@
 
 ## 🐛 Critical Bugs
 
+### ✅ CRITICAL-17: CssGenerator.colorToCss() Incorrect RGB Handling (Fixed)
+**Status:** 🟢 Fixed  
+**Component:** CSS Export  
+**Impact:** High
+
+**Description:**  
+In `CssGenerator.colorToCss()`, when the color is an RGB value (`.rgb => |rgb|`), the function returns a hardcoded fallback `"rgb(128, 128, 128)"` instead of properly formatting the actual RGB values. This causes all custom RGB colors in themes to be rendered as gray in the generated CSS.
+
+**Location:** `src/export/CssGenerator.zig:214`
+
+**Fix:** Properly format the RGB values:
+```zig
+.rgb => |rgb| {
+    // Need to allocate or use a buffer to format the RGB values
+    // Option 1: Return a formatted string (requires allocator)
+    // Option 2: Use a static buffer (not thread-safe)
+    return std.fmt.bufPrint(&buf, "rgb({d}, {d}, {d})", .{rgb.r, rgb.g, rgb.b}) catch "rgb(128, 128, 128)";
+}
+```
+
+---
+
 ### ✅ CRITICAL-15: TextWidget.deinit() Frees Unallocated String Literal (Fixed)
 **Status:** 🟢 Fixed  
 **Component:** Widgets  
