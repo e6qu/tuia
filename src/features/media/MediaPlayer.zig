@@ -36,6 +36,7 @@ pub const MediaPlayback = struct {
     process: ?std.process.Child,
     thread: ?std.Thread,
     allocator: std.mem.Allocator,
+    mutex: std.Thread.Mutex,
 
     const Self = @This();
 
@@ -48,6 +49,7 @@ pub const MediaPlayback = struct {
             .process = null,
             .thread = null,
             .allocator = allocator,
+            .mutex = .{},
         };
     }
 
@@ -58,6 +60,9 @@ pub const MediaPlayback = struct {
 
     /// Start playback
     pub fn play(self: *Self) !void {
+        self.mutex.lock();
+        defer self.mutex.unlock();
+
         if (self.state == .playing) return;
 
         // Stop any existing playback
@@ -73,6 +78,9 @@ pub const MediaPlayback = struct {
 
     /// Stop playback
     pub fn stop(self: *Self) void {
+        self.mutex.lock();
+        defer self.mutex.unlock();
+
         if (self.process) |*proc| {
             _ = proc.kill() catch {};
             _ = proc.wait() catch {};
@@ -80,7 +88,9 @@ pub const MediaPlayback = struct {
         }
 
         if (self.thread) |thread| {
+            self.mutex.unlock();
             thread.join();
+            self.mutex.lock();
             self.thread = null;
         }
 
@@ -90,6 +100,9 @@ pub const MediaPlayback = struct {
 
     /// Pause playback (if supported by player)
     pub fn pause(self: *Self) void {
+        self.mutex.lock();
+        defer self.mutex.unlock();
+
         if (self.state == .playing) {
             // Note: External players may not support pause
             // This is a placeholder for future enhancement
@@ -99,17 +112,39 @@ pub const MediaPlayback = struct {
 
     /// Set volume (0-100)
     pub fn setVolume(self: *Self, volume: u8) void {
+        self.mutex.lock();
+        defer self.mutex.unlock();
+
         self.volume = @min(volume, 100);
         // Note: Volume control for external players would require
         // player-specific implementation
     }
 
+    /// Check if currently playing (thread-safe)
+    pub fn isPlaying(self: *Self) bool {
+        self.mutex.lock();
+        defer self.mutex.unlock();
+        return self.state == .playing;
+    }
+
     /// Monitor playback thread
     fn monitorPlayback(self: *Self) void {
-        if (self.process) |*proc| {
+        // Wait for process to complete
+        var process_to_wait: ?*std.process.Child = null;
+        {
+            self.mutex.lock();
+            if (self.process) |*proc| {
+                process_to_wait = proc;
+            }
+            self.mutex.unlock();
+        }
+
+        if (process_to_wait) |proc| {
             _ = proc.wait() catch {};
         }
 
+        self.mutex.lock();
+        defer self.mutex.unlock();
         self.state = .stopped;
         self.process = null;
     }

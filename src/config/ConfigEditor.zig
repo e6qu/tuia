@@ -79,6 +79,7 @@ pub const ConfigEditor = struct {
     }
 
     pub fn deinit(self: *Self) void {
+        self.allocator.free(self.config.theme.name);
         self.input_buffer.deinit(self.allocator);
     }
 
@@ -146,22 +147,90 @@ pub const ConfigEditor = struct {
         const value = self.input_buffer.items;
         if (value.len == 0) return;
 
+        const trimmed = std.mem.trim(u8, value, " \t\r\n");
+        if (trimmed.len == 0) return;
+
         switch (self.selected_section) {
-            .theme => {
-                if (self.selected_field == 0) { // theme name
-                    self.allocator.free(self.config.theme.name);
-                    self.config.theme.name = try self.allocator.dupe(u8, value);
-                    self.dirty = true;
-                }
-            },
             .presentation => {
-                if (self.selected_field == 0) { // auto_advance
-                    self.config.presentation.auto_advance_seconds = std.fmt.parseInt(u32, value, 10) catch return;
-                    self.dirty = true;
+                switch (self.selected_field) {
+                    0 => { // auto_advance_seconds
+                        self.config.presentation.auto_advance_seconds = std.fmt.parseInt(u32, trimmed, 10) catch return;
+                        self.dirty = true;
+                    },
+                    1 => { // loop
+                        self.config.presentation.loop = parseBool(trimmed) orelse return;
+                        self.dirty = true;
+                    },
+                    2 => { // show_slide_numbers
+                        self.config.presentation.show_slide_numbers = parseBool(trimmed) orelse return;
+                        self.dirty = true;
+                    },
+                    else => {},
                 }
             },
-            else => {},
+            .theme => {
+                switch (self.selected_field) {
+                    0 => { // theme name
+                        self.allocator.free(self.config.theme.name);
+                        self.config.theme.name = try self.allocator.dupe(u8, trimmed);
+                        self.dirty = true;
+                    },
+                    1 => { // use_terminal_background
+                        self.config.theme.use_terminal_background = parseBool(trimmed) orelse return;
+                        self.dirty = true;
+                    },
+                    else => {},
+                }
+            },
+            .display => {
+                switch (self.selected_field) {
+                    0 => { // truecolor
+                        self.config.display.truecolor = parseBool(trimmed) orelse return;
+                        self.dirty = true;
+                    },
+                    1 => { // mouse
+                        self.config.display.mouse = parseBool(trimmed) orelse return;
+                        self.dirty = true;
+                    },
+                    else => {},
+                }
+            },
+            .transitions => {
+                switch (self.selected_field) {
+                    0 => { // enabled
+                        self.config.transitions.enabled = parseBool(trimmed) orelse return;
+                        self.dirty = true;
+                    },
+                    1 => { // duration_ms
+                        self.config.transitions.duration_ms = std.fmt.parseInt(u32, trimmed, 10) catch return;
+                        self.dirty = true;
+                    },
+                    else => {},
+                }
+            },
         }
+    }
+
+    /// Parse a boolean value from various string formats
+    fn parseBool(value: []const u8) ?bool {
+        // Compare lowercase version of first character
+        if (value.len == 0) return null;
+        
+        const first = std.ascii.toLower(value[0]);
+        
+        // Check for "t" (true), "y" (yes), "1", "o" (on)
+        if (first == 't' or first == 'y' or first == '1' or 
+            std.mem.eql(u8, value, "on") or
+            std.mem.eql(u8, value, "ON")) {
+            return true;
+        }
+        // Check for "f" (false), "n" (no), "0", "o" (off)
+        if (first == 'f' or first == 'n' or first == '0' or
+            std.mem.eql(u8, value, "off") or
+            std.mem.eql(u8, value, "OFF")) {
+            return false;
+        }
+        return null;
     }
 
     fn getFieldCount(self: Self) usize {
@@ -289,13 +358,17 @@ pub const ConfigEditor = struct {
     fn drawFooter(self: Self, win: vaxis.Window) void {
         const footer_row = win.height - 1;
 
-        const help_text = "j/k: navigate | h/l: sections | Enter: edit | q: quit";
+        const help_text = if (self.input_mode == .edit)
+            "Type value, Enter: confirm, Esc: cancel | bool: yes/no, int: number"
+        else
+            "j/k: navigate | h/l: sections | Enter: edit | q: quit";
+        
         _ = win.writeCell(0, footer_row, .{
             .char = .{ .grapheme = help_text },
             .style = .{ .fg = .{ .rgb = .{ 128, 128, 128 } } },
         });
 
-        if (self.dirty) {
+        if (self.dirty and self.input_mode == .navigate) {
             const dirty_text = " [modified]";
             _ = win.writeCell(@intCast(help_text.len), footer_row, .{
                 .char = .{ .grapheme = dirty_text },
@@ -350,7 +423,7 @@ pub const ConfigEditor = struct {
     fn getFieldValue(self: Self, index: usize) []const u8 {
         return switch (self.selected_section) {
             .presentation => switch (index) {
-                0 => if (self.config.presentation.auto_advance_seconds == 0) "off" else "on",
+                0 => if (self.config.presentation.auto_advance_seconds == 0) "0 (off)" else "on",
                 1 => if (self.config.presentation.loop) "yes" else "no",
                 2 => if (self.config.presentation.show_slide_numbers) "yes" else "no",
                 else => "?",

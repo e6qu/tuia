@@ -29,10 +29,10 @@ pub const RemoteServer = struct {
 
     /// Start the remote server
     pub fn start(self: *Self, navigation: *Navigation) !void {
-        if (self.running) return;
-
         self.mutex.lock();
         defer self.mutex.unlock();
+
+        if (self.running) return;
 
         self.navigation = navigation;
         self.running = true;
@@ -42,11 +42,12 @@ pub const RemoteServer = struct {
 
     /// Stop the remote server
     pub fn stop(self: *Self) void {
+        self.mutex.lock();
+        defer self.mutex.unlock();
+
         if (!self.running) return;
 
-        self.mutex.lock();
         self.running = false;
-        self.mutex.unlock();
 
         if (self.server_thread) |thread| {
             thread.join();
