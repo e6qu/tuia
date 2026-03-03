@@ -24,6 +24,9 @@ pub const Config = struct {
     /// File watching settings
     watch: WatchConfig = .{},
 
+    /// Slide transition settings
+    transitions: TransitionConfig = .{},
+
     const Self = @This();
 
     /// Merge another config into this one (other takes precedence)
@@ -35,6 +38,7 @@ pub const Config = struct {
         self.export_config.merge(other.export_config);
         self.executor.merge(other.executor);
         self.watch.merge(other.watch);
+        self.transitions.merge(other.transitions);
     }
 
     /// Create a copy with allocator
@@ -269,6 +273,58 @@ pub const WatchConfig = struct {
         if (other.ignore_patterns.len > 0) {
             self.ignore_patterns = other.ignore_patterns;
         }
+    }
+};
+
+/// Slide transition settings
+pub const TransitionConfig = struct {
+    /// Enable slide transitions
+    enabled: bool = true,
+
+    /// Default transition type
+    default_type: TransitionType = .fade,
+
+    /// Transition duration in milliseconds
+    duration_ms: u32 = 300,
+
+    /// Merge with other config
+    pub fn merge(self: *TransitionConfig, other: TransitionConfig) void {
+        if (!other.enabled) self.enabled = false;
+        if (@intFromEnum(other.default_type) != 0) {
+            self.default_type = other.default_type;
+        }
+        if (other.duration_ms != 300) self.duration_ms = other.duration_ms;
+    }
+};
+
+/// Transition type options
+pub const TransitionType = enum {
+    none,
+    fade,
+    slide_left,
+    slide_right,
+    slide_up,
+    slide_down,
+    dissolve,
+    wipe_left,
+    wipe_right,
+    wipe_up,
+    wipe_down,
+
+    /// Parse from string
+    pub fn fromString(str: []const u8) TransitionType {
+        if (std.mem.eql(u8, str, "none")) return .none;
+        if (std.mem.eql(u8, str, "fade")) return .fade;
+        if (std.mem.eql(u8, str, "slide-left")) return .slide_left;
+        if (std.mem.eql(u8, str, "slide-right")) return .slide_right;
+        if (std.mem.eql(u8, str, "slide-up")) return .slide_up;
+        if (std.mem.eql(u8, str, "slide-down")) return .slide_down;
+        if (std.mem.eql(u8, str, "dissolve")) return .dissolve;
+        if (std.mem.eql(u8, str, "wipe-left")) return .wipe_left;
+        if (std.mem.eql(u8, str, "wipe-right")) return .wipe_right;
+        if (std.mem.eql(u8, str, "wipe-up")) return .wipe_up;
+        if (std.mem.eql(u8, str, "wipe-down")) return .wipe_down;
+        return .fade;
     }
 };
 
