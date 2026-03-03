@@ -126,7 +126,6 @@ pub const Renderer = struct {
         theme: Theme,
     ) !void {
         _ = theme;
-        // Clear the screen
         win.clear();
 
         if (presentation == null or nav == null) {

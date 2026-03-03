@@ -13,24 +13,20 @@ pub fn main() !void {
     }
     const allocator = gpa.allocator();
 
-    // Parse CLI args
     var options = try cli.parseArgs(allocator);
     defer cli.deinitOptions(&options, allocator);
 
-    // Handle help
     if (options.help) {
         cli.printHelp();
         export_cmd.printExportHelp();
         return;
     }
 
-    // Handle version
     if (options.version) {
         cli.printVersion();
         return;
     }
 
-    // Handle export
     if (options.isExport()) {
         const file_path = options.file_path orelse {
             std.debug.print("Error: Export requires a file path\n", .{});
@@ -45,7 +41,6 @@ pub fn main() !void {
         return;
     }
 
-    // Initialize app for presentation mode
     var app = try App.init(allocator);
     defer app.deinit();
 
@@ -57,6 +52,5 @@ pub fn main() !void {
         };
     }
 
-    // Run the app
     try app.run();
 }
