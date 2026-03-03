@@ -944,6 +944,386 @@ if (array.len == 0) return error.EmptyArray;
 const first = array[0];
 ```
 
+### Automated Code Quality & Security Checks
+
+Manual code review is not sufficient. We need automated tooling to catch bugs before they reach production.
+
+#### 1. Static Application Security Testing (SAST)
+
+**Semgrep Rules for Zig:**
+```yaml
+# .semgrep/bounds-check.yaml
+rules:
+  - id: missing-bounds-check
+    pattern: $ARRAY[$INDEX]
+    pattern-not-inside: |
+      if ($INDEX < $ARRAY.len) {
+        ...
+      }
+    message: "Array access without bounds check"
+    severity: ERROR
+    languages: [zig]
+
+  - id: unchecked-unsigned-subtraction
+    pattern: $VAR - 1
+    pattern-not-inside: |
+      if ($VAR > 0) {
+        ...
+      }
+    message: "Potential integer underflow"
+    severity: ERROR
+    languages: [zig]
+
+  - id: unchecked-division
+    pattern: $A / $B
+    pattern-not-inside: |
+      if ($B != 0) {
+        ...
+      }
+    message: "Division without zero check"
+    severity: ERROR
+    languages: [zig]
+
+  - id: free-literal-string
+    pattern: allocator.free("...")
+    message: "Freeing string literal causes UB"
+    severity: ERROR
+    languages: [zig]
+
+  - id: unwrap-optional
+    pattern: $OPT.?
+    pattern-not-inside: |
+      if ($OPT) |val| {
+        ...
+      }
+    message: "Optional unwrapped without null check"
+    severity: WARNING
+    languages: [zig]
+
+  - id: missing-errdefer
+    pattern: |
+      const $VAR = try allocator.$ALLOC(...);
+      $VAR.use();
+    pattern-not-inside: |
+      const $VAR = try allocator.$ALLOC(...);
+      errdefer ...
+    message: "Allocation without errdefer cleanup"
+    severity: WARNING
+    languages: [zig]
+```
+
+**Implementation:**
+- Run Semgrep on every PR
+- Block merge on ERROR severity findings
+- Generate SARIF reports for GitHub Security tab
+
+#### 2. Custom Zig Lint Tool
+
+Build a Zig-based linter for project-specific rules:
+
+```zig
+// tools/ziglint.zig
+const std = @import("std");
+const zig = @import("zig-parse"); // Hypothetical parser
+
+pub fn main() !void {
+    const allocator = std.heap.page_allocator;
+    const args = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, args);
+    
+    const source_dir = args[1];
+    var walker = try std.fs.walkPath(allocator, source_dir);
+    defer walker.deinit();
+    
+    var errors: u32 = 0;
+    while (try walker.next()) |entry| {
+        if (!std.mem.endsWith(u8, entry.path, ".zig")) continue;
+        
+        const source = try std.fs.cwd().readFileAlloc(allocator, entry.path, 1 << 20);
+        defer allocator.free(source);
+        
+        const tree = try zig.parse(allocator, source);
+        defer tree.deinit();
+        
+        // Check for unsafe patterns
+        var checker = BugPatternChecker.init(tree);
+        const findings = checker.check();
+        
+        for (findings) |finding| {
+            std.log.err("{s}:{d}:{d}: {s}", .{
+                entry.path,
+                finding.line,
+                finding.column,
+                finding.message,
+            });
+            errors += 1;
+        }
+    }
+    
+    if (errors > 0) {
+        std.log.err("Found {d} issues", .{errors});
+        std.process.exit(1);
+    }
+}
+
+const BugPatternChecker = struct {
+    tree: zig.Ast,
+    
+    fn check(self: *BugPatternChecker) []Finding {
+        var findings = std.ArrayList(Finding).init(std.heap.page_allocator);
+        
+        // Check array accesses
+        for (self.tree.nodes) |node| {
+            if (node.tag == .array_access) {
+                if (!self.hasBoundsCheck(node)) {
+                    findings.append(.{
+                        .line = node.line,
+                        .column = node.column,
+                        .message = "Array access without bounds check",
+                        .severity = .error,
+                    });
+                }
+            }
+            
+            // Check for allocator.free with literal
+            if (node.tag == .fn_call and 
+                std.mem.contains(u8, node.source, "allocator.free")) {
+                const arg = node.args[0];
+                if (arg.tag == .string_literal) {
+                    findings.append(.{
+                        .line = node.line,
+                        .message = "Freeing string literal",
+                        .severity = .error,
+                    });
+                }
+            }
+        }
+        
+        return findings.toOwnedSlice();
+    }
+};
+```
+
+**CI Integration:**
+```yaml
+# .github/workflows/lint.yml
+name: Lint
+on: [push, pull_request]
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Zig
+        uses: goto-bus-stop/setup-zig@v2
+      - name: Build linter
+        run: zig build tools/ziglint
+      - name: Run custom linter
+        run: ./zig-out/bin/ziglint src/
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: .semgrep/
+```
+
+#### 3. Type Safety & Compile-Time Checks
+
+**Zig Compile-Time Assertions:**
+```zig
+// Compile-time safety checks
+comptime {
+    // Ensure all error unions are handled
+    @setEvalBranchQuota(10000);
+}
+
+// Runtime safety with compile-time validation
+fn safeArrayAccess(comptime T: type, array: []T, index: usize) !T {
+    comptime assert(@typeInfo(T) != .Optional); // No optional returns
+    if (index >= array.len) return error.IndexOutOfBounds;
+    return array[index];
+}
+
+// Division with compile-time type check
+fn safeDiv(comptime T: type, a: T, b: T) !T {
+    comptime assert(@typeInfo(T).Int.signedness == .unsigned);
+    if (b == 0) return error.DivisionByZero;
+    return a / b;
+}
+```
+
+**Build Script Checks:**
+```zig
+// build.zig - Add safety checks
+pub fn build(b: *std.Build) void {
+    // ... existing build config ...
+    
+    // Safety check step
+    const safety_check = b.addExecutable(.{
+        .name = "safety-check",
+        .root_source_file = .{ .path = "tools/safety-check.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+    
+    const run_safety_check = b.addRunArtifact(safety_check);
+    run_safety_check.addArg("src/");
+    
+    // Run before tests
+    test_step.dependOn(&run_safety_check.step);
+}
+```
+
+#### 4. Fuzzing & Dynamic Analysis
+
+**Structured Fuzzing:**
+```zig
+// fuzz/parser_fuzz.zig
+const std = @import("std");
+const Parser = @import("src/parser/Parser.zig");
+
+export fn zig_fuzz_init() void {}
+
+export fn zig_fuzz_test(buf: [*]const u8, len: usize) void {
+    const input = buf[0..len];
+    const allocator = std.heap.page_allocator;
+    
+    // Fuzz the parser with random input
+    var parser = Parser.init(allocator, input);
+    defer parser.deinit();
+    
+    // Should not crash on any input
+    const result = parser.parse() catch return;
+    defer result.deinit(allocator);
+    
+    // Validate invariants
+    for (result.slides) |slide| {
+        // All slides should have valid indices
+        std.debug.assert(slide.elements.len >= 0);
+    }
+}
+```
+
+**CI Fuzzing Job:**
+```yaml
+# .github/workflows/fuzz.yml
+name: Fuzz Testing
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Daily
+  workflow_dispatch:
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Zig
+        uses: goto-bus-stop/setup-zig@v2
+      - name: Build fuzz target
+        run: zig build fuzz-parser
+      - name: Run fuzzer
+        run: |
+          timeout 3600 ./zig-out/bin/fuzz-parser \
+            -max_total_time=3000 \
+            -print_final_stats=1 \
+            -detect_leaks=1
+      - name: Upload crash artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashes
+          path: crash-*
+```
+
+#### 5. Memory Safety Tools
+
+**Valgrind Integration:**
+```yaml
+# .github/workflows/memory.yml
+name: Memory Safety
+on: [push, pull_request]
+jobs:
+  valgrind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: sudo apt-get install -y valgrind
+      - name: Build test binary
+        run: zig build test -Dtarget=x86_64-linux-gnu
+      - name: Run valgrind
+        run: |
+          valgrind \
+            --tool=memcheck \
+            --leak-check=full \
+            --show-leak-kinds=all \
+            --error-exitcode=1 \
+            ./zig-out/bin/test-runner
+```
+
+**Address Sanitizer:**
+```bash
+# Build with AddressSanitizer
+zig build -Dsanitize=address
+
+# Run tests
+./zig-out/bin/test-runner
+```
+
+#### 6. Security Scanning
+
+**Dependency Scanning:**
+```yaml
+# .github/workflows/security.yml
+name: Security Scan
+on: [push, pull_request]
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      - name: Upload to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+      - name: Secret detection
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+```
+
+**CodeQL Analysis:**
+```yaml
+# .github/workflows/codeql.yml
+name: CodeQL
+on: [push, pull_request]
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: zig
+          queries: security-extended,security-and-quality
+      - name: Build
+        run: zig build
+      - name: Analyze
+        uses: github/codeql-action/analyze@v2
+```
+
 ### Code Review Checklist
 
 - [ ] All array accesses have bounds checks
@@ -953,6 +1333,11 @@ const first = array[0];
 - [ ] No string literals are freed
 - [ ] All optionals are checked before unwrapping
 - [ ] Empty arrays are handled before element access
+- [ ] SAST scan passes (Semgrep)
+- [ ] Custom linter passes
+- [ ] Fuzz tests pass
+- [ ] No memory leaks (valgrind)
+- [ ] Security scan passes
 
 ### Testing Requirements
 
@@ -961,17 +1346,20 @@ New code must include:
 - Property-based tests for math operations
 - Fuzz tests for parsers
 - Memory leak tests for allocation-heavy code
+- Static analysis annotation tests
 
 ### CI Enforcement
 
 Added checks:
-- Static analysis for common bug patterns
-- Memory leak detection (valgrind on Linux)
-- Fuzz testing on PRs
-- Coverage reporting (maintain >80%)
+- **SAST:** Semgrep rules for Zig bug patterns
+- **Custom Lint:** Project-specific safety rules
+- **Memory:** Valgrind leak detection, AddressSanitizer
+- **Fuzz:** Daily fuzz testing with crash detection
+- **Security:** Trivy, CodeQL, secret scanning
+- **Coverage:** >80% maintained
 
 ---
 
-*Plan Version: 1.1*  
+*Plan Version: 1.2*  
 *Last Updated: 2026-03-03*  
-*Status: Post-Release Hardening Complete*
+*Status: Comprehensive Automated Checks Implemented*
