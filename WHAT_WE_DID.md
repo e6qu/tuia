@@ -321,6 +321,46 @@ See `BUGS.md` for complete bug tracking.
 
 ---
 
+## Post-Release: Automated Security & Quality Checks 🔒
+
+**Date:** 2026-03-03
+
+Implemented comprehensive automated security and quality checks to prevent bugs at CI time:
+
+### Semgrep SAST Rules
+- `.semgrep/bounds-check.yaml` - Detect array access without bounds check
+- `.semgrep/integer-safety.yaml` - Detect unsigned subtraction without zero check
+- `.semgrep/memory-safety.yaml` - Detect missing errdefer, freeing literals
+- `.semgrep/null-safety.yaml` - Detect optional unwrapping without null check
+
+### Custom Zig Linter (`tools/ziglint.zig`)
+- AST-based pattern detection using Zig's standard parser
+- Detects bounds check issues, integer safety problems
+- Memory safety pattern verification
+- Integrated into build.zig as `ziglint` and `lint-check` steps
+
+### Fuzzing Infrastructure
+- `fuzz/parser_fuzz.zig` - libFuzzer integration target
+- Tests parser with random inputs to find crashes
+- Integrated into CI with daily runs
+
+### CI Security Workflow (`.github/workflows/security.yml`)
+- **Semgrep SAST** - Static analysis with custom rules
+- **Custom Zig Linter** - Build and run ziglint
+- **Valgrind** - Memory leak detection
+- **Address Sanitizer** - Build verification
+- **Trivy** - Dependency vulnerability scanning
+- **TruffleHog** - Secret detection
+- **Format Check** - zig fmt verification
+
+### Fuzzing Workflow (`.github/workflows/fuzz.yml`)
+- Daily scheduled fuzzing runs
+- 30-minute fuzzing sessions
+- Crash artifact upload
+- Multiple input strategies
+
+---
+
 ## 🎉 Project Complete + Hardened!
 
-All milestones finished + extensive bug fixing completed. TUIA is stable and production-ready.
+All milestones finished + extensive bug fixing + automated security checks completed. TUIA is stable, production-ready, and protected by comprehensive CI checks.

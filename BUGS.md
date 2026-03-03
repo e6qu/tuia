@@ -2,7 +2,8 @@
 
 > This document tracks bugs and missing features discovered during testing.
 
-**Last Updated:** 2026-03-03  
+**Last Updated:** 2026-03-03
+**Open Bug Count:** 5 (1 High, 1 Medium, 3 Low)  
 **Status:** Active Development
 
 ---
@@ -108,6 +109,12 @@ To prevent similar bugs, we now enforce:
 3. **Memory Safety:** Use `errdefer` for cleanup, verify allocations
 4. **String Literal Safety:** Never free string literals
 5. **Null Checks:** Verify optional values before unwrapping
+
+### Automated Enforcement
+- **Semgrep SAST:** 4 rule sets automatically scan all PRs
+- **Custom Zig Linter:** AST-based pattern detection in CI
+- **Valgrind:** Memory leak detection on every PR
+- **Fuzzing:** Daily automated fuzzing runs
 
 See `docs/CODING_STANDARDS.md` for detailed guidelines.
 

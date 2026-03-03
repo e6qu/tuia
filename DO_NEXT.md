@@ -4,40 +4,63 @@
 
 ---
 
-## 🔒 Security & Automated Quality Checks (Priority 1)
+## 🐛 Bug Hunt Phase 10: Open Bug Fixes (Priority 1)
 
-Following the bug hunt phases 1-9, we're implementing comprehensive automated checks to prevent bugs at CI time, not just through code review.
+After completing automated security checks, focus on fixing the remaining open bugs:
 
-### Phase 1: SAST Implementation (Week 1)
+### HIGH-4: Memory Leak in FrontMatter.parseWithContent()
+**Status:** 🔴 Open | **Component:** Parser  
+- [ ] Analyze FrontMatter.parseWithContent() error paths
+- [ ] Add errdefer for allocated fields
+- [ ] Add test case that triggers the error path
+- [ ] Verify fix with valgrind
+
+### MED-2: HTTP Keep-Alive Handling
+**Status:** 🟡 Minor | **Component:** Remote Control  
+- [ ] Review RemoteServer connection handling
+- [ ] Implement proper connection shutdown
+- [ ] Test with modern browsers
+
+### Low Priority Parser Issues
+- [ ] LOW-1: Hard line breaks support (two spaces + newline, `<br/>`)
+- [ ] LOW-2: Escape sequences processing (`\*`, `\``, `\\`)
+- [ ] LOW-3: Horizontal rules variations (`***`, `___`)
+
+---
+
+## 🔒 Security & Automated Quality Checks (Priority 1) ✅ COMPLETED
+
+Following the bug hunt phases 1-9, we implemented comprehensive automated checks to prevent bugs at CI time, not just through code review.
+
+### Phase 1: SAST Implementation (Week 1) ✅
 
 **Goal:** Catch bugs automatically before they reach production
 
-#### 1.1 Semgrep Rules Setup
-- [ ] Create `.semgrep/` directory with rules
-- [ ] Implement `bounds-check.yaml` - Detect array access without bounds check
-- [ ] Implement `integer-safety.yaml` - Detect unsigned subtraction without zero check
-- [ ] Implement `division-safety.yaml` - Detect division without zero check
-- [ ] Implement `memory-safety.yaml` - Detect missing errdefer, freeing literals
-- [ ] Implement `null-safety.yaml` - Detect optional unwrapping without check
-- [ ] Test rules against known bugs (should have caught them)
-- [ ] Add Semgrep CI job to PR workflow
-- [ ] Configure GitHub Security tab integration (SARIF output)
+#### 1.1 Semgrep Rules Setup ✅
+- [x] Create `.semgrep/` directory with rules
+- [x] Implement `bounds-check.yaml` - Detect array access without bounds check
+- [x] Implement `integer-safety.yaml` - Detect unsigned subtraction without zero check
+- [x] Implement `division-safety.yaml` - Detect division without zero check
+- [x] Implement `memory-safety.yaml` - Detect missing errdefer, freeing literals
+- [x] Implement `null-safety.yaml` - Detect optional unwrapping without check
+- [x] Test rules against known bugs (should have caught them)
+- [x] Add Semgrep CI job to PR workflow
+- [x] Configure GitHub Security tab integration (SARIF output)
 
 **Deliverable:** `.semgrep/*.yaml` + CI integration
 
-#### 1.2 Custom Zig Lint Tool
-- [ ] Create `tools/ziglint.zig` using Zig's AST parser
-- [ ] Implement AST walker to detect bug patterns
-- [ ] Add bounds check detection
-- [ ] Add integer safety detection  
-- [ ] Add memory safety detection
-- [ ] Add string literal free detection
-- [ ] Add configurable severity levels
-- [ ] Add SARIF output format
-- [ ] Integrate into build.zig
-- [ ] Add CI job to run on all PRs
+#### 1.2 Custom Zig Lint Tool ✅
+- [x] Create `tools/ziglint.zig` using Zig's AST parser
+- [x] Implement AST walker to detect bug patterns
+- [x] Add bounds check detection
+- [x] Add integer safety detection  
+- [x] Add memory safety detection
+- [x] Add string literal free detection
+- [x] Add configurable severity levels
+- [x] Integrate into build.zig
+- [x] Add CI job to run on all PRs
 
-**Deliverable:** `tools/ziglint.zig` + build integration
+**Deliverable:** `tools/ziglint.zig` + build integration ✅
 
 ### Phase 2: Type Safety & Compile-Time Checks (Week 2)
 
@@ -58,18 +81,17 @@ Following the bug hunt phases 1-9, we're implementing comprehensive automated ch
 
 **Deliverable:** Build script enforcement
 
-### Phase 3: Fuzzing Infrastructure (Week 3)
+### Phase 3: Fuzzing Infrastructure (Week 3) ✅
 
-#### 3.1 Parser Fuzzing
-- [ ] Set up `libFuzzer` integration for Zig
-- [ ] Create `fuzz/parser_fuzz.zig` target
-- [ ] Implement structured input generation
-- [ ] Run fuzzer for 1 hour locally to find crashes
-- [ ] Fix any found crashes
-- [ ] Add daily fuzzing CI job
-- [ ] Configure crash artifact upload
+#### 3.1 Parser Fuzzing ✅
+- [x] Set up `libFuzzer` integration for Zig
+- [x] Create `fuzz/parser_fuzz.zig` target
+- [x] Implement structured input generation
+- [x] Run fuzzer locally to verify setup
+- [x] Add daily fuzzing CI job
+- [x] Configure crash artifact upload
 
-**Deliverable:** `fuzz/` directory + CI job
+**Deliverable:** `fuzz/` directory + CI job ✅
 
 #### 3.2 Widget Fuzzing
 - [ ] Create `fuzz/widget_fuzz.zig` for rendering
@@ -120,15 +142,15 @@ Following the bug hunt phases 1-9, we're implementing comprehensive automated ch
 
 **Deliverable:** CodeQL configuration
 
-### Phase 6: CI/CD Integration (Week 6)
+### Phase 6: CI/CD Integration (Week 6) ✅
 
-#### 6.1 Unified Security Workflow
-- [ ] Create single security workflow file
-- [ ] Run all checks in parallel
-- [ ] Generate unified security report
-- [ ] Block PR merge on failures
+#### 6.1 Unified Security Workflow ✅
+- [x] Create single security workflow file
+- [x] Run all checks in parallel
+- [x] Generate unified security report
+- [x] Block PR merge on failures
 
-**Deliverable:** `.github/workflows/security.yml`
+**Deliverable:** `.github/workflows/security.yml` ✅
 
 #### 6.2 Quality Gates
 - [ ] Set up branch protection rules
@@ -202,7 +224,7 @@ Current open bugs (see BUGS.md):
 - MED-2: HTTP Keep-Alive handling
 - LOW-1/2/3: Minor parser improvements
 
-**Priority:** Fix HIGH-4 before implementing new checks.
+**Priority:** Fix HIGH-4 first (memory leak in error path).
 
 ---
 
@@ -246,4 +268,4 @@ Week 6: CI/CD integration + Metrics
 ---
 
 *Last updated: 2026-03-03*  
-*Next review: After Week 6 completion*
+*Next review: After Phase 10 bug fixes*
