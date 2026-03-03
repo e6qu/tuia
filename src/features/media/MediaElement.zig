@@ -5,31 +5,31 @@ const std = @import("std");
 pub const MediaElement = struct {
     /// File path or URL
     path: []const u8,
-    
+
     /// Media type
     media_type: MediaType,
-    
+
     /// Display title/caption
     title: ?[]const u8,
-    
+
     /// Auto-play on slide load
     autoplay: bool,
-    
+
     /// Loop playback
     loop: bool,
-    
+
     /// Start time in seconds
     start_time: u32,
-    
+
     /// End time in seconds (0 = until end)
     end_time: u32,
-    
+
     /// Volume (0-100)
     volume: u8,
-    
+
     /// Show controls
     controls: bool,
-    
+
     /// Mute audio
     muted: bool,
 

@@ -187,12 +187,12 @@ pub const MediaPlayer = struct {
     fn detectAudioPlayer() []const u8 {
         // Check for available audio players
         const players = &[_][]const u8{
-            "afplay",      // macOS
-            "paplay",      // PulseAudio
-            "aplay",       // ALSA
-            "mpv",         // Universal
-            "mplayer",     // Legacy
-            "ffplay",      // FFmpeg
+            "afplay", // macOS
+            "paplay", // PulseAudio
+            "aplay", // ALSA
+            "mpv", // Universal
+            "mplayer", // Legacy
+            "ffplay", // FFmpeg
         };
 
         for (players) |player| {
@@ -207,10 +207,10 @@ pub const MediaPlayer = struct {
     /// Detect available video player
     fn detectVideoPlayer() []const u8 {
         const players = &[_][]const u8{
-            "mpv",         // Best option
-            "mplayer",     // Legacy
-            "ffplay",      // FFmpeg
-            "vlc",         // VLC (if terminal compatible)
+            "mpv", // Best option
+            "mplayer", // Legacy
+            "ffplay", // FFmpeg
+            "vlc", // VLC (if terminal compatible)
         };
 
         for (players) |player| {
