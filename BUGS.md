@@ -13,25 +13,32 @@
 | Category | Open | Fixed (Recent) | Total |
 |----------|------|----------------|-------|
 | Critical | 0 | 17 | 17 |
-| High | 1 | 5 | 6 |
+| High | 0 | 6 | 6 |
 | Medium | 1 | 5 | 6 |
-| Low | 3 | 0 | 3 |
+| Low | 1 | 2 | 3 |
+
+**Note:** HIGH-4 was verified as already protected by errdefer. LOW-2 and LOW-3 fixed in Phase 10.
 
 **Recent Bug Hunts:** Phase 1-9 completed (17 critical bugs fixed)
 
 ---
 
-## 🔴 Open Bugs
+## 🔴 Open Bugs (2 Remaining)
 
 ### HIGH-4: Memory Leak in FrontMatter.parseWithContent()
-**Status:** 🔴 Open  
+**Status:** ✅ Fixed (Code Review)  
 **Component:** Parser  
 **Impact:** Medium
 
 **Description:**  
-In `FrontMatter.parseWithContent()`, if `parse()` returns an error after partially allocating front_matter fields, the allocated memory is not freed before the error propagates.
+Initial analysis suggested a memory leak in error paths, but code review revealed that `parse()` already has proper `errdefer front_matter.deinit(allocator);` handling (line 40). This ensures cleanup of partially allocated fields if an allocation fails.
 
-**Location:** `src/parser/FrontMatter.zig:100`
+**Verification:**  
+- Code review confirms `errdefer` is correctly placed
+- All FrontMatter tests pass
+- Valgrind shows no leaks in test scenarios
+
+**Location:** `src/parser/FrontMatter.zig:40` (errdefer protection)
 
 ---
 
@@ -50,29 +57,39 @@ The RemoteServer sends `Connection: close` headers but does not properly handle 
 ## 🔧 Low Priority Issues
 
 ### LOW-1: Hard Line Breaks Not Supported
-**Status:** 🔴 Open  
+**Status:** 🟡 Partial (Deferred)  
 **Component:** Parser  
 **Impact:** Low
 
 Hard line breaks (two spaces + newline, or `<br/>`) are not converted to line breaks.
 
+**Note:** Full implementation requires parser changes. The Token type has `line_break` support, but parsing logic needs updates to handle hard breaks within paragraphs.
+
 ---
 
 ### LOW-2: Escape Sequences Not Processed
-**Status:** 🔴 Open  
-**Component:** Scanner/Parser  
+**Status:** ✅ Fixed  
+**Component:** Parser  
 **Impact:** Low
 
 Escaped characters (`\*`, `\``, `\\`) appear literally instead of being unescaped.
 
+**Fix:** Added `unescapeText()` function in Parser.zig that processes escape sequences when creating text nodes. Handles: `\\`, `\*`, `\``, `\[`, `\]`, `\(`, `\)`, `\#`, `\+`, `\-`, `\.`, `\!`, `\<`, `\>`, `\_`.
+
+**Location:** `src/parser/Parser.zig` (unescapeText function)
+
 ---
 
 ### LOW-3: Horizontal Rules Variations
-**Status:** 🟡 Partial  
+**Status:** ✅ Fixed  
 **Component:** Scanner  
 **Impact:** Low
 
 Only `---` is recognized as a thematic break. `***` and `___` are not recognized.
+
+**Fix:** Added support for `***` and `___` as thematic breaks in Scanner.zig.
+
+**Location:** `src/parser/Scanner.zig` (lines 83-95)
 
 ---
 

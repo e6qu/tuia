@@ -564,11 +564,57 @@ fn parseInlineContent(allocator: std.mem.Allocator, text: []const u8) ParseError
 
     // Flush remaining text
     if (text_start < text.len) {
-        const txt = try allocator.dupe(u8, text[text_start..]);
-        try result.append(allocator, .{ .text = txt });
+        const unescaped = try unescapeText(allocator, text[text_start..]);
+        try result.append(allocator, .{ .text = unescaped });
     }
 
     return try result.toOwnedSlice(allocator);
+}
+
+/// Unescape markdown escape sequences (LOW-2 fix)
+/// Converts: \\ -> \, \\* -> *, \\` -> `, etc.
+fn unescapeText(allocator: std.mem.Allocator, text: []const u8) ParseError![]const u8 {
+    // Count how many escape sequences we'll process
+    var escape_count: usize = 0;
+    var i: usize = 0;
+    while (i < text.len) : (i += 1) {
+        if (text[i] == '\\' and i + 1 < text.len) {
+            const next = text[i + 1];
+            // Only count valid escape sequences
+            if (next == '\\' or next == '*' or next == '`' or next == '[' or next == ']' or next == '(' or next == ')' or next == '#' or next == '+' or next == '-' or next == '.' or next == '!' or next == '<' or next == '>' or next == '_') {
+                escape_count += 1;
+                i += 1; // Skip the escaped character
+            }
+        }
+    }
+
+    if (escape_count == 0) {
+        // No escapes, just duplicate the text
+        return try allocator.dupe(u8, text);
+    }
+
+    // Allocate result with reduced size (minus escape characters)
+    const result = try allocator.alloc(u8, text.len - escape_count);
+    errdefer allocator.free(result);
+
+    var j: usize = 0;
+    i = 0;
+    while (i < text.len) : (i += 1) {
+        if (text[i] == '\\' and i + 1 < text.len) {
+            const next = text[i + 1];
+            // Only process valid escape sequences
+            if (next == '\\' or next == '*' or next == '`' or next == '[' or next == ']' or next == '(' or next == ')' or next == '#' or next == '+' or next == '-' or next == '.' or next == '!' or next == '<' or next == '>' or next == '_') {
+                result[j] = next; // Store the escaped character without the backslash
+                j += 1;
+                i += 1; // Skip the escaped character
+                continue;
+            }
+        }
+        result[j] = text[i];
+        j += 1;
+    }
+
+    return result;
 }
 
 /// Parse the next inline element starting at position i
@@ -606,7 +652,7 @@ fn parseInlineCode(
 
     // Flush pending text
     if (start > text_start.*) {
-        const txt = try allocator.dupe(u8, text[text_start.*..start]);
+        const txt = try unescapeText(allocator, text[text_start.*..start]);
         return .{ .text = txt };
     }
 

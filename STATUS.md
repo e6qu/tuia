@@ -2,7 +2,7 @@
 
 > Current status of TUIA (Terminal UI Application)
 
-**Last Updated:** 2026-03-03  
+**Last Updated:** 2026-03-03 (Phase 10 bug fixes completed)  
 **Current Version:** 1.0.0 🎉  
 **Repository:** https://github.com/e6qu/tuia
 
@@ -65,7 +65,8 @@ Milestone 4: Polish & Release     ✅ COMPLETE
 | Documentation | Complete | Complete | ✅ |
 | CI/CD | Passing | Passing | ✅ |
 | Critical Bugs Fixed | 17 | - | ✅ |
-| Open Bugs | 5 | <10 | ✅ |
+| Open Bugs | 2 | <10 | ✅ |
+| Recent Bug Fixes | 2 | - | ✅ |
 | Security Checks | 7 tools | 5+ | ✅ |
 
 ---

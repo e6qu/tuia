@@ -72,9 +72,19 @@ pub const Scanner = struct {
             return self.makeToken(.heading, start, line, col, indent);
         }
 
-        // Thematic break / Front matter
+        // Thematic break / Front matter (---, ***, ___)
         if (c == '-') {
             if (self.countPrefix('-') >= 2) {
+                return self.makeToken(.thematic_break, start, line, col, indent);
+            }
+        }
+        if (c == '*') {
+            if (self.countPrefix('*') >= 2) {
+                return self.makeToken(.thematic_break, start, line, col, indent);
+            }
+        }
+        if (c == '_') {
+            if (self.countPrefix('_') >= 2) {
                 return self.makeToken(.thematic_break, start, line, col, indent);
             }
         }
@@ -318,4 +328,23 @@ test "Scanner end_slide" {
     var scanner = Scanner.init("<!-- end_slide -->");
     const t = scanner.nextToken();
     try testing.expectEqual(.end_slide, t.type);
+}
+
+test "Scanner thematic break variations" {
+    const testing = std.testing;
+
+    // Test --- (already supported)
+    var scanner1 = Scanner.init("---");
+    const t1 = scanner1.nextToken();
+    try testing.expectEqual(.thematic_break, t1.type);
+
+    // Test *** (LOW-3 fix)
+    var scanner2 = Scanner.init("***");
+    const t2 = scanner2.nextToken();
+    try testing.expectEqual(.thematic_break, t2.type);
+
+    // Test ___ (LOW-3 fix)
+    var scanner3 = Scanner.init("___");
+    const t3 = scanner3.nextToken();
+    try testing.expectEqual(.thematic_break, t3.type);
 }
