@@ -214,11 +214,9 @@ pub const TransitionInterface = struct {
         switch (transition_type) {
             .none => applyNone(from_buffer, to_buffer, target),
             .fade => applyFade(from_buffer, to_buffer, target, progress),
-            .slide_left, .slide_right, .slide_up, .slide_down =>
-                applySlide(from_buffer, to_buffer, target, progress, transition_type),
+            .slide_left, .slide_right, .slide_up, .slide_down => applySlide(from_buffer, to_buffer, target, progress, transition_type),
             .dissolve => applyDissolve(from_buffer, to_buffer, target, progress),
-            .wipe_left, .wipe_right, .wipe_up, .wipe_down =>
-                applyWipe(from_buffer, to_buffer, target, progress, transition_type),
+            .wipe_left, .wipe_right, .wipe_up, .wipe_down => applyWipe(from_buffer, to_buffer, target, progress, transition_type),
         }
     }
 

@@ -334,9 +334,7 @@ pub const App = struct {
     fn willChangeSlide(self: *Self, key: vaxis.Key, nav: *Navigation) bool {
         _ = self;
         return switch (key.codepoint) {
-            'j', 'k', 'g', 'G', vaxis.Key.space,
-            vaxis.Key.backspace, vaxis.Key.left, vaxis.Key.right,
-            vaxis.Key.up, vaxis.Key.down => !nav.show_help and !nav.show_overview,
+            'j', 'k', 'g', 'G', vaxis.Key.space, vaxis.Key.backspace, vaxis.Key.left, vaxis.Key.right, vaxis.Key.up, vaxis.Key.down => !nav.show_help and !nav.show_overview,
             else => false,
         };
     }
