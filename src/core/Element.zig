@@ -1,5 +1,60 @@
 const std = @import("std");
 
+/// Inline represents inline text formatting
+pub const Inline = union(enum) {
+    text: []const u8,
+    bold: []Inline,
+    italic: []Inline,
+    code: []const u8,
+    link: Link,
+    image: Image,
+
+    pub fn deinit(self: Inline, allocator: std.mem.Allocator) void {
+        switch (self) {
+            .text => |t| allocator.free(t),
+            .bold => |b| {
+                for (b) |*item| item.deinit(allocator);
+                allocator.free(b);
+            },
+            .italic => |i| {
+                for (i) |*item| item.deinit(allocator);
+                allocator.free(i);
+            },
+            .code => |c| allocator.free(c),
+            .link => |l| {
+                for (l.content) |*item| item.deinit(allocator);
+                allocator.free(l.content);
+                allocator.free(l.url);
+            },
+            .image => |img| {
+                allocator.free(img.alt);
+                allocator.free(img.url);
+            },
+        }
+    }
+};
+
+/// Extract the first text content from inline elements (non-allocating)
+/// Returns the first .text found, or null if none exists
+pub fn extractFirstText(inlines: []const Inline) ?[]const u8 {
+    for (inlines) |inline_elem| {
+        switch (inline_elem) {
+            .text => |t| return t,
+            .bold => |b| if (extractFirstText(b)) |t| return t,
+            .italic => |i| if (extractFirstText(i)) |t| return t,
+            .link => |l| if (extractFirstText(l.content)) |t| return t,
+            else => {},
+        }
+    }
+    return null;
+}
+
+/// Link inline element
+pub const Link = struct {
+    content: []Inline,
+    url: []const u8,
+};
+
 /// Element represents a block-level element in a slide
 pub const Element = union(enum) {
     heading: Heading,
@@ -27,18 +82,20 @@ pub const Element = union(enum) {
 
 pub const Heading = struct {
     level: u8,
-    text: []const u8,
+    content: []Inline, // Styled inline content
 
     pub fn deinit(self: Heading, allocator: std.mem.Allocator) void {
-        allocator.free(self.text);
+        for (self.content) |*item| item.deinit(allocator);
+        allocator.free(self.content);
     }
 };
 
 pub const Paragraph = struct {
-    text: []const u8,
+    content: []Inline, // Styled inline content
 
     pub fn deinit(self: Paragraph, allocator: std.mem.Allocator) void {
-        allocator.free(self.text);
+        for (self.content) |*item| item.deinit(allocator);
+        allocator.free(self.content);
     }
 };
 
@@ -65,11 +122,12 @@ pub const List = struct {
 };
 
 pub const ListItem = struct {
-    text: []const u8,
+    content: []Inline, // Styled inline content
     children: ?*List, // Nested list (if any)
 
     pub fn deinit(self: ListItem, allocator: std.mem.Allocator) void {
-        allocator.free(self.text);
+        for (self.content) |*item| item.deinit(allocator);
+        allocator.free(self.content);
         if (self.children) |child_list| {
             child_list.deinit(allocator);
             allocator.destroy(child_list);
@@ -78,10 +136,11 @@ pub const ListItem = struct {
 };
 
 pub const Blockquote = struct {
-    text: []const u8,
+    content: []Inline, // Styled inline content
 
     pub fn deinit(self: Blockquote, allocator: std.mem.Allocator) void {
-        allocator.free(self.text);
+        for (self.content) |*item| item.deinit(allocator);
+        allocator.free(self.content);
     }
 };
 
@@ -96,7 +155,7 @@ pub const Image = struct {
 };
 
 pub const Table = struct {
-    headers: [][]const u8,
+    headers: []TableCell,
     rows: [][]TableCell,
     alignments: []Alignment,
 
@@ -108,16 +167,21 @@ pub const Table = struct {
     };
 
     pub const TableCell = struct {
-        text: []const u8,
+        content: []Inline,
+
+        pub fn deinit(self: TableCell, allocator: std.mem.Allocator) void {
+            for (self.content) |*item| item.deinit(allocator);
+            allocator.free(self.content);
+        }
     };
 
     pub fn deinit(self: Table, allocator: std.mem.Allocator) void {
-        for (self.headers) |h| allocator.free(h);
+        for (self.headers) |h| h.deinit(allocator);
         allocator.free(self.headers);
 
         for (self.rows) |row| {
             for (row) |cell| {
-                allocator.free(cell.text);
+                cell.deinit(allocator);
             }
             allocator.free(row);
         }
@@ -132,10 +196,13 @@ test "Element deinit" {
     const testing = std.testing;
     const allocator = testing.allocator;
 
+    const content = try allocator.alloc(Inline, 1);
+    content[0] = .{ .text = try allocator.dupe(u8, "Title") };
+
     const heading = Element{
         .heading = .{
             .level = 1,
-            .text = try allocator.dupe(u8, "Title"),
+            .content = content,
         },
     };
     heading.deinit(allocator);

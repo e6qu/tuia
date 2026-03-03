@@ -7,6 +7,7 @@ const Size = @import("Widget.zig").Size;
 const Widget = @import("Widget.zig").Widget;
 const WidgetFactory = @import("Widget.zig").WidgetFactory;
 const Slide = @import("../core/Slide.zig").Slide;
+const Inline = @import("../core/Element.zig").Inline;
 
 /// SlideWidget renders a complete slide with all its elements
 pub const SlideWidget = struct {
@@ -187,10 +188,13 @@ test "SlideWidget basic" {
     var elements: std.ArrayList(Element) = .empty;
     defer elements.deinit(allocator);
 
+    const heading_content = try allocator.alloc(Inline, 1);
+    heading_content[0] = .{ .text = try allocator.dupe(u8, "Test Slide") };
+
     try elements.append(allocator, .{
         .heading = .{
             .level = 1,
-            .text = try allocator.dupe(u8, "Test Slide"),
+            .content = heading_content,
         },
     });
 
@@ -198,6 +202,7 @@ test "SlideWidget basic" {
         .elements = try elements.toOwnedSlice(allocator),
         .speaker_notes = null,
     };
+    // SlideWidget takes ownership of slide, so no defer cleanup needed
 
     var widget = try SlideWidget.init(allocator, slide);
     defer widget.deinit();
@@ -214,15 +219,21 @@ test "SlideWidget with multiple elements" {
     var elements: std.ArrayList(Element) = .empty;
     defer elements.deinit(allocator);
 
+    const heading_content = try allocator.alloc(Inline, 1);
+    heading_content[0] = .{ .text = try allocator.dupe(u8, "Title") };
+
+    const para_content = try allocator.alloc(Inline, 1);
+    para_content[0] = .{ .text = try allocator.dupe(u8, "Some content") };
+
     try elements.append(allocator, .{
         .heading = .{
             .level = 1,
-            .text = try allocator.dupe(u8, "Title"),
+            .content = heading_content,
         },
     });
     try elements.append(allocator, .{
         .paragraph = .{
-            .text = try allocator.dupe(u8, "Some content"),
+            .content = para_content,
         },
     });
 
@@ -230,6 +241,7 @@ test "SlideWidget with multiple elements" {
         .elements = try elements.toOwnedSlice(allocator),
         .speaker_notes = null,
     };
+    // SlideWidget takes ownership of slide, so no defer cleanup needed
 
     var widget = try SlideWidget.init(allocator, slide);
     defer widget.deinit();
@@ -250,10 +262,13 @@ test "SlideWidget getTitle" {
     var elements: std.ArrayList(Element) = .empty;
     defer elements.deinit(allocator);
 
+    const heading_content = try allocator.alloc(Inline, 1);
+    heading_content[0] = .{ .text = try allocator.dupe(u8, "My Slide Title") };
+
     try elements.append(allocator, .{
         .heading = .{
             .level = 1,
-            .text = try allocator.dupe(u8, "My Slide Title"),
+            .content = heading_content,
         },
     });
 
@@ -261,6 +276,7 @@ test "SlideWidget getTitle" {
         .elements = try elements.toOwnedSlice(allocator),
         .speaker_notes = null,
     };
+    // SlideWidget takes ownership of slide, so no defer cleanup needed
 
     var widget = try SlideWidget.init(allocator, slide);
     defer widget.deinit();
@@ -278,17 +294,21 @@ test "SlideWidget padding" {
     var elements: std.ArrayList(Element) = .empty;
     defer elements.deinit(allocator);
 
+    const heading_content = try allocator.alloc(Inline, 1);
+    heading_content[0] = .{ .text = try allocator.dupe(u8, "Title") };
+
     try elements.append(allocator, .{
         .heading = .{
             .level = 1,
-            .text = try allocator.dupe(u8, "Title"),
+            .content = heading_content,
         },
     });
 
     const slide = Slide{
-            .speaker_notes = null,
+        .speaker_notes = null,
         .elements = try elements.toOwnedSlice(allocator),
     };
+    // SlideWidget takes ownership of slide, so no defer cleanup needed
 
     var widget = try SlideWidget.init(allocator, slide);
     defer widget.deinit();

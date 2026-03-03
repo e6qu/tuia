@@ -8,6 +8,38 @@ const DrawUtils = @import("Widget.zig").DrawUtils;
 const toVaxisStyle = @import("Widget.zig").toVaxisStyle;
 const List = @import("../core/Element.zig").List;
 const ListItem = @import("../core/Element.zig").ListItem;
+const Inline = @import("../core/Element.zig").Inline;
+
+/// Convert inline content to plain text
+fn inlineToPlainText(allocator: std.mem.Allocator, inlines: []const Inline) ![]const u8 {
+    var result: std.ArrayList(u8) = .empty;
+    errdefer result.deinit(allocator);
+
+    for (inlines) |inline_elem| {
+        switch (inline_elem) {
+            .text => |t| try result.appendSlice(allocator, t),
+            .code => |c| try result.appendSlice(allocator, c),
+            .bold => |b| {
+                const text = try inlineToPlainText(allocator, b);
+                defer allocator.free(text);
+                try result.appendSlice(allocator, text);
+            },
+            .italic => |i| {
+                const text = try inlineToPlainText(allocator, i);
+                defer allocator.free(text);
+                try result.appendSlice(allocator, text);
+            },
+            .link => |l| {
+                const text = try inlineToPlainText(allocator, l.content);
+                defer allocator.free(text);
+                try result.appendSlice(allocator, text);
+            },
+            .image => |img| try result.appendSlice(allocator, img.alt),
+        }
+    }
+
+    return try result.toOwnedSlice(allocator);
+}
 
 /// ListWidget renders bullet and numbered lists
 pub const ListWidget = struct {
@@ -32,8 +64,10 @@ pub const ListWidget = struct {
         errdefer allocator.free(items);
 
         for (list.items, 0..) |list_item, i| {
+            const text = try inlineToPlainText(allocator, list_item.content);
+            errdefer allocator.free(text);
             items[i] = .{
-                .text = try allocator.dupe(u8, list_item.text),
+                .text = text,
             };
         }
 
@@ -179,9 +213,17 @@ test "ListWidget unordered" {
     var items: std.ArrayList(ListItem) = .empty;
     defer items.deinit(allocator);
 
-    try items.append(allocator, .{ .text = try allocator.dupe(u8, "First item"), .children = null });
-    try items.append(allocator, .{ .text = try allocator.dupe(u8, "Second item"), .children = null });
-    try items.append(allocator, .{ .text = try allocator.dupe(u8, "Third item"), .children = null });
+    const content1 = try allocator.alloc(Inline, 1);
+    content1[0] = .{ .text = try allocator.dupe(u8, "First item") };
+    try items.append(allocator, .{ .content = content1, .children = null });
+
+    const content2 = try allocator.alloc(Inline, 1);
+    content2[0] = .{ .text = try allocator.dupe(u8, "Second item") };
+    try items.append(allocator, .{ .content = content2, .children = null });
+
+    const content3 = try allocator.alloc(Inline, 1);
+    content3[0] = .{ .text = try allocator.dupe(u8, "Third item") };
+    try items.append(allocator, .{ .content = content3, .children = null });
 
     const list = List{
         .ordered = false,
@@ -206,8 +248,13 @@ test "ListWidget ordered" {
     var items: std.ArrayList(ListItem) = .empty;
     defer items.deinit(allocator);
 
-    try items.append(allocator, .{ .text = try allocator.dupe(u8, "Step one"), .children = null });
-    try items.append(allocator, .{ .text = try allocator.dupe(u8, "Step two"), .children = null });
+    const content1 = try allocator.alloc(Inline, 1);
+    content1[0] = .{ .text = try allocator.dupe(u8, "Step one") };
+    try items.append(allocator, .{ .content = content1, .children = null });
+
+    const content2 = try allocator.alloc(Inline, 1);
+    content2[0] = .{ .text = try allocator.dupe(u8, "Step two") };
+    try items.append(allocator, .{ .content = content2, .children = null });
 
     const list = List{
         .ordered = true,
@@ -231,8 +278,13 @@ test "ListWidget size calculation" {
     var items: std.ArrayList(ListItem) = .empty;
     defer items.deinit(allocator);
 
-    try items.append(allocator, .{ .text = try allocator.dupe(u8, "Item 1"), .children = null });
-    try items.append(allocator, .{ .text = try allocator.dupe(u8, "Item 2"), .children = null });
+    const content1 = try allocator.alloc(Inline, 1);
+    content1[0] = .{ .text = try allocator.dupe(u8, "Item 1") };
+    try items.append(allocator, .{ .content = content1, .children = null });
+
+    const content2 = try allocator.alloc(Inline, 1);
+    content2[0] = .{ .text = try allocator.dupe(u8, "Item 2") };
+    try items.append(allocator, .{ .content = content2, .children = null });
 
     const list = List{
         .ordered = false,

@@ -566,7 +566,7 @@ fn parseInlineContent(allocator: std.mem.Allocator, text: []const u8) ![]AST.Inl
                 i += 2; // skip closing **
             } else {
                 // No closing **, treat as text
-                const txt = try allocator.dupe(u8, text[strong_start - 2..i]);
+                const txt = try allocator.dupe(u8, text[strong_start - 2 .. i]);
                 try result.append(allocator, .{ .text = txt });
             }
             text_start = i;
@@ -595,7 +595,7 @@ fn parseInlineContent(allocator: std.mem.Allocator, text: []const u8) ![]AST.Inl
                 i += 1; // skip closing *
             } else {
                 // No closing *, treat as text
-                const txt = try allocator.dupe(u8, text[emph_start - 1..i]);
+                const txt = try allocator.dupe(u8, text[emph_start - 1 .. i]);
                 try result.append(allocator, .{ .text = txt });
             }
             text_start = i;
@@ -809,7 +809,7 @@ fn extractSpeakerNotes(text: []const u8, allocator: std.mem.Allocator) ![]const 
         }
     }
 
-    // Find the end (-->)  
+    // Find the end (-->)
     var end = text.len;
     if (std.mem.indexOf(u8, text[start..], "-->")) |idx| {
         end = start + idx;
