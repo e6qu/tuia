@@ -225,6 +225,7 @@ pub const ExportFormat = enum {
     html,
     pdf,
     revealjs,
+    beamer,
 };
 
 /// Code execution settings

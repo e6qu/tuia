@@ -154,7 +154,7 @@ pub fn printHelp() void {
         \\  --loop                  Loop presentation
         \\  --auto-advance <SEC>    Auto-advance slides every N seconds
         \\  --timeout <SEC>         Code execution timeout (default: 30)
-        \\  -e, --export <FORMAT>   Export to format (html, revealjs)
+        \\  -e, --export <FORMAT>   Export to format (html, revealjs, beamer, pdf)
         \\  -o, --output <DIR>      Output directory for export
         \\
         \\COMMANDS (in presentation):
