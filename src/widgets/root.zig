@@ -9,6 +9,7 @@ pub const HelpWidget = @import("HelpWidget.zig");
 pub const StatusBar = @import("StatusBar.zig");
 pub const NoteWidget = @import("NoteWidget.zig");
 pub const ExecutionWidget = @import("ExecutionWidget.zig");
+pub const PresentationOverlay = @import("PresentationOverlay.zig").PresentationOverlay;
 
 test {
     std.testing.refAllDecls(@This());

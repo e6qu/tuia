@@ -25,6 +25,14 @@ pub const HelpWidget = struct {
         \\│    G                    Last slide       │
         \\│    1-9, Enter           Go to slide N    │
         \\│                                          │
+        \\│  Presentation Tools:                     │
+        \\│    L                    Toggle laser     │
+        \\│    h/j/k/l (in laser)   Move laser       │
+        \\│    D                    Toggle drawing   │
+        \\│    Space (in draw)      Draw at cursor   │
+        \\│    C                    Clear drawings   │
+        \\│    t                    Switch theme     │
+        \\│                                          │
         \\│  View:                                   │
         \\│    ?, F1                Toggle help      │
         \\│    o                    Toggle overview  │

@@ -120,7 +120,9 @@ pub const Renderer = struct {
         nav: ?Navigation,
         execution_widget: ?*ExecutionWidget,
         help_widget: ?*HelpWidget,
+        theme: Theme,
     ) !void {
+        _ = theme;
         // Clear the screen
         win.clear();
 

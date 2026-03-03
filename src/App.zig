@@ -16,11 +16,15 @@ const convertPresentation = @import("parser/Converter.zig").convertPresentation;
 const InputHandler = @import("core/InputHandler.zig").InputHandler;
 const ExecutionWidget = @import("widgets/ExecutionWidget.zig").ExecutionWidget;
 const HelpWidget = @import("widgets/HelpWidget.zig").HelpWidget;
+const PresentationOverlay = @import("widgets/PresentationOverlay.zig").PresentationOverlay;
 const CodeExecutor = executor.CodeExecutor;
 const ExecutionConfig = executor.ExecutionConfig;
 const ExecutorRegistry = executor.ExecutorRegistry;
 const Language = executor.Language;
 const Renderer = render.Renderer;
+const Theme = render.Theme.Theme;
+const darkTheme = render.Theme.darkTheme;
+const lightTheme = render.Theme.lightTheme;
 
 const Event = union(enum) {
     key: vaxis.Key,
@@ -46,6 +50,12 @@ pub const App = struct {
     // Code execution
     execution_widget: ExecutionWidget,
     executor_registry: ?ExecutorRegistry = null,
+
+    // Presentation overlay (laser, drawing, annotations)
+    overlay: PresentationOverlay,
+
+    // Current theme
+    current_theme: Theme,
 
     // Running state
     running: bool = true,
@@ -73,7 +83,9 @@ pub const App = struct {
             .input_handler = InputHandler.init(allocator),
             .execution_widget = ExecutionWidget.init(allocator),
             .help_widget = HelpWidget.init(allocator),
+            .overlay = PresentationOverlay.init(allocator),
             .renderer = Renderer.init(allocator),
+            .current_theme = darkTheme(),
         };
     }
 
@@ -91,6 +103,7 @@ pub const App = struct {
         self.renderer.deinit();
         self.execution_widget.deinit();
         self.help_widget.deinit();
+        self.overlay.deinit();
         self.input_handler.deinit();
         self.loop.stop();
         self.vx.deinit(self.allocator, self.tty.writer());
@@ -174,6 +187,94 @@ pub const App = struct {
             return;
         }
 
+        // Handle laser pointer movement
+        if (self.overlay.isLaserMode()) {
+            switch (key.codepoint) {
+                'h', vaxis.Key.left => {
+                    self.overlay.moveLaser(-1, 0, 80, 24);
+                    return;
+                },
+                'j', vaxis.Key.down => {
+                    self.overlay.moveLaser(0, 1, 80, 24);
+                    return;
+                },
+                'k', vaxis.Key.up => {
+                    self.overlay.moveLaser(0, -1, 80, 24);
+                    return;
+                },
+                'l', vaxis.Key.right => {
+                    self.overlay.moveLaser(1, 0, 80, 24);
+                    return;
+                },
+                else => {},
+            }
+        }
+
+        // Toggle laser pointer mode with 'L'
+        if (key.codepoint == 'L' and !self.input_handler.isInJumpMode()) {
+            self.overlay.toggleLaserMode();
+            // Center laser initially
+            if (self.overlay.isLaserMode()) {
+                self.overlay.setLaserPosition(40, 12);
+            }
+            return;
+        }
+
+        // Toggle drawing mode with 'D'
+        if (key.codepoint == 'D' and !self.input_handler.isInJumpMode()) {
+            self.overlay.toggleDrawMode();
+            return;
+        }
+
+        // Clear drawings with 'C' (Shift+C, distinct from Ctrl+C)
+        if (key.codepoint == 'C' and !key.mods.ctrl and !self.input_handler.isInJumpMode()) {
+            self.overlay.clearDrawings();
+            return;
+        }
+
+        // Handle drawing (click to draw in draw mode)
+        if (self.overlay.isDrawMode() and key.codepoint == ' ') {
+            // Draw at laser position
+            try self.overlay.drawAt(self.overlay.laser_x, self.overlay.laser_y);
+            return;
+        }
+
+        // Theme switching with 't'
+        if (key.codepoint == 't' and !self.input_handler.isInJumpMode()) {
+            self.overlay.toggleThemePicker();
+            return;
+        }
+
+        // Theme selection in picker mode
+        if (self.overlay.show_theme_picker) {
+            switch (key.codepoint) {
+                'j', vaxis.Key.down => {
+                    self.overlay.nextTheme();
+                    return;
+                },
+                'k', vaxis.Key.up => {
+                    self.overlay.prevTheme();
+                    return;
+                },
+                '\r', ' ' => {
+                    // Apply selected theme
+                    const theme_name = self.overlay.getCurrentThemeName();
+                    if (std.mem.eql(u8, theme_name, "dark")) {
+                        self.current_theme = darkTheme();
+                    } else if (std.mem.eql(u8, theme_name, "light")) {
+                        self.current_theme = lightTheme();
+                    }
+                    self.overlay.toggleThemePicker();
+                    return;
+                },
+                'q', 0x1B => { // Escape
+                    self.overlay.toggleThemePicker();
+                    return;
+                },
+                else => {},
+            }
+        }
+
         // Handle input
         const should_quit = try self.input_handler.handleKey(key, nav, self.allocator);
         if (should_quit) {
@@ -186,6 +287,15 @@ pub const App = struct {
         // For now, check if 'e' was pressed and we're not in jump mode
         if (key.codepoint == 'e' and !self.input_handler.isInJumpMode()) {
             try self.executeCurrentCodeBlock();
+        }
+
+        // On slide change, update overlay
+        if (key.codepoint == 'j' or key.codepoint == 'k' or
+            key.codepoint == ' ' or key.codepoint == vaxis.Key.backspace or
+            key.codepoint == vaxis.Key.right or key.codepoint == vaxis.Key.left or
+            key.codepoint == vaxis.Key.down or key.codepoint == vaxis.Key.up)
+        {
+            self.overlay.onSlideChange();
         }
     }
 
@@ -254,7 +364,17 @@ pub const App = struct {
             self.navigation,
             if (self.navigation) |nav| if (nav.show_execution) &self.execution_widget else null else null,
             if (self.navigation) |nav| if (nav.show_help) &self.help_widget else null else null,
+            self.current_theme,
         );
+
+        // Draw overlay (laser pointer, drawings, theme picker)
+        if (self.presentation != null and self.navigation != null) {
+            // Get slide dimensions (approximate)
+            const slide_width = win.width;
+            const slide_height = win.height - 2; // Account for status bar
+
+            self.overlay.draw(win, slide_width, slide_height);
+        }
 
         try self.vx.render(self.tty.writer());
     }
