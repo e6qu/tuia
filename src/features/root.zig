@@ -16,6 +16,10 @@ pub const TransitionManager = transitions.TransitionManager;
 pub const TransitionType = transitions.TransitionType;
 pub const TransitionConfig = transitions.TransitionConfig;
 
+// Remote control
+pub const remote = @import("remote/root.zig");
+pub const RemoteServer = remote.RemoteServer;
+
 test {
     std.testing.refAllDecls(@This());
 }

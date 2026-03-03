@@ -22,21 +22,21 @@ All milestones are complete:
 Potential enhancements for future versions:
 
 ### Export Formats
-- PDF export support
-- PowerPoint export
-- Reveal.js export
+- ✅ PDF export support (LaTeX/Beamer backend)
+- ✅ Reveal.js export (enhanced with plugins)
+- PowerPoint export (.pptx)
 
 ### Features
 - Presentation remote control
-- Laser pointer mode
-- Drawing/annotations on slides
-- Slide transitions/animations
+- ✅ Laser pointer mode
+- ✅ Drawing/annotations on slides
+- ✅ Slide transitions/animations
 - Audio/video support
 
 ### Configuration
 - GUI config editor
 - Theme preview
-- Live theme switching
+- ✅ Live theme switching
 
 ### Developer
 - Plugin system
