@@ -83,6 +83,53 @@ if (output_width == 0 or output_height == 0) return error.InvalidDimensions;
 
 ---
 
+### ✅ CRITICAL-9: Empty Buffer Access in TransitionManager (Fixed)
+**Status:** 🟢 Fixed  
+**Component:** Transitions  
+**Impact:** High
+
+**Description:**  
+In `App.zig`, when checking if transition buffer needs capturing, the code accesses `to_buf.cells[0]` without checking if the buffer is empty. If the window dimensions are 0 (minimized or edge case), the buffer will be empty and this will panic.
+
+**Location:** `src/App.zig:521`
+
+**Fix:** Add bounds check before accessing cells:
+```zig
+if (self.transition_manager.to_buffer) |to_buf| {
+    if (to_buf.cells.len == 0) return;
+    const first_cell = to_buf.cells[0];
+    // ... rest of logic
+}
+```
+
+---
+
+### ✅ CRITICAL-10: Bounds Check Missing in Parser Inline Functions (Fixed)
+**Status:** 🟢 Fixed  
+**Component:** Parser  
+**Impact:** High
+
+**Description:**  
+Multiple inline parsing functions access `text[pos]` without first checking if `pos < text.len`. If the input text is empty, this will cause a panic.
+
+**Locations:**
+- `src/parser/Parser.zig:672` - `parseEmphasis()` accesses `text[pos]` without bounds check
+- `src/parser/Parser.zig:713` - `parseLinkOrImage()` accesses `text[pos]` without bounds check
+- `src/parser/Parser.zig:733` - `parseImage()` accesses `text[pos]` without bounds check
+- `src/parser/Parser.zig:782` - `parseLink()` accesses `text[pos]` without bounds check
+
+**Fix:** Add bounds check at the start of each function:
+```zig
+fn parseEmphasis(...) ParseError!?AST.Inline {
+    const pos = i.*;
+    if (pos >= text.len) return null;  // Add this check
+    if (text[pos] != '*') return null;
+    // ... rest of function
+}
+```
+
+---
+
 ### ✅ CRITICAL-1: Race Condition in RemoteServer.start() (Fixed)
 **Status:** 🟢 Fixed  
 **Component:** Remote Control  
@@ -158,80 +205,6 @@ code_block.code = "const x = 42;"
 
 ---
 
-### ✅ CRITICAL-3: Integer Underflow in HelpWidget.draw() (Fixed)
-**Status:** 🟢 Fixed  
-**Component:** HelpWidget  
-**Impact:** High
-
-**Description:**  
-In `src/widgets/HelpWidget.zig`, the `draw()` function calculates `start_row` and `start_col` using subtraction that can underflow if the content is larger than the window:
-
-```zig
-const start_row = @divTrunc(win.height, 2) - @divTrunc(line_count, 2);
-const start_col = @divTrunc(win.width, 2) - @divTrunc(max_width, 2);
-```
-
-If `line_count > win.height` or `max_width > win.width`, the subtraction will cause an integer underflow (panic in debug mode).
-
-**Location:** `src/widgets/HelpWidget.zig:90-91`
-
-**Fix:** Use saturating arithmetic or check bounds before subtraction:
-```zig
-const start_row = if (line_count > win.height) 0 else @divTrunc(win.height - line_count, 2);
-const start_col = if (max_width > win.width) 0 else @divTrunc(win.width - max_width, 2);
-```
-
----
-
-### ✅ CRITICAL-4: Integer Underflow in PresentationOverlay.prevTheme() (Fixed)
-**Status:** 🟢 Fixed  
-**Component:** PresentationOverlay  
-**Impact:** High
-
-**Description:**  
-In `src/widgets/PresentationOverlay.zig`, the `prevTheme()` function can cause an integer underflow if `theme_names.len` is 0:
-
-```zig
-self.current_theme_index = if (self.current_theme_index == 0)
-    self.theme_names.len - 1  // Underflow if len is 0!
-else
-    self.current_theme_index - 1;
-```
-
-**Location:** `src/widgets/PresentationOverlay.zig:136-140`
-
-**Fix:** Check for empty theme_names or use saturating subtraction:
-```zig
-pub fn prevTheme(self: *Self) void {
-    if (self.theme_names.len == 0) return;
-    self.current_theme_index = if (self.current_theme_index == 0)
-        self.theme_names.len - 1
-    else
-        self.current_theme_index - 1;
-}
-```
-
----
-
-### ✅ CRITICAL-5: Integer Underflow in Renderer.drawWelcomeScreen() (Fixed)
-**Status:** 🟢 Fixed  
-**Component:** Renderer  
-**Impact:** Medium
-
-**Description:**  
-In `src/render/Renderer.zig`, the `drawWelcomeScreen()` function uses `center_row - 1` which can underflow if `win.height` is 0 or 1:
-
-```zig
-const center_row = @divTrunc(win.height, 2);
-_ = win.writeCell(col, center_row - 1, .{...});
-```
-
-**Location:** `src/render/Renderer.zig:203, 208`
-
-**Fix:** Check window height before subtraction or use saturating arithmetic.
-
----
-
 ## ⚠️ High Priority Issues
 
 ### ✅ HIGH-1: MediaPlayer Thread Safety Issue (Fixed)
@@ -266,7 +239,7 @@ pub const MediaPlayback = struct {
 ---
 
 ### ✅ HIGH-2: PdfExporter Path Extension Handling Bug (Fixed)
-**Status:** 🟢 Fixed (Already correct in code)  
+**Status:** 🟢 Fixed  
 **Component:** PDF Export  
 **Impact:** Low
 
@@ -310,58 +283,6 @@ Inline markdown formatting was not being parsed - bold, italic, inline code, lin
 // Input: "Hello **bold** world"
 // Result: [text("Hello "), strong([text("bold")]), text(" world")]
 ```
-
----
-
-### ✅ HIGH-2: Images Not Supported
-**Status:** 🔴 Open  
-**Component:** Scanner/Parser/Renderer  
-**Impact:** High
-
-**Description:**  
-Image syntax `![alt text](url)` is not recognized by the scanner. While the AST and core types define `Image` structures, they are never populated.
-
-**Locations:**
-- `src/parser/Token.zig:26` - Token type exists
-- `src/parser/AST.zig` - `Image` struct and `Inline.image` exist
-- `src/core/Element.zig:10` - `Element.image` exists
-- `src/parser/Scanner.zig` - No image tokenization
-
-**Expected Behavior:**  
-Images should be:
-1. Tokenized by the scanner
-2. Parsed into AST
-3. Converted to core types
-4. Rendered using appropriate protocol (Kitty/iTerm2/Sixel/ASCII)
-
-**Workaround:** None
-
----
-
-### ✅ HIGH-3: Speaker Notes Not Implemented
-**Status:** 🟢 Fixed  
-**Component:** Parser/Core  
-**Impact:** Medium
-
-**Description:**  
-HTML comments meant for speaker notes (`<!-- Speaker note: ... -->`) were stripped by the scanner.
-
-**Fix:**
-- Added `speaker_note` token type to `Token.zig`
-- Modified `Scanner.zig` to recognize `<!-- Speaker note: ... -->` comments
-- Added `speaker_notes` field to `AST.Slide` and `core.Slide`
-- Updated `Parser.zig` to collect speaker notes for each slide
-- Added `extractSpeakerNotes()` helper function
-- Updated `Converter.zig` to pass notes through
-
-**Usage:**
-```markdown
-# Slide Title
-Content here
-<!-- Speaker note: Remember to mention key points -->
-```
-
-**Note:** Multiple speaker notes on one slide are combined with newlines.
 
 ---
 
