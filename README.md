@@ -6,7 +6,7 @@
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 [![Zig Version](https://img.shields.io/badge/Zig-0.15.2-orange.svg)](https://ziglang.org)
 
-**Status:** ✅ Feature Complete (Pre-release)
+**Status:** ✅ Version 1.0.0 Released
 
 ---
 
