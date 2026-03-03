@@ -94,8 +94,9 @@ pub const CodeWidget = struct {
             const line_end = std.mem.indexOfScalarPos(u8, self.code, line_start, '\n') orelse self.code.len;
             const line_len = line_end - line_start;
 
-            // Account for wrapping
-            const wrapped_lines = @max(1, (line_len + available_width - 4 - 1) / (available_width - 4));
+            // Account for wrapping (avoid division by zero)
+            const content_width = if (available_width > 4) available_width - 4 else 1;
+            const wrapped_lines = @max(1, (line_len + content_width - 1) / content_width);
             lines += wrapped_lines;
 
             line_start = line_end + 1;
