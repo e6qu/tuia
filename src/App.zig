@@ -63,6 +63,9 @@ pub const App = struct {
     remote_server: features.remote.RemoteServer,
     remote_enabled: bool,
 
+    // Media player
+    media_player: features.media.MediaPlayer,
+
     // Current theme
     current_theme: Theme,
 
@@ -96,6 +99,7 @@ pub const App = struct {
             .transition_manager = transitions.TransitionManager.init(allocator),
             .remote_server = features.remote.RemoteServer.init(allocator, 8765),
             .remote_enabled = false,
+            .media_player = features.media.MediaPlayer.init(allocator),
             .renderer = Renderer.init(allocator),
             .current_theme = darkTheme(),
         };
@@ -118,6 +122,7 @@ pub const App = struct {
         self.overlay.deinit();
         self.transition_manager.deinit();
         self.remote_server.stop();
+        self.media_player.deinit();
         self.input_handler.deinit();
         self.loop.stop();
         self.vx.deinit(self.allocator, self.tty.writer());
@@ -351,6 +356,19 @@ pub const App = struct {
                 self.remote_enabled = true;
                 try nav.setMessage(self.allocator, "Remote: http://localhost:8765", 120);
             }
+        }
+
+        // Media controls
+        if (key.codepoint == 'm' and !self.input_handler.isInJumpMode()) {
+            // Play sample media (for testing)
+            // In real use, this would be triggered by media elements in slides
+            try nav.setMessage(self.allocator, "Media: Press 'M' to toggle playback", 60);
+        }
+
+        // Stop media with 'M' (shift+m)
+        if (key.codepoint == 'M' and !key.mods.ctrl) {
+            self.media_player.stop();
+            try nav.setMessage(self.allocator, "Media stopped", 60);
         }
     }
 
