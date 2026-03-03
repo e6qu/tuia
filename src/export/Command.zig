@@ -7,6 +7,7 @@ const Presentation = @import("../core/Presentation.zig").Presentation;
 
 const HtmlExporter = @import("HtmlExporter.zig").HtmlExporter;
 const RevealJsExporter = @import("RevealJsExporter.zig").RevealJsExporter;
+const RevealJsConfig = @import("RevealJsExporter.zig").RevealJsConfig;
 const BeamerExporter = @import("BeamerExporter.zig").BeamerExporter;
 const PdfExporter = @import("PdfExporter.zig").PdfExporter;
 const ThemeModule = @import("../render/Theme.zig");
@@ -111,7 +112,18 @@ fn exportHtml(allocator: std.mem.Allocator, presentation: Presentation, output_p
 
 /// Export to Reveal.js
 fn exportRevealJs(allocator: std.mem.Allocator, presentation: Presentation, output_path: []const u8) !void {
-    var exporter = RevealJsExporter.init(allocator, "dark");
+    // Default configuration for reveal.js export
+    const config = RevealJsConfig{
+        .theme = "black",
+        .transition = .slide,
+        .background_transition = .fade,
+        .enable_notes = true,
+        .enable_highlight = true,
+        .enable_search = true,
+        .enable_zoom = true,
+        .enable_pdf = true,
+    };
+    var exporter = RevealJsExporter.init(allocator, config);
     try exporter.exportToFile(presentation, output_path);
 }
 
