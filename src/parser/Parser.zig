@@ -669,7 +669,7 @@ fn parseEmphasis(
     text_start: *usize,
 ) ParseError!?AST.Inline {
     const pos = i.*;
-    if (text[pos] != '*') return null;
+    if (pos >= text.len or text[pos] != '*') return null;
     // Skip if this is the start of strong (**)
     if (pos + 1 < text.len and text[pos + 1] == '*') return null;
 
@@ -708,6 +708,7 @@ fn parseLinkOrImage(
     text_start: *usize,
 ) ParseError!?AST.Inline {
     const pos = i.*;
+    if (pos >= text.len) return null;
 
     // Check for images: ![alt](url)
     if (text[pos] == '!' and pos + 1 < text.len and text[pos + 1] == '[') {
@@ -730,7 +731,7 @@ fn parseImage(
     text_start: *usize,
 ) ParseError!?AST.Inline {
     const pos = i.*;
-    if (text[pos] != '!' or pos + 1 >= text.len or text[pos + 1] != '[') return null;
+    if (pos >= text.len or text[pos] != '!' or pos + 1 >= text.len or text[pos + 1] != '[') return null;
 
     // Find closing ]
     var j = pos + 2;
@@ -779,7 +780,7 @@ fn parseLink(
     text_start: *usize,
 ) ParseError!?AST.Inline {
     const pos = i.*;
-    if (text[pos] != '[') return null;
+    if (pos >= text.len or text[pos] != '[') return null;
 
     // Find closing ]
     var j = pos + 1;

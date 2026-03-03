@@ -518,6 +518,8 @@ pub const App = struct {
             // Capture the "to" slide if we haven't yet
             // We check if the first cell has any content to determine if we've captured
             if (self.transition_manager.to_buffer) |to_buf| {
+                // Skip if buffer is empty (e.g., zero window dimensions)
+                if (to_buf.cells.len == 0) return;
                 const first_cell = to_buf.cells[0];
                 if (first_cell.char.grapheme.len == 0 and first_cell.style.fg == .default) {
                     self.transition_manager.completeTransition(content_win);
