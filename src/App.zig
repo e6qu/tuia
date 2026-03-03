@@ -6,6 +6,7 @@ const core = @import("core/root.zig");
 const parser_module = @import("parser/root.zig");
 const widgets = @import("widgets/root.zig");
 const render = @import("render/root.zig");
+const features = @import("features/root.zig");
 const executor = @import("features/executor/root.zig");
 const transitions = @import("features/transitions/root.zig");
 
@@ -58,6 +59,10 @@ pub const App = struct {
     // Slide transitions
     transition_manager: transitions.TransitionManager,
 
+    // Remote control server
+    remote_server: features.remote.RemoteServer,
+    remote_enabled: bool,
+
     // Current theme
     current_theme: Theme,
 
@@ -89,6 +94,8 @@ pub const App = struct {
             .help_widget = HelpWidget.init(allocator),
             .overlay = PresentationOverlay.init(allocator),
             .transition_manager = transitions.TransitionManager.init(allocator),
+            .remote_server = features.remote.RemoteServer.init(allocator, 8765),
+            .remote_enabled = false,
             .renderer = Renderer.init(allocator),
             .current_theme = darkTheme(),
         };
@@ -110,6 +117,7 @@ pub const App = struct {
         self.help_widget.deinit();
         self.overlay.deinit();
         self.transition_manager.deinit();
+        self.remote_server.stop();
         self.input_handler.deinit();
         self.loop.stop();
         self.vx.deinit(self.allocator, self.tty.writer());
@@ -327,6 +335,22 @@ pub const App = struct {
             self.transition_manager.toggleEnabled();
             const status = if (self.transition_manager.config.enabled) "enabled" else "disabled";
             try nav.setMessage(self.allocator, try std.fmt.allocPrint(self.allocator, "Transitions {s}", .{status}), 60);
+        }
+
+        // Toggle remote control with 'R'
+        if (key.codepoint == 'R' and !self.input_handler.isInJumpMode()) {
+            if (self.remote_enabled) {
+                self.remote_server.stop();
+                self.remote_enabled = false;
+                try nav.setMessage(self.allocator, "Remote control disabled", 60);
+            } else {
+                self.remote_server.start(nav) catch |err| {
+                    try nav.setMessage(self.allocator, try std.fmt.allocPrint(self.allocator, "Remote error: {s}", .{@errorName(err)}), 120);
+                    return;
+                };
+                self.remote_enabled = true;
+                try nav.setMessage(self.allocator, "Remote: http://localhost:8765", 120);
+            }
         }
     }
 
