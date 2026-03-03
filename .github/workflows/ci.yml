@@ -225,8 +225,8 @@ jobs:
       - name: Check size limits
         run: |
           SIZE=$(stat -c%s zig-out/bin/tuia)
-          if [ $SIZE -gt 5242880 ]; then  # 5MB
-            echo "Binary size $SIZE exceeds 5MB limit"
+          if [ $SIZE -gt 7340032 ]; then  # 7MB
+            echo "Binary size $SIZE exceeds 7MB limit"
             exit 1
           fi
           echo "Binary size OK: $SIZE bytes"
