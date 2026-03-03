@@ -5,17 +5,203 @@ const Slide = @import("../core/Slide.zig").Slide;
 const Element = @import("../core/Element.zig").Element;
 const inlineToPlainText = @import("../core/Element.zig").inlineToPlainText;
 
+/// Reveal.js export configuration
+pub const RevealJsConfig = struct {
+    /// Reveal.js theme (black, white, league, beige, sky, night, serif, simple, solarized, blood, moon)
+    theme: []const u8 = "black",
+
+    /// Slide transition style
+    transition: Transition = .slide,
+
+    /// Background transition style
+    background_transition: BackgroundTransition = .fade,
+
+    /// Enable slide numbers
+    slide_number: SlideNumber = .c_t,
+
+    /// Enable speaker notes
+    enable_notes: bool = true,
+
+    /// Enable code highlighting with highlight.js
+    enable_highlight: bool = true,
+
+    /// Enable search plugin
+    enable_search: bool = true,
+
+    /// Enable zoom plugin
+    enable_zoom: bool = true,
+
+    /// Self-contained mode (inline all resources)
+    self_contained: bool = false,
+
+    /// Enable PDF export support
+    enable_pdf: bool = true,
+
+    /// Transition speed
+    transition_speed: TransitionSpeed = .default,
+
+    /// Auto-slide (0 = disabled)
+    auto_slide: u32 = 0,
+
+    /// Loop presentation
+    loop: bool = false,
+
+    /// Show controls
+    controls: bool = true,
+
+    /// Show progress bar
+    progress: bool = true,
+
+    /// Center slides vertically
+    center: bool = true,
+
+    /// Enable touch/swipe
+    touch: bool = true,
+
+    /// Show navigation arrows
+    navigation_mode: NavigationMode = .default,
+
+    /// Fragment default animation
+    fragment_default: FragmentAnimation = .fade_in,
+
+    pub const Transition = enum {
+        none,
+        fade,
+        slide,
+        convex,
+        concave,
+        zoom,
+
+        pub fn toString(self: Transition) []const u8 {
+            return switch (self) {
+                .none => "none",
+                .fade => "fade",
+                .slide => "slide",
+                .convex => "convex",
+                .concave => "concave",
+                .zoom => "zoom",
+            };
+        }
+    };
+
+    pub const BackgroundTransition = enum {
+        none,
+        fade,
+        slide,
+        convex,
+        concave,
+        zoom,
+
+        pub fn toString(self: BackgroundTransition) []const u8 {
+            return switch (self) {
+                .none => "none",
+                .fade => "fade",
+                .slide => "slide",
+                .convex => "convex",
+                .concave => "concave",
+                .zoom => "zoom",
+            };
+        }
+    };
+
+    pub const SlideNumber = enum {
+        none,
+        h_v,
+        h_slash_v,
+        c,
+        c_slash_t,
+        c_t,
+
+        pub fn toString(self: SlideNumber) []const u8 {
+            return switch (self) {
+                .none => "false",
+                .h_v => "h.v",
+                .h_slash_v => "h/v",
+                .c => "c",
+                .c_slash_t => "c/t",
+                .c_t => "c/t",
+            };
+        }
+    };
+
+    pub const TransitionSpeed = enum {
+        default,
+        fast,
+        slow,
+
+        pub fn toString(self: TransitionSpeed) []const u8 {
+            return switch (self) {
+                .default => "default",
+                .fast => "fast",
+                .slow => "slow",
+            };
+        }
+    };
+
+    pub const NavigationMode = enum {
+        default,
+        linear,
+        grid,
+
+        pub fn toString(self: NavigationMode) []const u8 {
+            return switch (self) {
+                .default => "default",
+                .linear => "linear",
+                .grid => "grid",
+            };
+        }
+    };
+
+    pub const FragmentAnimation = enum {
+        fade_in,
+        fade_out,
+        fade_up,
+        fade_down,
+        fade_left,
+        fade_right,
+        fade_in_then_out,
+        fade_in_then_semi_out,
+        grow,
+        shrink,
+        strike,
+        highlight_current_blue,
+        highlight_red,
+        highlight_green,
+        highlight_blue,
+
+        pub fn toString(self: FragmentAnimation) []const u8 {
+            return switch (self) {
+                .fade_in => "fade-in",
+                .fade_out => "fade-out",
+                .fade_up => "fade-up",
+                .fade_down => "fade-down",
+                .fade_left => "fade-left",
+                .fade_right => "fade-right",
+                .fade_in_then_out => "fade-in-then-out",
+                .fade_in_then_semi_out => "fade-in-then-semi-out",
+                .grow => "grow",
+                .shrink => "shrink",
+                .strike => "strike",
+                .highlight_current_blue => "highlight-current-blue",
+                .highlight_red => "highlight-red",
+                .highlight_green => "highlight-green",
+                .highlight_blue => "highlight-blue",
+            };
+        }
+    };
+};
+
 /// Reveal.js exporter for generating web-based presentations
 pub const RevealJsExporter = struct {
     allocator: std.mem.Allocator,
-    theme: ?[]const u8,
+    config: RevealJsConfig,
 
     const Self = @This();
 
-    pub fn init(allocator: std.mem.Allocator, theme: ?[]const u8) Self {
+    pub fn init(allocator: std.mem.Allocator, config: RevealJsConfig) Self {
         return .{
             .allocator = allocator,
-            .theme = theme,
+            .config = config,
         };
     }
 
@@ -50,7 +236,6 @@ pub const RevealJsExporter = struct {
     fn writeHeader(self: Self, writer: anytype, presentation: Presentation) !void {
         const title = if (presentation.metadata.title) |t| t else "Presentation";
         const author = if (presentation.metadata.author) |a| a else null;
-        const reveal_theme = self.theme orelse "black";
 
         try writer.writeAll("<!DOCTYPE html>\n");
         try writer.writeAll("<html lang=\"en\">\n");
@@ -60,10 +245,19 @@ pub const RevealJsExporter = struct {
         try writer.writeAll("    <title>");
         try writer.writeAll(title);
         try writer.writeAll("</title>\n");
+
+        // Reveal.js core CSS
         try writer.writeAll("    <link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.css\">\n");
         try writer.writeAll("    <link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/theme/");
-        try writer.writeAll(reveal_theme);
+        try writer.writeAll(self.config.theme);
         try writer.writeAll(".css\">\n");
+
+        // Highlight.js for code syntax highlighting
+        if (self.config.enable_highlight) {
+            try writer.writeAll("    <link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css\">\n");
+        }
+
+        // Custom styles
         try writer.writeAll("    <style>\n");
         try writer.writeAll("        .reveal section img {\n");
         try writer.writeAll("            border: none;\n");
@@ -72,10 +266,27 @@ pub const RevealJsExporter = struct {
         try writer.writeAll("        }\n");
         try writer.writeAll("        .reveal pre {\n");
         try writer.writeAll("            font-size: 0.55em;\n");
+        try writer.writeAll("            width: 100%;\n");
         try writer.writeAll("        }\n");
         try writer.writeAll("        .reveal code {\n");
         try writer.writeAll("            font-family: 'Fira Code', 'Consolas', monospace;\n");
         try writer.writeAll("        }\n");
+        try writer.writeAll("        .reveal .slides {\n");
+        try writer.writeAll("            text-align: left;\n");
+        try writer.writeAll("        }\n");
+        try writer.writeAll("        .reveal h1, .reveal h2, .reveal h3 {\n");
+        try writer.writeAll("            text-transform: none;\n");
+        try writer.writeAll("        }\n");
+
+        // PDF export styles
+        if (self.config.enable_pdf) {
+            try writer.writeAll("        @media print {\n");
+            try writer.writeAll("            .reveal .slides {\n");
+            try writer.writeAll("                text-align: left !important;\n");
+            try writer.writeAll("            }\n");
+            try writer.writeAll("        }\n");
+        }
+
         try writer.writeAll("    </style>\n");
 
         if (author) |a| {
@@ -84,24 +295,119 @@ pub const RevealJsExporter = struct {
             try writer.writeAll("\">\n");
         }
 
+        // PDF export hint
+        if (self.config.enable_pdf) {
+            try writer.writeAll("    <!-- PDF Export: Add ?print-pdf to URL and print to PDF -->\n");
+        }
+
         try writer.writeAll("</head>\n");
         try writer.writeAll("<body>\n");
         try writer.writeAll("    <div class=\"reveal\">\n");
         try writer.writeAll("        <div class=\"slides\">\n");
     }
 
-    fn writeFooter(_: Self, writer: anytype) !void {
+    fn writeFooter(self: Self, writer: anytype) !void {
         try writer.writeAll("        </div>\n");
         try writer.writeAll("    </div>\n");
+
+        // Reveal.js core
         try writer.writeAll("    <script src=\"https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.js\"></script>\n");
+
+        // Plugins
+        if (self.config.enable_notes) {
+            try writer.writeAll("    <script src=\"https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/notes/notes.js\"></script>\n");
+        }
+        if (self.config.enable_highlight) {
+            try writer.writeAll("    <script src=\"https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/highlight.js\"></script>\n");
+        }
+        if (self.config.enable_search) {
+            try writer.writeAll("    <script src=\"https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/search/search.js\"></script>\n");
+        }
+        if (self.config.enable_zoom) {
+            try writer.writeAll("    <script src=\"https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/zoom/zoom.js\"></script>\n");
+        }
+
+        // Reveal.js initialization
         try writer.writeAll("    <script>\n");
         try writer.writeAll("        Reveal.initialize({\n");
+
+        // Core options
         try writer.writeAll("            hash: true,\n");
-        try writer.writeAll("            slideNumber: 'c/t',\n");
+        try writer.writeAll("            slideNumber: '");
+        try writer.writeAll(self.config.slide_number.toString());
+        try writer.writeAll("',\n");
         try writer.writeAll("            showSlideNumber: 'all',\n");
-        try writer.writeAll("            transition: 'slide',\n");
-        try writer.writeAll("            backgroundTransition: 'fade'\n");
+        try writer.writeAll("            transition: '");
+        try writer.writeAll(self.config.transition.toString());
+        try writer.writeAll("',\n");
+        try writer.writeAll("            backgroundTransition: '");
+        try writer.writeAll(self.config.background_transition.toString());
+        try writer.writeAll("',\n");
+        try writer.writeAll("            transitionSpeed: '");
+        try writer.writeAll(self.config.transition_speed.toString());
+        try writer.writeAll("',\n");
+        try writer.writeAll("            controls: ");
+        try writer.writeAll(if (self.config.controls) "true" else "false");
+        try writer.writeAll(",\n");
+        try writer.writeAll("            progress: ");
+        try writer.writeAll(if (self.config.progress) "true" else "false");
+        try writer.writeAll(",\n");
+        try writer.writeAll("            center: ");
+        try writer.writeAll(if (self.config.center) "true" else "false");
+        try writer.writeAll(",\n");
+        try writer.writeAll("            touch: ");
+        try writer.writeAll(if (self.config.touch) "true" else "false");
+        try writer.writeAll(",\n");
+        try writer.writeAll("            loop: ");
+        try writer.writeAll(if (self.config.loop) "true" else "false");
+        try writer.writeAll(",\n");
+        try writer.writeAll("            navigationMode: '");
+        try writer.writeAll(self.config.navigation_mode.toString());
+        try writer.writeAll("',\n");
+
+        if (self.config.auto_slide > 0) {
+            try writer.print("            autoSlide: {d},\n", .{self.config.auto_slide});
+        }
+
+        // Plugins
+        try writer.writeAll("            plugins: [");
+        var first = true;
+        if (self.config.enable_notes) {
+            if (!first) try writer.writeAll(", ");
+            try writer.writeAll("RevealNotes");
+            first = false;
+        }
+        if (self.config.enable_highlight) {
+            if (!first) try writer.writeAll(", ");
+            try writer.writeAll("RevealHighlight");
+            first = false;
+        }
+        if (self.config.enable_search) {
+            if (!first) try writer.writeAll(", ");
+            try writer.writeAll("RevealSearch");
+            first = false;
+        }
+        if (self.config.enable_zoom) {
+            if (!first) try writer.writeAll(", ");
+            try writer.writeAll("RevealZoom");
+            first = false;
+        }
+        try writer.writeAll("]\n");
+
         try writer.writeAll("        });\n");
+
+        // Keyboard shortcuts help
+        try writer.writeAll("\n");
+        try writer.writeAll("        // Keyboard shortcut help\n");
+        try writer.writeAll("        console.log('Keyboard Shortcuts:');\n");
+        try writer.writeAll("        console.log('  ? - Show help');\n");
+        try writer.writeAll("        console.log('  f - Fullscreen');\n");
+        try writer.writeAll("        console.log('  s - Speaker view');\n");
+        try writer.writeAll("        console.log('  o - Overview mode');\n");
+        if (self.config.enable_pdf) {
+            try writer.writeAll("        console.log('  Add ?print-pdf to URL for PDF export');\n");
+        }
+
         try writer.writeAll("    </script>\n");
         try writer.writeAll("</body>\n");
         try writer.writeAll("</html>\n");
@@ -109,6 +415,8 @@ pub const RevealJsExporter = struct {
 
     fn writeSlide(self: Self, writer: anytype, slide: Slide, slide_num: usize) !void {
         _ = slide_num;
+
+        // Start section with optional attributes
         try writer.writeAll("            <section>\n");
 
         for (slide.elements) |element| {
@@ -153,9 +461,9 @@ pub const RevealJsExporter = struct {
                 if (cb.language) |lang| {
                     try writer.writeAll(" class=\"language-");
                     try writer.writeAll(lang);
-                    try writer.writeAll("\" data-trim data-noescape");
+                    try writer.writeAll("\"");
                 }
-                try writer.writeAll(">");
+                try writer.writeAll(" data-trim data-noescape>");
                 try writeEscapedHtml(writer, cb.code);
                 try writer.writeAll("</code></pre>\n");
             },
@@ -304,7 +612,8 @@ test "RevealJsExporter basic" {
         .speaker_notes = null,
     };
 
-    var exporter = RevealJsExporter.init(allocator, null);
+    const config = RevealJsConfig{};
+    var exporter = RevealJsExporter.init(allocator, config);
     const html = try exporter.exportToHtml(presentation);
     defer allocator.free(html);
 
@@ -313,4 +622,49 @@ test "RevealJsExporter basic" {
     try testing.expect(std.mem.containsAtLeast(u8, html, 1, "reveal.js"));
     try testing.expect(std.mem.containsAtLeast(u8, html, 1, "<section>"));
     try testing.expect(std.mem.containsAtLeast(u8, html, 1, "Hello World"));
+    try testing.expect(std.mem.containsAtLeast(u8, html, 1, "RevealNotes"));
+    try testing.expect(std.mem.containsAtLeast(u8, html, 1, "RevealHighlight"));
+}
+
+test "RevealJsExporter with custom config" {
+    const testing = std.testing;
+    const allocator = testing.allocator;
+
+    var presentation = Presentation{
+        .allocator = allocator,
+        .metadata = .{
+            .title = try allocator.dupe(u8, "Custom Config Test"),
+            .author = null,
+            .date = null,
+            .theme = null,
+        },
+        .slides = try allocator.alloc(Slide, 1),
+    };
+    defer {
+        presentation.metadata.deinit(allocator);
+        for (presentation.slides) |slide| {
+            slide.deinit(allocator);
+        }
+        allocator.free(presentation.slides);
+    }
+
+    presentation.slides[0] = Slide{
+        .elements = try allocator.alloc(Element, 0),
+        .speaker_notes = null,
+    };
+
+    const config = RevealJsConfig{
+        .theme = "white",
+        .transition = .fade,
+        .enable_notes = false,
+        .enable_highlight = false,
+    };
+
+    var exporter = RevealJsExporter.init(allocator, config);
+    const html = try exporter.exportToHtml(presentation);
+    defer allocator.free(html);
+
+    try testing.expect(std.mem.containsAtLeast(u8, html, 1, "theme/white.css"));
+    try testing.expect(std.mem.containsAtLeast(u8, html, 1, "transition: 'fade'"));
+    try testing.expect(!std.mem.containsAtLeast(u8, html, 1, "RevealNotes"));
 }
