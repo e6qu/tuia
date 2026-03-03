@@ -48,6 +48,7 @@ pub const Navigation = struct {
 
     /// Go to the next slide
     pub fn nextSlide(self: *Self) void {
+        if (self.total_slides == 0) return;
         if (self.current_slide < self.total_slides - 1) {
             self.current_slide += 1;
         }
@@ -138,6 +139,7 @@ pub const Navigation = struct {
 
     /// Check if we're on the last slide
     pub fn isLastSlide(self: Self) bool {
+        if (self.total_slides == 0) return true;
         return self.current_slide >= self.total_slides - 1;
     }
 
