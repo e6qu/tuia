@@ -9,6 +9,47 @@
 
 ## 🐛 Critical Bugs
 
+### ✅ CRITICAL-11: Use-After-Free in MediaPlayer.spawnMediaPlayer() (Fixed)
+**Status:** 🟢 Fixed  
+**Component:** Media Player  
+**Impact:** High
+
+**Description:**  
+In `MediaPlayer.spawnMediaPlayer()`, the `args` array is freed with `defer allocator.free(args)` immediately after `std.process.Child.init()` returns. The `Child` struct stores a pointer to the args array, but the memory is freed before the function returns, causing a use-after-free when the child process tries to access the arguments.
+
+**Location:** `src/features/media/MediaPlayer.zig:307-310`
+
+**Fix:** Remove the `defer` that frees `args` - the Child process owns the args memory:
+```zig
+const args = try argv.toOwnedSlice(allocator);
+// DON'T free args here - Child stores the pointer
+// defer allocator.free(args);  // REMOVE THIS LINE
+
+return std.process.Child.init(args, allocator);
+```
+
+---
+
+### ✅ CRITICAL-12: Buffer Overflow in ConfigParser.parseBool() (Fixed)
+**Status:** 🟢 Fixed  
+**Component:** Configuration  
+**Impact:** High
+
+**Description:**  
+In `ConfigParser.parseBool()`, if `value.len == 16`, the check `value.len > 16` returns false, but `lower_buf` only has 16 bytes (indices 0-15). The loop writes to `lower_buf[0..15]`, but this is still a buffer overflow risk because the condition should prevent any value of length 16 or more.
+
+**Location:** `src/config/ConfigParser.zig:178-194`
+
+**Fix:** Change the condition to `>= 16`:
+```zig
+fn parseBool(value: []const u8) bool {
+    if (value.len >= 16) return false;  // Fix: was > 16
+    // ... rest of function
+}
+```
+
+---
+
 ### ✅ CRITICAL-6: HTML Not Escaped in HtmlExporter (XSS/Invalid HTML) (Fixed)
 **Status:** 🟢 Fixed  
 **Component:** HTML Export  
@@ -126,6 +167,48 @@ fn parseEmphasis(...) ParseError!?AST.Inline {
     if (text[pos] != '*') return null;
     // ... rest of function
 }
+```
+
+---
+
+## ⚠️ High Priority Issues
+
+### 🔴 HIGH-4: Memory Leak in FrontMatter.parseWithContent()
+**Status:** 🔴 Open  
+**Component:** Parser  
+**Impact:** Medium
+
+**Description:**  
+In `FrontMatter.parseWithContent()`, if `parse()` returns an error after partially allocating front_matter fields, the allocated memory is not freed before the error propagates.
+
+**Location:** `src/parser/FrontMatter.zig:100`
+
+**Fix:** Add errdefer to clean up on error:
+```zig
+const fm = try parse(allocator, source);
+// If parse fails after allocating some fields, they're leaked
+
+// Fix: Use errdefer in parse() or handle error cleanup
+```
+
+---
+
+### ✅ HIGH-5: Memory Leak in ConfigParser Key Bindings (Fixed)
+**Status:** 🟢 Fixed  
+**Component:** Configuration  
+**Impact:** Medium
+
+**Description:**  
+In `ConfigParser.parseKeysKey()`, key binding strings are allocated with `allocator.dupe()` but are never freed. The `Config.deinit()` only frees `theme.name` and `theme.custom_theme_path`, not key bindings.
+
+**Location:** `src/config/ConfigParser.zig:116-132`
+
+**Fix:** Add cleanup for key bindings in `Config.deinit()`:
+```zig
+// In Config.deinit():
+if (self.keys.next_slide.ptr != "j".ptr) allocator.free(self.keys.next_slide);
+if (self.keys.prev_slide.ptr != "k".ptr) allocator.free(self.keys.prev_slide);
+// ... etc for all keys
 ```
 
 ---
