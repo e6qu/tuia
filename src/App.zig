@@ -42,45 +42,34 @@ pub const App = struct {
     vx: vaxis.Vaxis,
     loop: vaxis.Loop(Event),
 
-    // Presentation state
     presentation: ?Presentation = null,
     navigation: ?Navigation = null,
     input_handler: InputHandler,
 
-    // Rendering
     renderer: Renderer,
     help_widget: HelpWidget,
 
-    // Code execution
     execution_widget: ExecutionWidget,
     executor_registry: ?ExecutorRegistry = null,
 
-    // Presentation overlay (laser, drawing, annotations)
     overlay: PresentationOverlay,
 
-    // Slide transitions
     transition_manager: transitions.TransitionManager,
 
-    // Remote control server
     remote_server: features.remote.RemoteServer,
     remote_enabled: bool,
 
-    // Media player
     media_player: features.media.MediaPlayer,
 
-    // Config editor
     config_editor: ?ConfigEditor,
     show_config_editor: bool,
 
-    // Current theme
     current_theme: Theme,
 
-    // Running state
     running: bool = true,
 
     const Self = @This();
 
-    /// Initialize the application
     pub fn init(allocator: std.mem.Allocator) !Self {
         var tty_buffer: [4096]u8 = undefined;
         var tty = try vaxis.Tty.init(&tty_buffer);
