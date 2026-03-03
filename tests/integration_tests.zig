@@ -76,4 +76,10 @@ test "all modules compile" {
     _ = tuia.infra;
     _ = tuia.highlight;
     _ = tuia.cli;
+    _ = tuia.export_;
+}
+
+// Import export tests
+comptime {
+    _ = @import("integration/export_tests.zig");
 }
