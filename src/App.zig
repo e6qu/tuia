@@ -7,6 +7,7 @@ const parser_module = @import("parser/root.zig");
 const widgets = @import("widgets/root.zig");
 const render = @import("render/root.zig");
 const executor = @import("features/executor/root.zig");
+const transitions = @import("features/transitions/root.zig");
 
 const Presentation = core.Presentation;
 const PresentationBuilder = core.PresentationBuilder;
@@ -54,6 +55,9 @@ pub const App = struct {
     // Presentation overlay (laser, drawing, annotations)
     overlay: PresentationOverlay,
 
+    // Slide transitions
+    transition_manager: transitions.TransitionManager,
+
     // Current theme
     current_theme: Theme,
 
@@ -84,6 +88,7 @@ pub const App = struct {
             .execution_widget = ExecutionWidget.init(allocator),
             .help_widget = HelpWidget.init(allocator),
             .overlay = PresentationOverlay.init(allocator),
+            .transition_manager = transitions.TransitionManager.init(allocator),
             .renderer = Renderer.init(allocator),
             .current_theme = darkTheme(),
         };
@@ -104,6 +109,7 @@ pub const App = struct {
         self.execution_widget.deinit();
         self.help_widget.deinit();
         self.overlay.deinit();
+        self.transition_manager.deinit();
         self.input_handler.deinit();
         self.loop.stop();
         self.vx.deinit(self.allocator, self.tty.writer());
@@ -275,6 +281,28 @@ pub const App = struct {
             }
         }
 
+        // Check if this key will cause a slide change (before handling input)
+        const will_change_slide = self.willChangeSlide(key, nav);
+        const current_slide = nav.current_slide;
+
+        // Capture current slide for transition BEFORE navigation
+        if (will_change_slide and self.transition_manager.config.enabled) {
+            const win = self.vx.window();
+            // Render current state to capture "from" slide
+            try self.renderer.render(
+                win,
+                self.presentation,
+                self.navigation,
+                null, // Don't capture execution widget
+                null, // Don't capture help widget
+                self.current_theme,
+            );
+
+            // Start transition
+            const next_slide = self.getNextSlideIndex(key, nav);
+            try self.transition_manager.startTransition(current_slide, next_slide, win);
+        }
+
         // Handle input
         const should_quit = try self.input_handler.handleKey(key, nav, self.allocator);
         if (should_quit) {
@@ -290,13 +318,40 @@ pub const App = struct {
         }
 
         // On slide change, update overlay
-        if (key.codepoint == 'j' or key.codepoint == 'k' or
-            key.codepoint == ' ' or key.codepoint == vaxis.Key.backspace or
-            key.codepoint == vaxis.Key.right or key.codepoint == vaxis.Key.left or
-            key.codepoint == vaxis.Key.down or key.codepoint == vaxis.Key.up)
-        {
+        if (will_change_slide) {
             self.overlay.onSlideChange();
         }
+
+        // Toggle transitions with 'T'
+        if (key.codepoint == 'T' and !self.input_handler.isInJumpMode()) {
+            self.transition_manager.toggleEnabled();
+            const status = if (self.transition_manager.config.enabled) "enabled" else "disabled";
+            try nav.setMessage(self.allocator, try std.fmt.allocPrint(self.allocator, "Transitions {s}", .{status}), 60);
+        }
+    }
+
+    /// Check if a key press will change the current slide
+    fn willChangeSlide(self: *Self, key: vaxis.Key, nav: *Navigation) bool {
+        _ = self;
+        return switch (key.codepoint) {
+            'j', 'k', 'g', 'G', vaxis.Key.space, vaxis.Key.backspace, vaxis.Key.left, vaxis.Key.right, vaxis.Key.up, vaxis.Key.down => !nav.show_help and !nav.show_overview,
+            else => false,
+        };
+    }
+
+    /// Get the next slide index based on key press
+    fn getNextSlideIndex(self: *Self, key: vaxis.Key, nav: *Navigation) usize {
+        _ = self;
+        const total = nav.total_slides;
+        const current = nav.current_slide;
+
+        return switch (key.codepoint) {
+            'j', vaxis.Key.down, vaxis.Key.right, vaxis.Key.space => if (current < total - 1) current + 1 else current,
+            'k', vaxis.Key.up, vaxis.Key.left, vaxis.Key.backspace => if (current > 0) current - 1 else current,
+            'g' => 0,
+            'G' => if (total > 0) total - 1 else 0,
+            else => current,
+        };
     }
 
     /// Execute the code block on the current slide
@@ -357,15 +412,57 @@ pub const App = struct {
     fn render(self: *Self) !void {
         const win = self.vx.window();
 
-        // Use renderer to render everything
-        try self.renderer.render(
-            win,
-            self.presentation,
-            self.navigation,
-            if (self.navigation) |nav| if (nav.show_execution) &self.execution_widget else null else null,
-            if (self.navigation) |nav| if (nav.show_help) &self.help_widget else null else null,
-            self.current_theme,
-        );
+        // Update transition manager
+        const transition_just_completed = self.transition_manager.update();
+
+        // If transition just completed, we need to capture the final slide
+        if (transition_just_completed) {
+            // Transition finished - normal rendering will show new slide
+        }
+
+        // Check if we're in a transition
+        if (self.transition_manager.isTransitioning()) {
+            // During transition, render to a temporary buffer first
+            // Create a child window for the slide content
+            const content_win = win.child(.{
+                .x_off = 0,
+                .y_off = 0,
+                .width = win.width,
+                .height = win.height,
+            });
+
+            // Render current state (which should be the "to" slide)
+            try self.renderer.render(
+                content_win,
+                self.presentation,
+                self.navigation,
+                null, // Don't show execution during transition
+                null, // Don't show help during transition
+                self.current_theme,
+            );
+
+            // Capture the "to" slide if we haven't yet
+            // We check if the first cell has any content to determine if we've captured
+            if (self.transition_manager.to_buffer) |to_buf| {
+                const first_cell = to_buf.cells[0];
+                if (first_cell.char.grapheme.len == 0 and first_cell.style.fg == .default) {
+                    self.transition_manager.completeTransition(content_win);
+                }
+            }
+
+            // Render the transition
+            self.transition_manager.render(win);
+        } else {
+            // Normal rendering
+            try self.renderer.render(
+                win,
+                self.presentation,
+                self.navigation,
+                if (self.navigation) |nav| if (nav.show_execution) &self.execution_widget else null else null,
+                if (self.navigation) |nav| if (nav.show_help) &self.help_widget else null else null,
+                self.current_theme,
+            );
+        }
 
         // Draw overlay (laser pointer, drawings, theme picker)
         if (self.presentation != null and self.navigation != null) {

@@ -32,6 +32,7 @@ pub const HelpWidget = struct {
         \\│    Space (in draw)      Draw at cursor   │
         \\│    C                    Clear drawings   │
         \\│    t                    Switch theme     │
+        \\│    T                    Toggle trans.    │
         \\│                                          │
         \\│  View:                                   │
         \\│    ?, F1                Toggle help      │
