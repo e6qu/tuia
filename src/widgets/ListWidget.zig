@@ -9,37 +9,7 @@ const toVaxisStyle = @import("Widget.zig").toVaxisStyle;
 const List = @import("../core/Element.zig").List;
 const ListItem = @import("../core/Element.zig").ListItem;
 const Inline = @import("../core/Element.zig").Inline;
-
-/// Convert inline content to plain text
-fn inlineToPlainText(allocator: std.mem.Allocator, inlines: []const Inline) ![]const u8 {
-    var result: std.ArrayList(u8) = .empty;
-    errdefer result.deinit(allocator);
-
-    for (inlines) |inline_elem| {
-        switch (inline_elem) {
-            .text => |t| try result.appendSlice(allocator, t),
-            .code => |c| try result.appendSlice(allocator, c),
-            .bold => |b| {
-                const text = try inlineToPlainText(allocator, b);
-                defer allocator.free(text);
-                try result.appendSlice(allocator, text);
-            },
-            .italic => |i| {
-                const text = try inlineToPlainText(allocator, i);
-                defer allocator.free(text);
-                try result.appendSlice(allocator, text);
-            },
-            .link => |l| {
-                const text = try inlineToPlainText(allocator, l.content);
-                defer allocator.free(text);
-                try result.appendSlice(allocator, text);
-            },
-            .image => |img| try result.appendSlice(allocator, img.alt),
-        }
-    }
-
-    return try result.toOwnedSlice(allocator);
-}
+const inlineToPlainText = @import("../core/Element.zig").inlineToPlainText;
 
 /// ListWidget renders bullet and numbered lists
 pub const ListWidget = struct {

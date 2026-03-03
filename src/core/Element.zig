@@ -49,6 +49,38 @@ pub fn extractFirstText(inlines: []const Inline) ?[]const u8 {
     return null;
 }
 
+/// Convert inline content to plain text (allocating)
+/// Concatenates all text content from inline elements
+pub fn inlineToPlainText(allocator: std.mem.Allocator, inlines: []const Inline) ![]const u8 {
+    var result: std.ArrayList(u8) = .empty;
+    errdefer result.deinit(allocator);
+
+    for (inlines) |inline_elem| {
+        switch (inline_elem) {
+            .text => |t| try result.appendSlice(allocator, t),
+            .code => |c| try result.appendSlice(allocator, c),
+            .bold => |b| {
+                const text = try inlineToPlainText(allocator, b);
+                defer allocator.free(text);
+                try result.appendSlice(allocator, text);
+            },
+            .italic => |i| {
+                const text = try inlineToPlainText(allocator, i);
+                defer allocator.free(text);
+                try result.appendSlice(allocator, text);
+            },
+            .link => |l| {
+                const text = try inlineToPlainText(allocator, l.content);
+                defer allocator.free(text);
+                try result.appendSlice(allocator, text);
+            },
+            .image => |img| try result.appendSlice(allocator, img.alt),
+        }
+    }
+
+    return try result.toOwnedSlice(allocator);
+}
+
 /// Link inline element
 pub const Link = struct {
     content: []Inline,
