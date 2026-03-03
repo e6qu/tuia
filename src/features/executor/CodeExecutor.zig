@@ -153,6 +153,10 @@ pub const CodeExecutor = struct {
                 argv[i] = @ptrCast(arg.ptr);
             }
 
+            // Check for empty command to avoid panic on argv[0].?
+            if (cmd.len == 0) {
+                std.process.exit(127);
+            }
             const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@alignCast(std.c.environ));
             std.posix.execvpeZ(argv[0].?, argv.ptr, envp) catch {};
             std.process.exit(127);

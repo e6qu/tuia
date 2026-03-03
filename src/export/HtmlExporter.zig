@@ -137,19 +137,23 @@ pub const HtmlExporter = struct {
                 };
                 const text = try inlineToPlainText(self.allocator, h.content);
                 defer self.allocator.free(text);
-                try writer.print("<{s}>{s}</{s}>\n", .{ tag, text, tag });
+                try writer.print("<{s}>", .{tag});
+                try writeEscapedHtml(writer, text);
+                try writer.print("</{s}>\n", .{tag});
             },
             .paragraph => |p| {
                 const text = try inlineToPlainText(self.allocator, p.content);
                 defer self.allocator.free(text);
                 try writer.writeAll("<p>");
-                try writer.writeAll(text);
+                try writeEscapedHtml(writer, text);
                 try writer.writeAll("</p>\n");
             },
             .code_block => |cb| {
                 try writer.writeAll("<pre><code");
                 if (cb.language) |lang| {
-                    try writer.print(" class=\"language-{s}\"", .{lang});
+                    try writer.writeAll(" class=\"language-");
+                    try writeEscapedHtml(writer, lang);
+                    try writer.writeAll("\"");
                 }
                 try writer.writeAll(">");
                 try writeEscapedHtml(writer, cb.code);
@@ -162,7 +166,7 @@ pub const HtmlExporter = struct {
                     const text = try inlineToPlainText(self.allocator, item.content);
                     defer self.allocator.free(text);
                     try writer.writeAll("<li>");
-                    try writer.writeAll(text);
+                    try writeEscapedHtml(writer, text);
                     try writer.writeAll("</li>\n");
                 }
                 try writer.print("</{s}>\n", .{tag});
@@ -171,14 +175,18 @@ pub const HtmlExporter = struct {
                 const text = try inlineToPlainText(self.allocator, bq.content);
                 defer self.allocator.free(text);
                 try writer.writeAll("<blockquote>");
-                try writer.writeAll(text);
+                try writeEscapedHtml(writer, text);
                 try writer.writeAll("</blockquote>\n");
             },
             .thematic_break => {
                 try writer.writeAll("<hr>\n");
             },
             .image => |img| {
-                try writer.print("<img src=\"{s}\" alt=\"{s}\">\n", .{ img.url, img.alt });
+                try writer.writeAll("<img src=\"");
+                try writeEscapedHtml(writer, img.url);
+                try writer.writeAll("\" alt=\"");
+                try writeEscapedHtml(writer, img.alt);
+                try writer.writeAll("\">\n");
             },
             .table => |t| {
                 try writer.writeAll("<table>\n");
@@ -187,7 +195,9 @@ pub const HtmlExporter = struct {
                 for (t.headers) |header| {
                     const text = try inlineToPlainText(self.allocator, header.content);
                     defer self.allocator.free(text);
-                    try writer.print("<th>{s}</th>\n", .{text});
+                    try writer.writeAll("<th>");
+                    try writeEscapedHtml(writer, text);
+                    try writer.writeAll("</th>\n");
                 }
                 try writer.writeAll("</tr></thead>\n");
                 // Body
@@ -197,7 +207,9 @@ pub const HtmlExporter = struct {
                     for (row) |cell| {
                         const text = try inlineToPlainText(self.allocator, cell.content);
                         defer self.allocator.free(text);
-                        try writer.print("<td>{s}</td>\n", .{text});
+                        try writer.writeAll("<td>");
+                        try writeEscapedHtml(writer, text);
+                        try writer.writeAll("</td>\n");
                     }
                     try writer.writeAll("</tr>\n");
                 }
@@ -207,13 +219,17 @@ pub const HtmlExporter = struct {
             .media => |m| {
                 // Media element HTML output
                 if (m.media_type == .audio) {
-                    try writer.print("<audio src=\"{s}\"", .{m.url});
+                    try writer.writeAll("<audio src=\"");
+                    try writeEscapedHtml(writer, m.url);
+                    try writer.writeAll("\"");
                     if (m.autoplay) try writer.writeAll(" autoplay");
                     if (m.loop) try writer.writeAll(" loop");
                     if (m.controls) try writer.writeAll(" controls");
                     try writer.writeAll("></audio>\n");
                 } else {
-                    try writer.print("<video src=\"{s}\"", .{m.url});
+                    try writer.writeAll("<video src=\"");
+                    try writeEscapedHtml(writer, m.url);
+                    try writer.writeAll("\"");
                     if (m.autoplay) try writer.writeAll(" autoplay");
                     if (m.loop) try writer.writeAll(" loop");
                     if (m.controls) try writer.writeAll(" controls");

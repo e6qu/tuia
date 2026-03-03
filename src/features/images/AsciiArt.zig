@@ -23,8 +23,18 @@ pub const AsciiArt = struct {
         image: Image,
         options: ConvertOptions,
     ) ![]const u8 {
+        // Validate image dimensions to prevent division by zero
+        if (image.width == 0 or image.height == 0) {
+            return error.InvalidImageDimensions;
+        }
+
         const target_width = options.width;
         const target_height = options.height;
+
+        // Validate output dimensions
+        if (target_width == 0 or target_height == 0) {
+            return error.InvalidOutputDimensions;
+        }
 
         // Calculate aspect ratio
         const aspect_ratio = @as(f32, @floatFromInt(image.height)) / @as(f32, @floatFromInt(image.width));
@@ -32,6 +42,11 @@ pub const AsciiArt = struct {
         // Calculate output dimensions
         const output_width = target_width;
         const output_height = @min(target_height, @as(u32, @intFromFloat(@as(f32, @floatFromInt(output_width)) * aspect_ratio * 0.5)));
+
+        // Final validation of calculated dimensions
+        if (output_width == 0 or output_height == 0) {
+            return error.InvalidOutputDimensions;
+        }
 
         var output: std.ArrayList(u8) = .empty;
         errdefer output.deinit(self.allocator);

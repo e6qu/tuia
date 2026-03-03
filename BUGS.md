@@ -9,6 +9,80 @@
 
 ## 🐛 Critical Bugs
 
+### ✅ CRITICAL-6: HTML Not Escaped in HtmlExporter (XSS/Invalid HTML) (Fixed)
+**Status:** 🟢 Fixed  
+**Component:** HTML Export  
+**Impact:** High
+
+**Description:**  
+The `HtmlExporter` outputs text content directly without escaping HTML special characters (`<`, `>`, `&`, `"`). This causes:
+1. Invalid HTML when content contains special characters
+2. Potential XSS vulnerabilities if user content is rendered
+3. Broken rendering in browsers
+
+**Locations:**
+- `src/export/HtmlExporter.zig:140` - Heading text not escaped
+- `src/export/HtmlExporter.zig:146` - Paragraph text not escaped  
+- `src/export/HtmlExporter.zig:165` - List item text not escaped
+- `src/export/HtmlExporter.zig:174` - Blockquote text not escaped
+- `src/export/HtmlExporter.zig:181` - Image alt and URL not escaped
+- `src/export/HtmlExporter.zig:190` - Table header text not escaped
+- `src/export/HtmlExporter.zig:200` - Table cell text not escaped
+
+**Fix:** Use `writeEscapedHtml()` function (already exists in file) for all text output:
+```zig
+// Instead of:
+try writer.print("<{s}>{s}</{s}>\n", .{ tag, text, tag });
+
+// Use:
+try writer.print("<{s}>", .{tag});
+try writeEscapedHtml(writer, text);
+try writer.print("</{s}>\n", .{tag});
+```
+
+---
+
+### ✅ CRITICAL-7: Empty Command Array Access in CodeExecutor (Fixed)
+**Status:** 🟢 Fixed  
+**Component:** Code Execution  
+**Impact:** High
+
+**Description:**  
+In `CodeExecutor.runWithTimeout()`, the code accesses `argv[0].?` without checking if the `cmd` array is empty. If `runner.buildCommand()` returns an empty slice, this will cause a panic.
+
+**Location:** `src/features/executor/CodeExecutor.zig:157`
+
+**Fix:** Add validation before accessing argv:
+```zig
+if (cmd.len == 0) {
+    std.process.exit(127);
+}
+std.posix.execvpeZ(argv[0].?, argv.ptr, envp) catch {};
+```
+
+---
+
+### ✅ CRITICAL-8: Division by Zero in AsciiArt (Fixed)
+**Status:** 🟢 Fixed  
+**Component:** Image Rendering  
+**Impact:** Medium
+
+**Description:**  
+The `AsciiArt.render()` function performs division without checking for zero values. If `image.width` is 0, or if `output_width` or `output_height` are 0, this will cause a division by zero panic.
+
+**Locations:**
+- `src/features/images/AsciiArt.zig:30` - Division by `image.width`
+- `src/features/images/AsciiArt.zig:46` - Division by `output_width`
+- `src/features/images/AsciiArt.zig:47` - Division by `output_height`
+
+**Fix:** Add zero checks before division:
+```zig
+if (image.width == 0 or image.height == 0) return error.InvalidImage;
+if (output_width == 0 or output_height == 0) return error.InvalidDimensions;
+```
+
+---
+
 ### ✅ CRITICAL-1: Race Condition in RemoteServer.start() (Fixed)
 **Status:** 🟢 Fixed  
 **Component:** Remote Control  
