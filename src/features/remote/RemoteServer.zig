@@ -1,6 +1,7 @@
 //! Web server for remote presentation control
 const std = @import("std");
 const net = std.net;
+const posix = std.posix;
 
 const Navigation = @import("../../core/Navigation.zig").Navigation;
 
@@ -124,6 +125,11 @@ pub const RemoteServer = struct {
         } else {
             try self.send405(conn);
         }
+
+        // MED-2 Fix: Properly shut down the write side of the connection
+        // This signals to the client that we've finished sending data
+        // Uses posix.shutdown directly since net.Stream doesn't expose it
+        posix.shutdown(conn.stream.handle, .send) catch {};
     }
 
     /// Send the control page HTML
