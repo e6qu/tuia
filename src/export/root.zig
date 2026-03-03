@@ -2,6 +2,7 @@
 const std = @import("std");
 
 pub const HtmlExporter = @import("HtmlExporter.zig").HtmlExporter;
+pub const RevealJsExporter = @import("RevealJsExporter.zig").RevealJsExporter;
 pub const CssGenerator = @import("CssGenerator.zig").CssGenerator;
 
 test {

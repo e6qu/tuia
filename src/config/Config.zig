@@ -224,6 +224,7 @@ pub const ExportConfig = struct {
 pub const ExportFormat = enum {
     html,
     pdf,
+    revealjs,
 };
 
 /// Code execution settings
