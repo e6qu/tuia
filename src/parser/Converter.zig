@@ -275,14 +275,14 @@ fn convertListItemContent(allocator: std.mem.Allocator, elements: []const AST.El
         switch (elem) {
             .paragraph => |p| {
                 const inlines = try convertInlines(allocator, p.content, link_refs);
-                errdefer allocator.free(inlines);
                 try result.appendSlice(allocator, inlines);
+                allocator.free(inlines); // Free the temporary slice after copying
                 try result.append(allocator, .{ .text = try allocator.dupe(u8, " ") });
             },
             .heading => |h| {
                 const inlines = try convertInlines(allocator, h.content, link_refs);
-                errdefer allocator.free(inlines);
                 try result.appendSlice(allocator, inlines);
+                allocator.free(inlines); // Free the temporary slice after copying
                 try result.append(allocator, .{ .text = try allocator.dupe(u8, " ") });
             },
             else => {},
