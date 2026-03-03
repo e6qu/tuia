@@ -361,6 +361,34 @@ Implemented comprehensive automated security and quality checks to prevent bugs 
 
 ---
 
+## Bug Hunt Phase 10: Parser Fixes 🐛
+
+**Date:** 2026-03-03
+
+Fixed 2 low-priority parser bugs and verified 1 high-priority bug was already protected:
+
+### LOW-3: Horizontal Rules Variations ✅ Fixed
+- **Issue:** Only `---` was recognized as thematic break
+- **Fix:** Added support for `***` and `___` in Scanner.zig
+- **Location:** `src/parser/Scanner.zig` lines 83-95
+
+### LOW-2: Escape Sequences Not Processed ✅ Fixed  
+- **Issue:** Escaped characters (`\*`, `\``, `\\`) appeared literally
+- **Fix:** Added `unescapeText()` function in Parser.zig to process escape sequences
+- **Supported escapes:** `\\`, `\*`, `\``, `\[`, `\]`, `\(`, `\)`, `\#`, `\+`, `\-`, `\.`, `\!`, `\<`, `\>`, `\_`
+- **Location:** `src/parser/Parser.zig` (unescapeText function)
+
+### HIGH-4: Memory Leak Investigation ✅ Verified
+- **Initial concern:** Potential leak in FrontMatter.parseWithContent() error path
+- **Finding:** Code already protected by `errdefer front_matter.deinit(allocator);`
+- **Status:** No fix needed - existing protection sufficient
+
+### Remaining Open Bugs
+- **MED-2:** HTTP Keep-Alive handling in RemoteServer
+- **LOW-1:** Hard line breaks (deferred - requires parser architecture changes)
+
+---
+
 ## 🎉 Project Complete + Hardened!
 
 All milestones finished + extensive bug fixing + automated security checks completed. TUIA is stable, production-ready, and protected by comprehensive CI checks.
