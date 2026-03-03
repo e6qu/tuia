@@ -308,11 +308,12 @@ pub const App = struct {
                 },
                 '\r', ' ' => {
                     // Apply selected theme
-                    const theme_name = self.overlay.getCurrentThemeName();
-                    if (std.mem.eql(u8, theme_name, "dark")) {
-                        self.current_theme = darkTheme();
-                    } else if (std.mem.eql(u8, theme_name, "light")) {
-                        self.current_theme = lightTheme();
+                    if (self.overlay.getCurrentThemeName()) |theme_name| {
+                        if (std.mem.eql(u8, theme_name, "dark")) {
+                            self.current_theme = darkTheme();
+                        } else if (std.mem.eql(u8, theme_name, "light")) {
+                            self.current_theme = lightTheme();
+                        }
                     }
                     self.overlay.toggleThemePicker();
                     return;

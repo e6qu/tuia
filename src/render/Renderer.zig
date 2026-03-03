@@ -200,10 +200,13 @@ pub const Renderer = struct {
         const subtitle = "Open a presentation file to begin.";
         const hint = "Press 'q' to quit.";
 
+        // Ensure minimum window height to avoid underflow
+        if (win.height < 5) return;
+
         const center_row = @divTrunc(win.height, 2);
 
         // Draw welcome text
-        if (win.width > welcome_text.len) {
+        if (win.width > welcome_text.len and center_row >= 1) {
             const col = @divTrunc(win.width - @as(u16, @intCast(welcome_text.len)), 2);
             _ = win.writeCell(col, center_row - 1, .{
                 .char = .{ .grapheme = welcome_text },
@@ -220,7 +223,7 @@ pub const Renderer = struct {
         }
 
         // Draw hint
-        if (win.width > hint.len) {
+        if (win.width > hint.len and center_row + 3 < win.height) {
             const col = @divTrunc(win.width - @as(u16, @intCast(hint.len)), 2);
             const style = vaxis.Style{
                 .fg = .{ .rgb = .{ 128, 128, 128 } },

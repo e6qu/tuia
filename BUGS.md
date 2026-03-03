@@ -84,6 +84,80 @@ code_block.code = "const x = 42;"
 
 ---
 
+### ✅ CRITICAL-3: Integer Underflow in HelpWidget.draw() (Fixed)
+**Status:** 🟢 Fixed  
+**Component:** HelpWidget  
+**Impact:** High
+
+**Description:**  
+In `src/widgets/HelpWidget.zig`, the `draw()` function calculates `start_row` and `start_col` using subtraction that can underflow if the content is larger than the window:
+
+```zig
+const start_row = @divTrunc(win.height, 2) - @divTrunc(line_count, 2);
+const start_col = @divTrunc(win.width, 2) - @divTrunc(max_width, 2);
+```
+
+If `line_count > win.height` or `max_width > win.width`, the subtraction will cause an integer underflow (panic in debug mode).
+
+**Location:** `src/widgets/HelpWidget.zig:90-91`
+
+**Fix:** Use saturating arithmetic or check bounds before subtraction:
+```zig
+const start_row = if (line_count > win.height) 0 else @divTrunc(win.height - line_count, 2);
+const start_col = if (max_width > win.width) 0 else @divTrunc(win.width - max_width, 2);
+```
+
+---
+
+### ✅ CRITICAL-4: Integer Underflow in PresentationOverlay.prevTheme() (Fixed)
+**Status:** 🟢 Fixed  
+**Component:** PresentationOverlay  
+**Impact:** High
+
+**Description:**  
+In `src/widgets/PresentationOverlay.zig`, the `prevTheme()` function can cause an integer underflow if `theme_names.len` is 0:
+
+```zig
+self.current_theme_index = if (self.current_theme_index == 0)
+    self.theme_names.len - 1  // Underflow if len is 0!
+else
+    self.current_theme_index - 1;
+```
+
+**Location:** `src/widgets/PresentationOverlay.zig:136-140`
+
+**Fix:** Check for empty theme_names or use saturating subtraction:
+```zig
+pub fn prevTheme(self: *Self) void {
+    if (self.theme_names.len == 0) return;
+    self.current_theme_index = if (self.current_theme_index == 0)
+        self.theme_names.len - 1
+    else
+        self.current_theme_index - 1;
+}
+```
+
+---
+
+### ✅ CRITICAL-5: Integer Underflow in Renderer.drawWelcomeScreen() (Fixed)
+**Status:** 🟢 Fixed  
+**Component:** Renderer  
+**Impact:** Medium
+
+**Description:**  
+In `src/render/Renderer.zig`, the `drawWelcomeScreen()` function uses `center_row - 1` which can underflow if `win.height` is 0 or 1:
+
+```zig
+const center_row = @divTrunc(win.height, 2);
+_ = win.writeCell(col, center_row - 1, .{...});
+```
+
+**Location:** `src/render/Renderer.zig:203, 208`
+
+**Fix:** Check window height before subtraction or use saturating arithmetic.
+
+---
+
 ## ⚠️ High Priority Issues
 
 ### ✅ HIGH-1: MediaPlayer Thread Safety Issue (Fixed)

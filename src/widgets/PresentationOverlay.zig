@@ -129,11 +129,13 @@ pub const PresentationOverlay = struct {
 
     /// Cycle to next theme
     pub fn nextTheme(self: *Self) void {
+        if (self.theme_names.len == 0) return;
         self.current_theme_index = (self.current_theme_index + 1) % self.theme_names.len;
     }
 
     /// Cycle to previous theme
     pub fn prevTheme(self: *Self) void {
+        if (self.theme_names.len == 0) return;
         self.current_theme_index = if (self.current_theme_index == 0)
             self.theme_names.len - 1
         else
@@ -141,7 +143,8 @@ pub const PresentationOverlay = struct {
     }
 
     /// Get current theme name
-    pub fn getCurrentThemeName(self: Self) []const u8 {
+    pub fn getCurrentThemeName(self: Self) ?[]const u8 {
+        if (self.theme_names.len == 0) return null;
         return self.theme_names[self.current_theme_index];
     }
 
@@ -323,14 +326,14 @@ test "PresentationOverlay theme cycling" {
     var overlay = PresentationOverlay.init(allocator);
     defer overlay.deinit();
 
-    try testing.expectEqualStrings("dark", overlay.getCurrentThemeName());
+    try testing.expectEqualStrings("dark", overlay.getCurrentThemeName().?);
 
     overlay.nextTheme();
-    try testing.expectEqualStrings("light", overlay.getCurrentThemeName());
+    try testing.expectEqualStrings("light", overlay.getCurrentThemeName().?);
 
     overlay.nextTheme();
-    try testing.expectEqualStrings("dark", overlay.getCurrentThemeName()); // Wraps around
+    try testing.expectEqualStrings("dark", overlay.getCurrentThemeName().?); // Wraps around
 
     overlay.prevTheme();
-    try testing.expectEqualStrings("light", overlay.getCurrentThemeName());
+    try testing.expectEqualStrings("light", overlay.getCurrentThemeName().?);
 }

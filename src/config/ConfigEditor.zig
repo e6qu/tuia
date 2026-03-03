@@ -215,19 +215,21 @@ pub const ConfigEditor = struct {
     fn parseBool(value: []const u8) ?bool {
         // Compare lowercase version of first character
         if (value.len == 0) return null;
-        
+
         const first = std.ascii.toLower(value[0]);
-        
+
         // Check for "t" (true), "y" (yes), "1", "o" (on)
-        if (first == 't' or first == 'y' or first == '1' or 
+        if (first == 't' or first == 'y' or first == '1' or
             std.mem.eql(u8, value, "on") or
-            std.mem.eql(u8, value, "ON")) {
+            std.mem.eql(u8, value, "ON"))
+        {
             return true;
         }
         // Check for "f" (false), "n" (no), "0", "o" (off)
         if (first == 'f' or first == 'n' or first == '0' or
             std.mem.eql(u8, value, "off") or
-            std.mem.eql(u8, value, "OFF")) {
+            std.mem.eql(u8, value, "OFF"))
+        {
             return false;
         }
         return null;
@@ -362,7 +364,7 @@ pub const ConfigEditor = struct {
             "Type value, Enter: confirm, Esc: cancel | bool: yes/no, int: number"
         else
             "j/k: navigate | h/l: sections | Enter: edit | q: quit";
-        
+
         _ = win.writeCell(0, footer_row, .{
             .char = .{ .grapheme = help_text },
             .style = .{ .fg = .{ .rgb = .{ 128, 128, 128 } } },

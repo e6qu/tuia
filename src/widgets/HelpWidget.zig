@@ -86,16 +86,16 @@ pub const HelpWidget = struct {
             }
         }
 
-        // Center on screen
-        const start_row = @divTrunc(win.height, 2) - @divTrunc(line_count, 2);
-        const start_col = @divTrunc(win.width, 2) - @divTrunc(max_width, 2);
+        // Center on screen (avoid underflow)
+        const start_row = if (line_count > win.height) 0 else @divTrunc(win.height - line_count, 2);
+        const start_col = if (max_width > win.width) 0 else @divTrunc(win.width - max_width, 2);
 
         // Draw background box
         for (0..line_count + 2) |row| {
-            const r = start_row + row - 1;
+            const r = if (start_row + row > 0) start_row + row - 1 else 0;
             if (r >= win.height) continue;
             for (0..max_width + 4) |col| {
-                const c = start_col + col - 2;
+                const c = if (start_col + col > 1) start_col + col - 2 else 0;
                 if (c >= win.width) continue;
                 const bg_color = if (theme.code_block.bg) |color|
                     if (@import("../render/Theme.zig").Theme.toRgb(color)) |rgb|
