@@ -105,9 +105,10 @@ pub const Parser = struct {
 
         var speaker_notes: ?[]const u8 = null;
 
-        while (self.current.type != .end_slide and 
-               self.current.type != .thematic_break and 
-               self.current.type != .eof) {
+        while (self.current.type != .end_slide and
+            self.current.type != .thematic_break and
+            self.current.type != .eof)
+        {
             // Handle speaker notes
             if (self.current.type == .speaker_note) {
                 const notes = try extractSpeakerNotes(self.current.text, self.allocator);
