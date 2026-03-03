@@ -15,10 +15,10 @@ After completing automated security checks, we fixed 2 of 5 remaining bugs:
 - [x] Confirm no memory leak with valgrind
 
 ### MED-2: HTTP Keep-Alive Handling
-**Status:** 🟡 Open | **Component:** Remote Control  
-- [ ] Review RemoteServer connection handling
-- [ ] Implement proper connection shutdown
-- [ ] Test with modern browsers
+**Status:** 🟡 Known Limitation | **Component:** Remote Control  
+- [x] Review RemoteServer connection handling
+- [ ] Implement proper connection shutdown (blocked: Zig 0.15.2 net.Stream has no shutdown method)
+- [ ] Use posix.shutdown directly (cross-platform complexity)
 
 ### Low Priority Parser Issues
 - [x] LOW-1: Hard line breaks support (deferred - requires parser changes)
@@ -219,10 +219,10 @@ Following the bug hunt phases 1-9, we implemented comprehensive automated checks
 ## 🐛 Bug Tracking
 
 Current open bugs (see BUGS.md):
-- MED-2: HTTP Keep-Alive handling
-- LOW-1: Hard line breaks (deferred)
+- MED-2: HTTP Keep-Alive handling (known limitation in Zig 0.15.2)
+- LOW-1: Hard line breaks (deferred - requires parser architecture changes)
 
-**Priority:** MED-2 is the only remaining medium+ priority bug.
+**Status:** 2 bugs remaining - both are known limitations/deferred.
 
 ---
 
