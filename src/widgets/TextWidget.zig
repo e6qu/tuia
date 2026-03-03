@@ -64,7 +64,7 @@ pub const TextWidget = struct {
         const self = try allocator.create(Self);
         self.* = .{
             .allocator = allocator,
-            .text = "",
+            .text = &.{}, // Empty slice (not a literal), won't be freed
             .text_type = .thematic_break,
         };
         return self;

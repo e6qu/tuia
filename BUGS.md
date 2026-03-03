@@ -9,6 +9,49 @@
 
 ## 🐛 Critical Bugs
 
+### ✅ CRITICAL-15: TextWidget.deinit() Frees Unallocated String Literal (Fixed)
+**Status:** 🟢 Fixed  
+**Component:** Widgets  
+**Impact:** High
+
+**Description:**  
+In `TextWidget.initThematicBreak()`, the `text` field is set to an empty string literal ` ""`. However, `deinit()` unconditionally calls `allocator.free(self.text)`, which is undefined behavior when freeing a string literal that was never allocated. This could cause a crash or memory corruption.
+
+**Location:** `src/widgets/TextWidget.zig:67,74-76`
+
+**Fix:** Use a sentinel value or check before freeing:
+```zig
+pub fn deinit(self: *Self) void {
+    // Only free if text was allocated (not a literal)
+    if (self.text_type != .thematic_break) {
+        self.allocator.free(self.text);
+    }
+    self.allocator.destroy(self);
+}
+```
+
+---
+
+### ✅ CRITICAL-16: CodeWidget.getSize() Division by Zero (Fixed)
+**Status:** 🟢 Fixed  
+**Component:** Widgets  
+**Impact:** High
+
+**Description:**  
+In `CodeWidget.getSize()`, if `available_width < 4`, the expression `(line_len + available_width - 4 - 1) / (available_width - 4)` will have a divisor of 0 or underflow (usize wrap), causing division by zero or incorrect results.
+
+**Location:** `src/widgets/CodeWidget.zig:98`
+
+**Fix:** Add check for minimum width:
+```zig
+const wrapped_lines = if (available_width > 4)
+    @max(1, (line_len + available_width - 4 - 1) / (available_width - 4))
+else
+    1;
+```
+
+---
+
 ### ✅ CRITICAL-13: Integer Underflow in Navigation.nextSlide() (Fixed)
 **Status:** 🟢 Fixed  
 **Component:** Navigation  
