@@ -177,21 +177,47 @@ pub const CssGenerator = struct {
 
         // Background color from code_block bg (closest we have to page bg)
         if (self.theme.code_block.bg) |bg| {
-            const color_str = colorToCss(bg);
-            try writer.print("    background: {s};\n", .{color_str});
+            try writer.writeAll("    background: ");
+            try writeColorCss(writer, bg);
+            try writer.writeAll(";\n");
         }
 
         // Text color from paragraph fg
         if (self.theme.paragraph.fg) |fg| {
-            const color_str = colorToCss(fg);
-            try writer.print("    color: {s};\n", .{color_str});
+            try writer.writeAll("    color: ");
+            try writeColorCss(writer, fg);
+            try writer.writeAll(";\n");
         }
 
         try writer.writeAll("}\n\n");
     }
 };
 
-/// Convert theme color to CSS color string
+/// Write theme color as CSS color string to writer
+fn writeColorCss(writer: anytype, color: Color) !void {
+    switch (color) {
+        .default => try writer.writeAll("inherit"),
+        .black => try writer.writeAll("#000000"),
+        .red => try writer.writeAll("#cd3131"),
+        .green => try writer.writeAll("#0dbc79"),
+        .yellow => try writer.writeAll("#e5e510"),
+        .blue => try writer.writeAll("#2472c8"),
+        .magenta => try writer.writeAll("#bc3fbc"),
+        .cyan => try writer.writeAll("#11a8cd"),
+        .white => try writer.writeAll("#e5e5e5"),
+        .bright_black => try writer.writeAll("#666666"),
+        .bright_red => try writer.writeAll("#f14c4c"),
+        .bright_green => try writer.writeAll("#23d18b"),
+        .bright_yellow => try writer.writeAll("#f5f543"),
+        .bright_blue => try writer.writeAll("#3b8eea"),
+        .bright_magenta => try writer.writeAll("#d670d6"),
+        .bright_cyan => try writer.writeAll("#29b8db"),
+        .bright_white => try writer.writeAll("#ffffff"),
+        .rgb => |rgb| try writer.print("rgb({d}, {d}, {d})", .{ rgb.r, rgb.g, rgb.b }),
+    }
+}
+
+/// Convert theme color to CSS color string (for non-RGB colors only)
 fn colorToCss(color: Color) []const u8 {
     return switch (color) {
         .default => "inherit",
@@ -211,7 +237,7 @@ fn colorToCss(color: Color) []const u8 {
         .bright_magenta => "#d670d6",
         .bright_cyan => "#29b8db",
         .bright_white => "#ffffff",
-        .rgb => "rgb(128, 128, 128)", // Fallback for RGB
+        .rgb => "rgb(128, 128, 128)", // Fallback - use writeColorCss for proper RGB handling
     };
 }
 
