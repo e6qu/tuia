@@ -20,6 +20,12 @@ pub const TransitionConfig = transitions.TransitionConfig;
 pub const remote = @import("remote/root.zig");
 pub const RemoteServer = remote.RemoteServer;
 
+// Media support
+pub const media = @import("media/root.zig");
+pub const MediaPlayer = media.MediaPlayer;
+pub const MediaElement = media.MediaElement;
+pub const MediaType = media.MediaType;
+
 test {
     std.testing.refAllDecls(@This());
 }

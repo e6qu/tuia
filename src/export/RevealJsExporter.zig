@@ -520,6 +520,21 @@ pub const RevealJsExporter = struct {
                 try writer.writeAll("                    </tbody>\n");
                 try writer.writeAll("                </table>\n");
             },
+            .media => |m| {
+                if (m.media_type == .audio) {
+                    try writer.writeAll("                <audio");
+                    if (m.autoplay) try writer.writeAll(" autoplay");
+                    if (m.loop) try writer.writeAll(" loop");
+                    if (m.controls) try writer.writeAll(" controls");
+                    try writer.print(" src=\"{s}\"></audio>\n", .{m.url});
+                } else {
+                    try writer.writeAll("                <video");
+                    if (m.autoplay) try writer.writeAll(" autoplay");
+                    if (m.loop) try writer.writeAll(" loop");
+                    if (m.controls) try writer.writeAll(" controls");
+                    try writer.print(" src=\"{s}\"></video>\n", .{m.url});
+                }
+            },
         }
     }
 

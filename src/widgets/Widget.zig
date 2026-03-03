@@ -112,6 +112,7 @@ pub const WidgetFactory = struct {
             .blockquote => |bq| self.createBlockquoteWidget(bq),
             .image => |img| self.createImageWidget(img),
             .table => |t| self.createTableWidget(t),
+            .media => |m| self.createMediaWidget(m),
             .thematic_break => self.createThematicBreakWidget(),
         };
     }
@@ -169,6 +170,17 @@ pub const WidgetFactory = struct {
         _ = table;
         const TextWidget = @import("TextWidget.zig").TextWidget;
         const widget = try TextWidget.initParagraph(self.allocator, "[Table: render not yet implemented]");
+        return Widget.init(widget);
+    }
+
+    fn createMediaWidget(self: Self, media: @import("../core/Element.zig").Media) !Widget {
+        const TextWidget = @import("TextWidget.zig").TextWidget;
+        const label = try std.fmt.allocPrint(self.allocator, "[{s}: {s}]", .{
+            @tagName(media.media_type),
+            std.fs.path.basename(media.url),
+        });
+        defer self.allocator.free(label);
+        const widget = try TextWidget.initParagraph(self.allocator, label);
         return Widget.init(widget);
     }
 };

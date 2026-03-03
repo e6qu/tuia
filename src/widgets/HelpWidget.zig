@@ -34,6 +34,7 @@ pub const HelpWidget = struct {
         \\│    t                    Switch theme     │
         \\│    T                    Toggle trans.    │
         \\│    R                    Toggle remote    │
+        \\│    M                    Stop media       │
         \\│                                          │
         \\│  View:                                   │
         \\│    ?, F1                Toggle help      │

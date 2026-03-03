@@ -281,6 +281,18 @@ pub const BeamerExporter = struct {
                 try writer.writeAll("    \\end{tabular}\n");
                 try writer.writeAll("    \\end{center}\n\n");
             },
+            .media => |m| {
+                // Media in LaTeX - use href for audio/video links
+                try writer.writeAll("    \\begin{center}\n");
+                try writer.print("        \\href{{{s}}}{{", .{m.url});
+                if (m.title) |title| {
+                    try writer.print("[{s}: {s}]", .{ @tagName(m.media_type), title });
+                } else {
+                    try writer.print("[{s}]", .{@tagName(m.media_type)});
+                }
+                try writer.writeAll("}\n");
+                try writer.writeAll("    \\end{center}\n\n");
+            },
         }
     }
 

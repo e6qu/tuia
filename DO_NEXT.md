@@ -27,7 +27,7 @@ Potential enhancements for future versions:
 - PowerPoint export (.pptx)
 
 ### Features
-- Presentation remote control
+- ✅ Presentation remote control
 - ✅ Laser pointer mode
 - ✅ Drawing/annotations on slides
 - ✅ Slide transitions/animations

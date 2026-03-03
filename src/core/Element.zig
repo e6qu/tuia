@@ -96,6 +96,7 @@ pub const Element = union(enum) {
     blockquote: Blockquote,
     image: Image,
     table: Table,
+    media: Media,
     thematic_break,
 
     pub fn deinit(self: Element, allocator: std.mem.Allocator) void {
@@ -107,6 +108,7 @@ pub const Element = union(enum) {
             .blockquote => |bq| bq.deinit(allocator),
             .image => |img| img.deinit(allocator),
             .table => |t| t.deinit(allocator),
+            .media => |m| m.deinit(allocator),
             else => {},
         }
     }
@@ -220,6 +222,32 @@ pub const Table = struct {
         allocator.free(self.rows);
 
         allocator.free(self.alignments);
+    }
+};
+
+/// Media element for audio/video
+pub const Media = struct {
+    /// File path or URL
+    url: []const u8,
+    /// Media type
+    media_type: MediaType,
+    /// Display title/caption
+    title: ?[]const u8,
+    /// Auto-play on slide load
+    autoplay: bool,
+    /// Loop playback
+    loop: bool,
+    /// Show controls
+    controls: bool,
+
+    pub const MediaType = enum {
+        audio,
+        video,
+    };
+
+    pub fn deinit(self: Media, allocator: std.mem.Allocator) void {
+        allocator.free(self.url);
+        if (self.title) |t| allocator.free(t);
     }
 };
 

@@ -204,6 +204,22 @@ pub const HtmlExporter = struct {
                 try writer.writeAll("</tbody>\n");
                 try writer.writeAll("</table>\n");
             },
+            .media => |m| {
+                // Media element HTML output
+                if (m.media_type == .audio) {
+                    try writer.print("<audio src=\"{s}\"", .{m.url});
+                    if (m.autoplay) try writer.writeAll(" autoplay");
+                    if (m.loop) try writer.writeAll(" loop");
+                    if (m.controls) try writer.writeAll(" controls");
+                    try writer.writeAll("></audio>\n");
+                } else {
+                    try writer.print("<video src=\"{s}\"", .{m.url});
+                    if (m.autoplay) try writer.writeAll(" autoplay");
+                    if (m.loop) try writer.writeAll(" loop");
+                    if (m.controls) try writer.writeAll(" controls");
+                    try writer.writeAll("></video>\n");
+                }
+            },
         }
     }
 };
