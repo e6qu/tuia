@@ -5,6 +5,61 @@ const core = @import("../core/root.zig");
 const ElementMod = @import("../core/Element.zig");
 const Presentation = @import("../core/Presentation.zig");
 
+/// Convert AST Inline to core Inline
+fn convertInline(allocator: std.mem.Allocator, ast_inline: AST.Inline, link_refs: *const std.StringHashMap([]const u8)) std.mem.Allocator.Error!ElementMod.Inline {
+    return switch (ast_inline) {
+        .text => |t| .{ .text = try allocator.dupe(u8, t) },
+        .code => |c| .{ .code = try allocator.dupe(u8, c) },
+        .emphasis => |e| {
+            const inner = try convertInlines(allocator, e, link_refs);
+            return .{ .italic = inner };
+        },
+        .strong => |s| {
+            const inner = try convertInlines(allocator, s, link_refs);
+            return .{ .bold = inner };
+        },
+        .link => |l| {
+            // Resolve reference-style links
+            var url = l.url;
+            if (l.ref_label) |label| {
+                if (link_refs.get(label)) |resolved_url| {
+                    url = resolved_url;
+                }
+            }
+
+            const content = try convertInlines(allocator, l.text, link_refs);
+            errdefer allocator.free(content);
+
+            return .{ .link = .{
+                .content = content,
+                .url = try allocator.dupe(u8, url),
+            } };
+        },
+        .image => |img| {
+            return .{ .image = .{
+                .alt = try allocator.dupe(u8, img.alt),
+                .url = try allocator.dupe(u8, img.url),
+            } };
+        },
+        .line_break => .{ .text = try allocator.dupe(u8, " ") }, // Convert line break to space
+    };
+}
+
+/// Convert multiple AST Inlines to core Inlines
+fn convertInlines(allocator: std.mem.Allocator, ast_inlines: []const AST.Inline, link_refs: *const std.StringHashMap([]const u8)) std.mem.Allocator.Error![]ElementMod.Inline {
+    var result = try allocator.alloc(ElementMod.Inline, ast_inlines.len);
+    errdefer {
+        for (result) |*item| item.deinit(allocator);
+        allocator.free(result);
+    }
+
+    for (ast_inlines, 0..) |item, i| {
+        result[i] = try convertInline(allocator, item, link_refs);
+    }
+
+    return result;
+}
+
 /// Convert AST Presentation to core Presentation
 pub fn convertPresentation(allocator: std.mem.Allocator, ast_pres: AST.Presentation) !core.Presentation {
     // Store link references for use during conversion
@@ -79,12 +134,12 @@ fn convertElement(allocator: std.mem.Allocator, ast_elem: AST.Element, link_refs
         .heading => |h| .{
             .heading = .{
                 .level = h.level,
-                .text = try inlineToTextWithLinks(allocator, h.content, link_refs),
+                .content = try convertInlines(allocator, h.content, link_refs),
             },
         },
         .paragraph => |p| .{
             .paragraph = .{
-                .text = try inlineToTextWithLinks(allocator, p.content, link_refs),
+                .content = try convertInlines(allocator, p.content, link_refs),
             },
         },
         .code_block => |cb| .{
@@ -101,7 +156,7 @@ fn convertElement(allocator: std.mem.Allocator, ast_elem: AST.Element, link_refs
         },
         .blockquote => |bq| .{
             .blockquote = .{
-                .text = try blockquoteToTextWithLinks(allocator, bq, link_refs),
+                .content = try convertBlockquoteContent(allocator, bq, link_refs),
             },
         },
         .table => |t| .{
@@ -183,31 +238,71 @@ fn blockquoteToTextWithLinks(allocator: std.mem.Allocator, bq: AST.Blockquote, l
     return result.toOwnedSlice(allocator);
 }
 
+/// Convert blockquote content - concatenate all paragraph content
+fn convertBlockquoteContent(allocator: std.mem.Allocator, bq: AST.Blockquote, link_refs: *const std.StringHashMap([]const u8)) ![]ElementMod.Inline {
+    // For simplicity, collect all inline content from paragraphs
+    var result: std.ArrayList(ElementMod.Inline) = .empty;
+    errdefer {
+        for (result.items) |*item| item.deinit(allocator);
+        result.deinit(allocator);
+    }
+
+    for (bq.content) |elem| {
+        switch (elem) {
+            .paragraph => |p| {
+                const inlines = try convertInlines(allocator, p.content, link_refs);
+                errdefer allocator.free(inlines);
+                try result.appendSlice(allocator, inlines);
+                // Add space between paragraphs
+                try result.append(allocator, .{ .text = try allocator.dupe(u8, " ") });
+            },
+            else => {},
+        }
+    }
+
+    return try result.toOwnedSlice(allocator);
+}
+
+/// Convert list item content
+fn convertListItemContent(allocator: std.mem.Allocator, elements: []const AST.Element, link_refs: *const std.StringHashMap([]const u8)) ![]ElementMod.Inline {
+    var result: std.ArrayList(ElementMod.Inline) = .empty;
+    errdefer {
+        for (result.items) |*item| item.deinit(allocator);
+        result.deinit(allocator);
+    }
+
+    for (elements) |elem| {
+        switch (elem) {
+            .paragraph => |p| {
+                const inlines = try convertInlines(allocator, p.content, link_refs);
+                errdefer allocator.free(inlines);
+                try result.appendSlice(allocator, inlines);
+                try result.append(allocator, .{ .text = try allocator.dupe(u8, " ") });
+            },
+            .heading => |h| {
+                const inlines = try convertInlines(allocator, h.content, link_refs);
+                errdefer allocator.free(inlines);
+                try result.appendSlice(allocator, inlines);
+                try result.append(allocator, .{ .text = try allocator.dupe(u8, " ") });
+            },
+            else => {},
+        }
+    }
+
+    return try result.toOwnedSlice(allocator);
+}
+
 /// Convert list items
 fn convertListItems(allocator: std.mem.Allocator, items: []AST.ListItem, link_refs: *const std.StringHashMap([]const u8)) ![]core.ListItem {
     var result = try allocator.alloc(core.ListItem, items.len);
     errdefer allocator.free(result);
 
     for (items, 0..) |item, i| {
-        // Convert elements to text
-        var text_list: std.ArrayList(u8) = .empty;
-        defer text_list.deinit(allocator);
-
-        for (item.content) |elem| {
-            const elem_text = switch (elem) {
-                .paragraph => |p| try inlineToTextWithLinks(allocator, p.content, link_refs),
-                .heading => |h| try inlineToTextWithLinks(allocator, h.content, link_refs),
-                else => try std.fmt.allocPrint(allocator, "[{s}]", .{@tagName(elem)}),
-            };
-            defer allocator.free(elem_text);
-            try text_list.appendSlice(allocator, elem_text);
-            try text_list.append(allocator, ' ');
-        }
-
         // Convert nested list if present
         var children: ?*ElementMod.List = null;
         if (item.children) |child_list| {
             children = try allocator.create(ElementMod.List);
+            errdefer allocator.destroy(children.?);
             children.?.* = .{
                 .ordered = child_list.ordered,
                 .items = try convertListItems(allocator, child_list.items, link_refs),
@@ -215,7 +310,7 @@ fn convertListItems(allocator: std.mem.Allocator, items: []AST.ListItem, link_re
         }
 
         result[i] = .{
-            .text = try text_list.toOwnedSlice(allocator),
+            .content = try convertListItemContent(allocator, item.content, link_refs),
             .children = children,
         };
     }
@@ -225,11 +320,15 @@ fn convertListItems(allocator: std.mem.Allocator, items: []AST.ListItem, link_re
 
 /// Convert AST Table to core Table
 fn convertTable(allocator: std.mem.Allocator, ast_table: AST.Table, link_refs: *const std.StringHashMap([]const u8)) !ElementMod.Table {
-    // Convert headers
-    var headers = try allocator.alloc([]const u8, ast_table.headers.len);
+    // Convert headers (now as TableCell with content)
+    var headers = try allocator.alloc(ElementMod.Table.TableCell, ast_table.headers.len);
     errdefer allocator.free(headers);
     for (ast_table.headers, 0..) |header, i| {
-        headers[i] = try allocator.dupe(u8, header);
+        // Parse header text as inline content (create simple text inline)
+        var content = try allocator.alloc(ElementMod.Inline, 1);
+        errdefer allocator.free(content);
+        content[0] = .{ .text = try allocator.dupe(u8, header) };
+        headers[i] = .{ .content = content };
     }
 
     // Convert alignments
@@ -249,7 +348,7 @@ fn convertTable(allocator: std.mem.Allocator, ast_table: AST.Table, link_refs: *
     errdefer {
         for (rows) |row| {
             for (row) |cell| {
-                allocator.free(cell.text);
+                cell.deinit(allocator);
             }
             allocator.free(row);
         }
@@ -262,7 +361,7 @@ fn convertTable(allocator: std.mem.Allocator, ast_table: AST.Table, link_refs: *
 
         for (ast_row, 0..) |ast_cell, j| {
             cells[j] = .{
-                .text = try inlineToTextWithLinks(allocator, ast_cell.content, link_refs),
+                .content = try convertInlines(allocator, ast_cell.content, link_refs),
             };
         }
 

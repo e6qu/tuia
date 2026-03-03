@@ -40,7 +40,8 @@ pub const Slide = struct {
     pub fn getTitle(self: Self) ?[]const u8 {
         for (self.elements) |element| {
             if (element == .heading) {
-                return element.heading.text;
+                // Extract first text from inline content
+                return @import("Element.zig").extractFirstText(element.heading.content);
             }
         }
         return null;

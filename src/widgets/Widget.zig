@@ -3,6 +3,38 @@ const std = @import("std");
 const vaxis = @import("vaxis");
 const Theme = @import("../render/Theme.zig").Theme;
 const Element = @import("../core/Element.zig").Element;
+const Inline = @import("../core/Element.zig").Inline;
+
+/// Convert inline content to plain text
+fn inlineToPlainText(allocator: std.mem.Allocator, inlines: []const Inline) ![]const u8 {
+    var result: std.ArrayList(u8) = .empty;
+    errdefer result.deinit(allocator);
+
+    for (inlines) |inline_elem| {
+        switch (inline_elem) {
+            .text => |t| try result.appendSlice(allocator, t),
+            .code => |c| try result.appendSlice(allocator, c),
+            .bold => |b| {
+                const text = try inlineToPlainText(allocator, b);
+                defer allocator.free(text);
+                try result.appendSlice(allocator, text);
+            },
+            .italic => |i| {
+                const text = try inlineToPlainText(allocator, i);
+                defer allocator.free(text);
+                try result.appendSlice(allocator, text);
+            },
+            .link => |l| {
+                const text = try inlineToPlainText(allocator, l.content);
+                defer allocator.free(text);
+                try result.appendSlice(allocator, text);
+            },
+            .image => |img| try result.appendSlice(allocator, img.alt),
+        }
+    }
+
+    return try result.toOwnedSlice(allocator);
+}
 
 /// Draw context containing window and theme
 pub const DrawContext = struct {
@@ -116,13 +148,17 @@ pub const WidgetFactory = struct {
 
     fn createHeadingWidget(self: Self, heading: @import("../core/Element.zig").Heading) !Widget {
         const TextWidget = @import("TextWidget.zig").TextWidget;
-        const widget = try TextWidget.initHeading(self.allocator, heading.text, heading.level);
+        const text = try inlineToPlainText(self.allocator, heading.content);
+        defer self.allocator.free(text);
+        const widget = try TextWidget.initHeading(self.allocator, text, heading.level);
         return Widget.init(widget);
     }
 
     fn createParagraphWidget(self: Self, paragraph: @import("../core/Element.zig").Paragraph) !Widget {
         const TextWidget = @import("TextWidget.zig").TextWidget;
-        const widget = try TextWidget.initParagraph(self.allocator, paragraph.text);
+        const text = try inlineToPlainText(self.allocator, paragraph.content);
+        defer self.allocator.free(text);
+        const widget = try TextWidget.initParagraph(self.allocator, text);
         return Widget.init(widget);
     }
 
@@ -140,7 +176,9 @@ pub const WidgetFactory = struct {
 
     fn createBlockquoteWidget(self: Self, blockquote: @import("../core/Element.zig").Blockquote) !Widget {
         const TextWidget = @import("TextWidget.zig").TextWidget;
-        const widget = try TextWidget.initBlockquote(self.allocator, blockquote.text);
+        const text = try inlineToPlainText(self.allocator, blockquote.content);
+        defer self.allocator.free(text);
+        const widget = try TextWidget.initBlockquote(self.allocator, text);
         return Widget.init(widget);
     }
 

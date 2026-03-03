@@ -3,8 +3,40 @@ const std = @import("std");
 const Presentation = @import("../core/Presentation.zig").Presentation;
 const Slide = @import("../core/Slide.zig").Slide;
 const Element = @import("../core/Element.zig").Element;
+const Inline = @import("../core/Element.zig").Inline;
 const Theme = @import("../render/Theme.zig").Theme;
 const CssGenerator = @import("CssGenerator.zig").CssGenerator;
+
+/// Convert inline content to plain text for HTML
+fn inlineToPlainText(allocator: std.mem.Allocator, inlines: []const Inline) ![]const u8 {
+    var result: std.ArrayList(u8) = .empty;
+    errdefer result.deinit(allocator);
+
+    for (inlines) |inline_elem| {
+        switch (inline_elem) {
+            .text => |t| try result.appendSlice(allocator, t),
+            .code => |c| try result.appendSlice(allocator, c),
+            .bold => |b| {
+                const text = try inlineToPlainText(allocator, b);
+                defer allocator.free(text);
+                try result.appendSlice(allocator, text);
+            },
+            .italic => |i| {
+                const text = try inlineToPlainText(allocator, i);
+                defer allocator.free(text);
+                try result.appendSlice(allocator, text);
+            },
+            .link => |l| {
+                const text = try inlineToPlainText(allocator, l.content);
+                defer allocator.free(text);
+                try result.appendSlice(allocator, text);
+            },
+            .image => |img| try result.appendSlice(allocator, img.alt),
+        }
+    }
+
+    return try result.toOwnedSlice(allocator);
+}
 
 /// HTML exporter for generating static HTML presentations
 pub const HtmlExporter = struct {
@@ -122,7 +154,7 @@ pub const HtmlExporter = struct {
         try writer.writeAll("            </div>\n");
     }
 
-    fn writeElement(_: Self, writer: anytype, element: Element) !void {
+    fn writeElement(self: Self, writer: anytype, element: Element) !void {
         switch (element) {
             .heading => |h| {
                 const tag = switch (h.level) {
@@ -133,11 +165,15 @@ pub const HtmlExporter = struct {
                     5 => "h5",
                     else => "h6",
                 };
-                try writer.print("<{s}>{s}</{s}>\n", .{ tag, h.text, tag });
+                const text = try inlineToPlainText(self.allocator, h.content);
+                defer self.allocator.free(text);
+                try writer.print("<{s}>{s}</{s}>\n", .{ tag, text, tag });
             },
             .paragraph => |p| {
+                const text = try inlineToPlainText(self.allocator, p.content);
+                defer self.allocator.free(text);
                 try writer.writeAll("<p>");
-                try writer.writeAll(p.text);
+                try writer.writeAll(text);
                 try writer.writeAll("</p>\n");
             },
             .code_block => |cb| {
@@ -153,15 +189,19 @@ pub const HtmlExporter = struct {
                 const tag = if (list.ordered) "ol" else "ul";
                 try writer.print("<{s}>\n", .{tag});
                 for (list.items) |item| {
+                    const text = try inlineToPlainText(self.allocator, item.content);
+                    defer self.allocator.free(text);
                     try writer.writeAll("<li>");
-                    try writer.writeAll(item.text);
+                    try writer.writeAll(text);
                     try writer.writeAll("</li>\n");
                 }
                 try writer.print("</{s}>\n", .{tag});
             },
             .blockquote => |bq| {
+                const text = try inlineToPlainText(self.allocator, bq.content);
+                defer self.allocator.free(text);
                 try writer.writeAll("<blockquote>");
-                try writer.writeAll(bq.text);
+                try writer.writeAll(text);
                 try writer.writeAll("</blockquote>\n");
             },
             .thematic_break => {
@@ -175,7 +215,9 @@ pub const HtmlExporter = struct {
                 // Headers
                 try writer.writeAll("<thead><tr>\n");
                 for (t.headers) |header| {
-                    try writer.print("<th>{s}</th>\n", .{header});
+                    const text = try inlineToPlainText(self.allocator, header.content);
+                    defer self.allocator.free(text);
+                    try writer.print("<th>{s}</th>\n", .{text});
                 }
                 try writer.writeAll("</tr></thead>\n");
                 // Body
@@ -183,7 +225,9 @@ pub const HtmlExporter = struct {
                 for (t.rows) |row| {
                     try writer.writeAll("<tr>\n");
                     for (row) |cell| {
-                        try writer.print("<td>{s}</td>\n", .{cell.text});
+                        const text = try inlineToPlainText(self.allocator, cell.content);
+                        defer self.allocator.free(text);
+                        try writer.print("<td>{s}</td>\n", .{text});
                     }
                     try writer.writeAll("</tr>\n");
                 }
@@ -235,8 +279,11 @@ test "HtmlExporter basic" {
     var elements: std.ArrayList(Element) = .empty;
     defer elements.deinit(allocator);
 
+    const heading_content = try allocator.alloc(@import("../core/Element.zig").Inline, 1);
+    heading_content[0] = .{ .text = try allocator.dupe(u8, "Hello World") };
+
     try elements.append(allocator, .{ .heading = .{
-        .text = try allocator.dupe(u8, "Hello World"),
+        .content = heading_content,
         .level = 1,
     } });
 
