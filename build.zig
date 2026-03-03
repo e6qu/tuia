@@ -140,7 +140,7 @@ pub fn build(b: *std.Build) void {
     });
 
     const fuzz_parser_step = b.step("fuzz-parser", "Build parser fuzz target");
-    fuzz_parser_step.dependOn(&b.addInstallArtifact(fuzz_parser_exe).step);
+    fuzz_parser_step.dependOn(&b.addInstallArtifact(fuzz_parser_exe, .{}).step);
 
     // Verify step now includes lint check
     verify_step.dependOn(lint_check_step);
