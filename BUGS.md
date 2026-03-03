@@ -9,6 +9,48 @@
 
 ## 🐛 Critical Bugs
 
+### ✅ CRITICAL-13: Integer Underflow in Navigation.nextSlide() (Fixed)
+**Status:** 🟢 Fixed  
+**Component:** Navigation  
+**Impact:** High
+
+**Description:**  
+In `Navigation.nextSlide()`, if `total_slides` is 0, the expression `self.total_slides - 1` causes an integer underflow (usize wraps to max value). This leads to incorrect navigation behavior when the presentation has no slides.
+
+**Location:** `src/core/Navigation.zig:51`
+
+**Fix:** Add check for total_slides == 0 before subtraction:
+```zig
+pub fn nextSlide(self: *Self) void {
+    if (self.total_slides == 0) return;  // Add this check
+    if (self.current_slide < self.total_slides - 1) {
+        self.current_slide += 1;
+    }
+}
+```
+
+---
+
+### ✅ CRITICAL-14: Integer Underflow in Navigation.isLastSlide() (Fixed)
+**Status:** 🟢 Fixed  
+**Component:** Navigation  
+**Impact:** High
+
+**Description:**  
+In `Navigation.isLastSlide()`, if `total_slides` is 0, the expression `self.total_slides - 1` causes an integer underflow, returning incorrect results.
+
+**Location:** `src/core/Navigation.zig:141`
+
+**Fix:** Add check for total_slides == 0:
+```zig
+pub fn isLastSlide(self: Self) bool {
+    if (self.total_slides == 0) return true;  // Add this check
+    return self.current_slide >= self.total_slides - 1;
+}
+```
+
+---
+
 ### ✅ CRITICAL-11: Use-After-Free in MediaPlayer.spawnMediaPlayer() (Fixed)
 **Status:** 🟢 Fixed  
 **Component:** Media Player  
@@ -370,6 +412,33 @@ Inline markdown formatting was not being parsed - bold, italic, inline code, lin
 ---
 
 ## 📝 Medium Priority Issues
+
+### ✅ MED-5: Memory Leak Risk in Renderer.setCurrentSlide() (Fixed)
+**Status:** 🟢 Fixed  
+**Component:** Rendering  
+**Impact:** Medium
+
+**Description:**  
+In `Renderer.setCurrentSlide()`, if `SlideWidget.init()` fails after the old widget is deinit'd, the slide data is lost but the old widget was already freed. This could lead to memory issues or dangling pointers in error paths.
+
+**Location:** `src/render/Renderer.zig:97-105`
+
+**Fix:** Store old widget and only free after successful creation, or use errdefer:
+```zig
+pub fn setCurrentSlide(self: *Self, slide: Slide) !void {
+    const old_widget = self.current_slide_widget;
+    
+    // Create new slide widget
+    self.current_slide_widget = try SlideWidget.init(self.allocator, slide);
+    
+    // Only free old widget after successful creation
+    if (old_widget) |widget| {
+        widget.deinit();
+    }
+}
+```
+
+---
 
 ### ✅ MED-1: ConfigEditor Incomplete Implementation (Fixed)
 **Status:** 🟢 Fixed  

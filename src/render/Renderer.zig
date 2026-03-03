@@ -95,13 +95,16 @@ pub const Renderer = struct {
 
     /// Update the current slide widget
     pub fn setCurrentSlide(self: *Self, slide: Slide) !void {
-        // Clean up previous widget
-        if (self.current_slide_widget) |widget| {
+        // Store old widget temporarily
+        const old_widget = self.current_slide_widget;
+
+        // Create new slide widget first
+        self.current_slide_widget = try SlideWidget.init(self.allocator, slide);
+
+        // Only free old widget after successful creation
+        if (old_widget) |widget| {
             widget.deinit();
         }
-
-        // Create new slide widget
-        self.current_slide_widget = try SlideWidget.init(self.allocator, slide);
     }
 
     /// Clear the current slide
