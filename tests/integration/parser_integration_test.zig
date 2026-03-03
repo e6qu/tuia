@@ -19,7 +19,7 @@ test "parse simple presentation" {
 test "parse with frontmatter" {
     const allocator = std.testing.allocator;
 
-    const markdown = 
+    const markdown =
         \\---
         \\title: Test
         \\author: Author
@@ -40,7 +40,7 @@ test "parse with frontmatter" {
 test "parse with lists" {
     const allocator = std.testing.allocator;
 
-    const markdown = 
+    const markdown =
         \\# List Test
         \\- Item 1
         \\- Item 2
@@ -58,7 +58,7 @@ test "parse with lists" {
 test "parse with code block" {
     const allocator = std.testing.allocator;
 
-    const markdown = 
+    const markdown =
         \\# Code Test
         \\```zig
         \\const x = 42;
@@ -76,7 +76,7 @@ test "parse with code block" {
 test "parse with blockquote" {
     const allocator = std.testing.allocator;
 
-    const markdown = 
+    const markdown =
         \\# Quote Test
         \\> This is a quote
         \\> With multiple lines
@@ -93,7 +93,7 @@ test "parse with blockquote" {
 test "parse multiple slides" {
     const allocator = std.testing.allocator;
 
-    const markdown = 
+    const markdown =
         \\# Slide 1
         \\Content 1
         \\---
@@ -114,13 +114,13 @@ test "parse multiple slides" {
 // DISABLED - File-based tests need more debugging
 // test "parse feature showcase presentation" {
 //     const allocator = std.testing.allocator;
-// 
+//
 //     const content = try std.fs.cwd().readFileAlloc(allocator, "examples/feature-showcase.md", 1024 * 1024);
 //     defer allocator.free(content);
-// 
+//
 //     var parser = tuia.parser.Parser.init(allocator, content);
 //     var ast_pres = try parser.parse();
 //     defer ast_pres.deinit();
-// 
+//
 //     try std.testing.expect(ast_pres.slides.len > 5);
 // }
