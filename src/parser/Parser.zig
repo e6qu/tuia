@@ -55,19 +55,23 @@ pub const Parser = struct {
     fn parseFrontMatter(self: *Self) !?AST.FrontMatter {
         const FrontMatterParser = @import("FrontMatter.zig");
 
-        // Get remaining source from current position
-        const remaining_source = self.scanner.source[self.scanner.pos..];
+        // Check if the first token is a thematic break (---)
+        // If so, we need to look at the source from the beginning
+        const source_to_check = if (self.current.type == .thematic_break)
+            self.scanner.source
+        else
+            self.scanner.source[self.scanner.pos..];
 
         // Check if there's front matter
-        if (!std.mem.startsWith(u8, remaining_source, "---")) {
+        if (!std.mem.startsWith(u8, source_to_check, "---")) {
             return null;
         }
 
         // Parse front matter and get remaining content
-        const result = try FrontMatterParser.parseWithContent(self.allocator, remaining_source);
+        const result = try FrontMatterParser.parseWithContent(self.allocator, source_to_check);
 
         // Advance scanner past the front matter
-        const front_matter_end = std.mem.indexOf(u8, remaining_source[3..], "---");
+        const front_matter_end = std.mem.indexOf(u8, source_to_check[3..], "---");
         if (front_matter_end) |end| {
             // Skip past the second ---
             const skip_len = 3 + end + 3;
@@ -313,6 +317,12 @@ pub const Parser = struct {
             const elem = try self.parseBlockElement();
             if (elem) |e| {
                 try content.append(self.allocator, e);
+            } else {
+                // parseBlockElement returned null - advance to avoid infinite loop
+                // This handles cases like unknown tokens or already-handled elements
+                if (self.current.type != .blank_line and self.current.type != .eof and self.current.type != .end_slide) {
+                    self.advance();
+                }
             }
         }
 
@@ -358,6 +368,20 @@ pub const Parser = struct {
                     try content.append(self.allocator, e);
                 } else if (self.current.type == .speaker_note) {
                     self.advance(); // Skip speaker notes in list context
+                } else {
+                    // parseBlockElement returned null but didn't advance - advance to avoid infinite loop
+                    // Check if we're still in a valid state to continue parsing
+                    if (self.current.type != .eof and
+                        self.current.type != .end_slide and
+                        self.current.type != .blank_line)
+                    {
+                        // Check if we hit a list item
+                        if ((self.current.type == .list_item or self.current.type == .ordered_list_item)) {
+                            // Don't advance - let the outer logic handle the list item
+                        } else {
+                            self.advance();
+                        }
+                    }
                 }
             }
 
