@@ -35,6 +35,7 @@ pub const HelpWidget = struct {
         \\│    T                    Toggle trans.    │
         \\│    R                    Toggle remote    │
         \\│    M                    Stop media       │
+        \\│    =                    Config editor    │
         \\│                                          │
         \\│  View:                                   │
         \\│    ?, F1                Toggle help      │

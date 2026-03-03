@@ -9,6 +9,8 @@ const render = @import("render/root.zig");
 const features = @import("features/root.zig");
 const executor = @import("features/executor/root.zig");
 const transitions = @import("features/transitions/root.zig");
+const ConfigEditor = @import("config/ConfigEditor.zig").ConfigEditor;
+const Config = @import("config/Config.zig").Config;
 
 const Presentation = core.Presentation;
 const PresentationBuilder = core.PresentationBuilder;
@@ -66,6 +68,10 @@ pub const App = struct {
     // Media player
     media_player: features.media.MediaPlayer,
 
+    // Config editor
+    config_editor: ?ConfigEditor,
+    show_config_editor: bool,
+
     // Current theme
     current_theme: Theme,
 
@@ -100,6 +106,8 @@ pub const App = struct {
             .remote_server = features.remote.RemoteServer.init(allocator, 8765),
             .remote_enabled = false,
             .media_player = features.media.MediaPlayer.init(allocator),
+            .config_editor = null,
+            .show_config_editor = false,
             .renderer = Renderer.init(allocator),
             .current_theme = darkTheme(),
         };
@@ -123,6 +131,9 @@ pub const App = struct {
         self.transition_manager.deinit();
         self.remote_server.stop();
         self.media_player.deinit();
+        if (self.config_editor) |*ce| {
+            ce.deinit();
+        }
         self.input_handler.deinit();
         self.loop.stop();
         self.vx.deinit(self.allocator, self.tty.writer());
@@ -198,11 +209,31 @@ pub const App = struct {
 
     /// Handle a key press
     fn handleKey(self: *Self, key: vaxis.Key) !void {
+        // Handle config editor mode
+        if (self.show_config_editor) {
+            if (self.config_editor) |*ce| {
+                try ce.handleKey(key);
+                if (key.codepoint == 'q' and ce.input_mode == .navigate) {
+                    self.show_config_editor = false;
+                }
+            }
+            return;
+        }
+
         const nav = &self.navigation.?;
 
         // Check for quit
         if (key.codepoint == 'c' and key.mods.ctrl) {
             self.running = false;
+            return;
+        }
+
+        // Launch config editor with '='
+        if (key.codepoint == '=' and !self.input_handler.isInJumpMode()) {
+            if (self.config_editor == null) {
+                self.config_editor = try ConfigEditor.init(self.allocator, Config{});
+            }
+            self.show_config_editor = true;
             return;
         }
 
@@ -513,6 +544,13 @@ pub const App = struct {
             const slide_height = win.height - 2; // Account for status bar
 
             self.overlay.draw(win, slide_width, slide_height);
+        }
+
+        // Draw config editor if active
+        if (self.show_config_editor) {
+            if (self.config_editor) |ce| {
+                ce.draw(win);
+            }
         }
 
         try self.vx.render(self.tty.writer());

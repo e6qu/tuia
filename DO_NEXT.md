@@ -31,7 +31,7 @@ Potential enhancements for future versions:
 - ✅ Laser pointer mode
 - ✅ Drawing/annotations on slides
 - ✅ Slide transitions/animations
-- Audio/video support
+- ✅ Audio/video support
 
 ### Configuration
 - GUI config editor
