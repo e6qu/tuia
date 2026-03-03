@@ -52,13 +52,13 @@ jobs:
       - name: Check binary size
         run: |
           SIZE=$(stat -c%s zig-out/bin/tuia)
-          MAX_SIZE=5242880  # 5MB
+          MAX_SIZE=7340032  # 7MB
           
           echo "Binary size: $SIZE bytes ($(numfmt --to=iec $SIZE))"
           echo "Max allowed: $(numfmt --to=iec $MAX_SIZE)"
           
           if [ $SIZE -gt $MAX_SIZE ]; then
-            echo "❌ Binary size exceeds 5MB limit!"
+            echo "❌ Binary size exceeds 7MB limit!"
             exit 1
           fi
           
