@@ -1,0 +1,65 @@
+# Semgrep rules for detecting null safety and optional handling issues in Zig
+
+rules:
+  - id: unchecked-optional-unwrap
+    languages:
+      - zig
+    message: "Optional unwrapped with .? without null check. This will panic if null. Use 'if (opt) |value|' instead."
+    severity: WARNING
+    metadata:
+      category: reliability
+      cwe: "CWE-476: NULL Pointer Dereference"
+      references:
+        - https://docs/CODING_STANDARDS.md
+    pattern: $OPT.?
+    pattern-not-inside: |
+      if ($OPT) |$VAL| {
+        ...
+      }
+    pattern-not-inside: |
+      if ($OPT != null) {
+        ...
+      }
+
+  - id: orelse-unreachable-without-check
+    languages:
+      - zig
+    message: "Using orelse unreachable without verifying the optional cannot be null."
+    severity: WARNING
+    metadata:
+      category: reliability
+    pattern: $OPT orelse unreachable
+
+  - id: empty-array-access
+    languages:
+      - zig
+    message: "Accessing array without checking if empty. Add 'if (array.len == 0) return' first."
+    severity: WARNING
+    metadata:
+      category: reliability
+    patterns:
+      - pattern-either:
+          - pattern: $ARRAY[0]
+          - pattern: $ARRAY[$ARRAY.len - 1]
+      - pattern-not-inside: |
+          if ($ARRAY.len == 0) {
+            ...
+          }
+      - pattern-not-inside: |
+          if ($ARRAY.len > 0) {
+            ...
+          }
+
+  - id: redundant-null-check-after-orelse
+    languages:
+      - zig
+    message: "Redundant null check - value was already unwrapped with orelse."
+    severity: INFO
+    metadata:
+      category: maintainability
+    patterns:
+      - pattern: |
+          const $VAR = $OPT orelse $DEFAULT;
+          if ($VAR != null) {
+            ...
+          }

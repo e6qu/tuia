@@ -1,0 +1,129 @@
+name: Fuzz Testing
+
+on:
+  schedule:
+    # Run daily at 02:00 UTC (after security checks)
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: 'Fuzz duration in seconds'
+        required: false
+        default: '3600'
+
+env:
+  ZIG_VERSION: 0.15.2
+
+jobs:
+  # Parser fuzzing
+  fuzz-parser:
+    name: Parser Fuzzing
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Install libFuzzer dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang llvm
+
+      - name: Build fuzz target
+        run: |
+          # Build with fuzzing instrumentation
+          zig build fuzz-parser || echo "Fuzz target not yet implemented"
+
+      - name: Run fuzzer
+        run: |
+          if [ -f ./zig-out/bin/fuzz-parser ]; then
+            mkdir -p fuzz-corpus fuzz-artifacts
+            ./zig-out/bin/fuzz-parser \
+              fuzz-corpus/ \
+              -max_total_time=${{ github.event.inputs.duration || '3600' }} \
+              -print_final_stats=1 \
+              -detect_leaks=1 \
+              -artifact_prefix=fuzz-artifacts/ \
+              -max_len=10000
+          else
+            echo "Fuzz target not available yet"
+          fi
+
+      - name: Upload crash artifacts
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: parser-fuzz-crashes
+          path: |
+            fuzz-artifacts/crash-*
+            fuzz-artifacts/oom-*
+            fuzz-artifacts/timeout-*
+          if-no-files-found: ignore
+
+      - name: Upload corpus
+        uses: actions/upload-artifact@v4
+        with:
+          name: parser-fuzz-corpus
+          path: fuzz-corpus/
+          if-no-files-found: ignore
+
+  # Widget fuzzing
+  fuzz-widgets:
+    name: Widget Fuzzing
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Build fuzz target
+        run: |
+          zig build fuzz-widgets || echo "Fuzz target not yet implemented"
+
+      - name: Run fuzzer
+        run: |
+          if [ -f ./zig-out/bin/fuzz-widgets ]; then
+            mkdir -p fuzz-widget-corpus fuzz-widget-artifacts
+            ./zig-out/bin/fuzz-widgets \
+              fuzz-widget-corpus/ \
+              -max_total_time=1800 \
+              -print_final_stats=1 \
+              -detect_leaks=1 \
+              -artifact_prefix=fuzz-widget-artifacts/
+          else
+            echo "Fuzz target not available yet"
+          fi
+
+      - name: Upload crash artifacts
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: widget-fuzz-crashes
+          path: fuzz-widget-artifacts/crash-*
+          if-no-files-found: ignore
+
+  # Summary
+  fuzz-summary:
+    name: Fuzz Summary
+    runs-on: ubuntu-latest
+    needs: [fuzz-parser, fuzz-widgets]
+    if: always()
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## Fuzz Testing Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Target | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Parser | ${{ needs.fuzz-parser.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Widgets | ${{ needs.fuzz-widgets.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Crashes found will be uploaded as artifacts." >> $GITHUB_STEP_SUMMARY

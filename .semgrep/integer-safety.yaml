@@ -1,0 +1,84 @@
+# Semgrep rules for detecting integer safety issues in Zig
+# Focuses on unsigned integer underflow and overflow patterns
+
+rules:
+  - id: unchecked-unsigned-subtraction
+    languages:
+      - zig
+    message: "Unsigned integer subtraction without zero check. This can cause underflow. Use 'if (value > 0)' before subtracting."
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-191: Integer Underflow"
+      references:
+        - https://docs/CODING_STANDARDS.md
+    patterns:
+      - pattern-either:
+          - pattern: $VAR - 1
+          - pattern: $VAR - $N
+      - pattern-not-inside: |
+          if ($VAR > 0) {
+            ...
+          }
+      - pattern-not-inside: |
+          if ($VAR > $N) {
+            ...
+          }
+      - pattern-not-inside: |
+          if ($VAR >= 1) {
+            ...
+          }
+      - pattern-not-inside: |
+          if ($VAR == 0) {
+            ...
+          }
+
+  - id: unchecked-division
+    languages:
+      - zig
+    message: "Division without zero check. Divisor could be zero causing panic. Use 'if (divisor != 0)' before dividing."
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-369: Divide By Zero"
+      references:
+        - https://docs/CODING_STANDARDS.md
+    patterns:
+      - pattern-either:
+          - pattern: $A / $B
+          - pattern: $A % $B
+      - pattern-not-inside: |
+          if ($B != 0) {
+            ...
+          }
+      - pattern-not-inside: |
+          if ($B > 0) {
+            ...
+          }
+
+  - id: total-slides-minus-one
+    languages:
+      - zig
+    message: "Common pattern: total_slides - 1 without checking if total_slides is 0."
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-191: Integer Underflow"
+    pattern-regex: total_slides\s*-\s*1
+    pattern-not-inside: |
+      if (total_slides == 0) {
+        ...
+      }
+    pattern-not-inside: |
+      if (total_slides > 0) {
+        ...
+      }
+
+  - id: usize-subtraction-risk
+    languages:
+      - zig
+    message: "usize subtraction detected. Ensure value cannot be zero."
+    severity: WARNING
+    metadata:
+      category: security
+    pattern-regex: '\busize\b.*\b-\s*1'

@@ -1,0 +1,94 @@
+# Semgrep rules for detecting memory safety issues in Zig
+# Focuses on use-after-free, double-free, and memory leaks
+
+rules:
+  - id: free-string-literal
+    languages:
+      - zig
+    message: "Freeing a string literal causes undefined behavior. String literals are not heap-allocated."
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-762: Mismatched Memory Management Routines"
+      references:
+        - https://docs/CODING_STANDARDS.md
+    pattern-either:
+      - pattern: $ALLOCATOR.free("")
+      - pattern: $ALLOCATOR.free("...")
+
+  - id: missing-errdefer-create
+    languages:
+      - zig
+    message: "Allocation with allocator.create() should have errdefer for cleanup."
+    severity: WARNING
+    metadata:
+      category: reliability
+      cwe: "CWE-401: Missing Release of Memory after Effective Lifetime"
+    patterns:
+      - pattern: |
+          const $VAR = try $ALLOCATOR.create($TYPE);
+          ...
+      - pattern-not-inside: |
+          const $VAR = try $ALLOCATOR.create($TYPE);
+          errdefer $ALLOCATOR.destroy($VAR);
+          ...
+
+  - id: missing-errdefer-alloc
+    languages:
+      - zig
+    message: "Allocation with allocator.alloc() should have errdefer for cleanup."
+    severity: WARNING
+    metadata:
+      category: reliability
+      cwe: "CWE-401: Missing Release of Memory after Effective Lifetime"
+    patterns:
+      - pattern: |
+          const $VAR = try $ALLOCATOR.alloc($TYPE, $SIZE);
+          ...
+      - pattern-not-inside: |
+          const $VAR = try $ALLOCATOR.alloc($TYPE, $SIZE);
+          errdefer $ALLOCATOR.free($VAR);
+          ...
+
+  - id: missing-errdefer-dupe
+    languages:
+      - zig
+    message: "Allocation with allocator.dupe() should have errdefer for cleanup."
+    severity: WARNING
+    metadata:
+      category: reliability
+      cwe: "CWE-401: Missing Release of Memory after Effective Lifetime"
+    patterns:
+      - pattern: |
+          const $VAR = try $ALLOCATOR.dupe($TYPE, $SRC);
+          ...
+      - pattern-not-inside: |
+          const $VAR = try $ALLOCATOR.dupe($TYPE, $SRC);
+          errdefer $ALLOCATOR.free($VAR);
+          ...
+
+  - id: defer-free-after-create
+    languages:
+      - zig
+    message: "Using defer instead of errdefer for cleanup. If an error occurs after this point, memory will leak."
+    severity: WARNING
+    metadata:
+      category: reliability
+    patterns:
+      - pattern: |
+          const $VAR = try $ALLOCATOR.create($TYPE);
+          defer $ALLOCATOR.destroy($VAR);
+
+  - id: potential-use-after-free
+    languages:
+      - zig
+    message: "Potential use-after-free pattern detected. Ensure pointer is not used after free."
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-416: Use After Free"
+    patterns:
+      - pattern: |
+          $ALLOCATOR.free($VAR);
+          ...
+          $VAR

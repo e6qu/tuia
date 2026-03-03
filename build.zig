@@ -103,4 +103,45 @@ pub fn build(b: *std.Build) void {
         .install_subdir = "docs",
     });
     docs_step.dependOn(&install_docs.step);
+
+    // Custom linter tool
+    const ziglint_module = b.createModule(.{
+        .root_source_file = b.path("tools/ziglint.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const ziglint_exe = b.addExecutable(.{
+        .name = "ziglint",
+        .root_module = ziglint_module,
+    });
+    b.installArtifact(ziglint_exe);
+
+    const ziglint_step = b.step("ziglint", "Build the custom Zig linter");
+    ziglint_step.dependOn(b.getInstallStep());
+
+    // Run linter
+    const run_ziglint = b.addRunArtifact(ziglint_exe);
+    run_ziglint.addArg("src/");
+    const lint_check_step = b.step("lint-check", "Run custom linter on source");
+    lint_check_step.dependOn(&run_ziglint.step);
+
+    // Fuzz target for parser
+    const fuzz_parser_module = b.createModule(.{
+        .root_source_file = b.path("fuzz/parser_fuzz.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    fuzz_parser_module.addImport("tuia", root_module);
+
+    const fuzz_parser_exe = b.addExecutable(.{
+        .name = "fuzz-parser",
+        .root_module = fuzz_parser_module,
+    });
+
+    const fuzz_parser_step = b.step("fuzz-parser", "Build parser fuzz target");
+    fuzz_parser_step.dependOn(&b.addInstallArtifact(fuzz_parser_exe).step);
+
+    // Verify step now includes lint check
+    verify_step.dependOn(lint_check_step);
 }

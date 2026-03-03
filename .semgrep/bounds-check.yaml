@@ -1,0 +1,85 @@
+# Semgrep rules for detecting missing bounds checks in Zig
+# These rules help prevent panics from out-of-bounds array access
+
+rules:
+  - id: array-index-without-bounds-check
+    languages:
+      - zig
+    message: "Array index access without bounds check. Use 'if (index < array.len)' before accessing."
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-125: Out-of-bounds Read"
+      references:
+        - https://docs/CODING_STANDARDS.md
+    pattern-either:
+      - pattern: $ARRAY[$INDEX]
+    pattern-not-inside: |
+      if ($INDEX < $ARRAY.len) {
+        ...
+      }
+    pattern-not-inside: |
+      if ($INDEX >= $ARRAY.len) {
+        ...
+      }
+    pattern-not-inside: |
+      while ($INDEX < $ARRAY.len) {
+        ...
+      }
+    pattern-not-inside: |
+      for ($ARRAY, 0..) |_, $INDEX| {
+        ...
+      }
+    pattern-not-inside: |
+      for ($ARRAY) |_| {
+        ...
+      }
+
+  - id: slice-access-without-length-check
+    languages:
+      - zig
+    message: "Slice access without length check. Verify slice is not empty before accessing."
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-125: Out-of-bounds Read"
+    pattern: |
+      $SLICE[0]
+    pattern-not-inside: |
+      if ($SLICE.len > 0) {
+        ...
+      }
+    pattern-not-inside: |
+      if ($SLICE.len >= 1) {
+        ...
+      }
+
+  - id: first-array-element-no-check
+    languages:
+      - zig
+    message: "Accessing first array element without checking if array is empty."
+    severity: WARNING
+    metadata:
+      category: reliability
+    pattern: $ARRAY[0]
+    pattern-not-inside: |
+      if ($ARRAY.len > 0) {
+        ...
+      }
+    pattern-not-inside: |
+      if ($ARRAY.len >= 1) {
+        ...
+      }
+
+  - id: last-array-element-no-check  
+    languages:
+      - zig
+    message: "Accessing last array element without checking if array is empty."
+    severity: WARNING
+    metadata:
+      category: reliability
+    pattern: $ARRAY[$ARRAY.len - 1]
+    pattern-not-inside: |
+      if ($ARRAY.len > 0) {
+        ...
+      }
