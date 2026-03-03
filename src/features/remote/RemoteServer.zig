@@ -164,7 +164,7 @@ pub const RemoteServer = struct {
             "</script>\n" ++
             "</body>\n" ++
             "</html>";
-        
+
         const response = try std.fmt.allocPrint(
             self.allocator,
             "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {d}\r\nConnection: close\r\n\r\n{s}",
