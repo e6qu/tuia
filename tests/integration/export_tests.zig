@@ -4,8 +4,6 @@ const std = @import("std");
 const tuia = @import("tuia");
 
 const Presentation = tuia.core.Presentation;
-const Slide = tuia.core.Slide;
-const Element = tuia.core.Element;
 const Parser = tuia.parser.Parser;
 const convertPresentation = tuia.parser.Converter.convertPresentation;
 const HtmlExporter = tuia.export_.HtmlExporter;
@@ -14,33 +12,23 @@ const BeamerExporter = tuia.export_.BeamerExporter;
 const PdfExporter = tuia.export_.PdfExporter;
 const Theme = tuia.render.Theme;
 
+// Helper to load fixture file
+fn loadFixture(allocator: std.mem.Allocator, name: []const u8) ![]u8 {
+    const path = try std.fs.path.join(allocator, &.{ "tests/fixtures", name });
+    defer allocator.free(path);
+    return try std.fs.cwd().readFileAlloc(allocator, path, 1024 * 1024);
+}
+
 // ============== HTML Export E2E Tests ==============
 
 test "e2e: HTML export full presentation" {
     const allocator = std.testing.allocator;
 
-    // Parse a full presentation
-    const markdown =
-        \\---
-        \\title: Integration Test
-        \\author: Test Author
-        \\---
-        \\# First Slide
-        \\This is a paragraph with **bold** and *italic* text.
-        \\---
-        \\# Second Slide
-        \\- Item 1
-        \\- Item 2
-        \\- Item 3
-        \\---
-        \\# Code Example
-        \\```python
-        \\print("Hello, World!")
-        \\```
-    ;
+    // Load test fixture
+    const markdown = try loadFixture(allocator, "export_test_basic.md");
+    defer allocator.free(markdown);
 
     var parser = Parser.init(allocator, markdown);
-
     var ast = try parser.parse();
     defer ast.deinit();
 
@@ -71,26 +59,10 @@ test "e2e: HTML export full presentation" {
 test "e2e: Reveal.js export with all element types" {
     const allocator = std.testing.allocator;
 
-    const markdown =
-        \\# Title Slide
-        \\A paragraph with [a link](https://example.com).
-        \\---
-        \\## Lists and Quotes
-        \\> This is a blockquote
-        \\> with multiple lines.
-        \\1. First ordered item
-        \\2. Second ordered item
-        \\3. Third item
-        \\---
-        \\## Table Slide
-        \\| Header 1 | Header 2 |
-        \\|----------|----------|
-        \\| Cell 1   | Cell 2   |
-        \\| Cell 3   | Cell 4   |
-    ;
+    const markdown = try loadFixture(allocator, "export_test_elements.md");
+    defer allocator.free(markdown);
 
     var parser = Parser.init(allocator, markdown);
-
     var ast = try parser.parse();
     defer ast.deinit();
 
@@ -126,31 +98,10 @@ test "e2e: Reveal.js export with all element types" {
 test "e2e: Beamer export produces valid LaTeX structure" {
     const allocator = std.testing.allocator;
 
-    const markdown =
-        \\---
-        \\title: LaTeX Test Presentation
-        \\author: LaTeX Author
-        \\date: 2026-03-03
-        \\---
-        \\# Introduction
-        \\Welcome to the **presentation** about `code` and *formatting*.
-        \\---
-        \\# Code Example
-        \\```rust
-        \\fn main() {
-        \\    println!("Hello");
-        \\}
-        \\```
-        \\---
-        \\# Summary
-        \\- Point A: Important
-        \\- Point B: Critical
-        \\- Point C: Essential
-        \\> Remember: Always test your code!
-    ;
+    const markdown = try loadFixture(allocator, "export_test_latex.md");
+    defer allocator.free(markdown);
 
     var parser = Parser.init(allocator, markdown);
-
     var ast = try parser.parse();
     defer ast.deinit();
 
@@ -203,15 +154,10 @@ test "e2e: Beamer export produces valid LaTeX structure" {
 test "e2e: Beamer export escapes special characters" {
     const allocator = std.testing.allocator;
 
-    // Markdown with special LaTeX characters
-    const markdown =
-        \\# Special Characters: $100 & More
-        \\This text contains: $, %, #, _, {, }, ~, ^, \\, <, >
-        \\Math formula: a^2 + b^2 = c^2
-    ;
+    const markdown = try loadFixture(allocator, "export_test_special_chars.md");
+    defer allocator.free(markdown);
 
     var parser = Parser.init(allocator, markdown);
-
     var ast = try parser.parse();
     defer ast.deinit();
 
@@ -240,17 +186,10 @@ test "e2e: Beamer export escapes special characters" {
 test "e2e: Beamer export table rendering" {
     const allocator = std.testing.allocator;
 
-    const markdown =
-        \\# Table Test
-        \\| Name | Value | Description |
-        \\|------|-------|-------------|
-        \\| A    | 10    | First item  |
-        \\| B    | 20    | Second item |
-        \\| C    | 30    | Third item  |
-    ;
+    const markdown = try loadFixture(allocator, "export_test_table.md");
+    defer allocator.free(markdown);
 
     var parser = Parser.init(allocator, markdown);
-
     var ast = try parser.parse();
     defer ast.deinit();
 
@@ -273,13 +212,10 @@ test "e2e: Beamer export table rendering" {
 test "e2e: Beamer export image handling" {
     const allocator = std.testing.allocator;
 
-    const markdown =
-        \\# Image Slide
-        \\![Alt text](path/to/image.png)
-    ;
+    const markdown = try loadFixture(allocator, "export_test_image.md");
+    defer allocator.free(markdown);
 
     var parser = Parser.init(allocator, markdown);
-
     var ast = try parser.parse();
     defer ast.deinit();
 
@@ -299,17 +235,10 @@ test "e2e: Beamer export image handling" {
 test "e2e: PDF export generates LaTeX source" {
     const allocator = std.testing.allocator;
 
-    const markdown =
-        \\---
-        \\title: PDF Export Test
-        \\author: PDF Author
-        \\---
-        \\# Slide 1
-        \\Content here.
-    ;
+    const markdown = try loadFixture(allocator, "export_test_pdf.md");
+    defer allocator.free(markdown);
 
     var parser = Parser.init(allocator, markdown);
-
     var ast = try parser.parse();
     defer ast.deinit();
 
@@ -354,22 +283,10 @@ test "e2e: PDF export generates LaTeX source" {
 test "e2e: Export all formats from same presentation" {
     const allocator = std.testing.allocator;
 
-    const markdown =
-        \\---
-        \\title: Multi-Format Test
-        \\author: Test Author
-        \\---
-        \\# Test Slide
-        \\This is **bold** and *italic* with `code`.
-        \\- Item 1
-        \\- Item 2
-        \\```python
-        \\print("hello")
-        \\```
-    ;
+    const markdown = try loadFixture(allocator, "export_test_multi_format.md");
+    defer allocator.free(markdown);
 
     var parser = Parser.init(allocator, markdown);
-
     var ast = try parser.parse();
     defer ast.deinit();
 
