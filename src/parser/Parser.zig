@@ -514,7 +514,8 @@ fn isCodeBlockEnd(text: []const u8) bool {
 }
 
 /// Parse inline markdown content (bold, italic, code, links)
-fn parseInlineContent(allocator: std.mem.Allocator, text: []const u8) ![]AST.Inline {
+/// Parse inline content and return array of inline elements
+fn parseInlineContent(allocator: std.mem.Allocator, text: []const u8) ParseError![]AST.Inline {
     var result: std.ArrayList(AST.Inline) = .empty;
     defer result.deinit(allocator);
 
@@ -522,260 +523,10 @@ fn parseInlineContent(allocator: std.mem.Allocator, text: []const u8) ![]AST.Inl
     var text_start: usize = 0;
 
     while (i < text.len) {
-        // Check for inline code: `code`
-        if (text[i] == '`') {
-            // Flush pending text
-            if (i > text_start) {
-                const txt = try allocator.dupe(u8, text[text_start..i]);
-                try result.append(allocator, .{ .text = txt });
-            }
-
-            // Find closing backtick
-            i += 1;
-            const code_start = i;
-            while (i < text.len and text[i] != '`') {
-                i += 1;
-            }
-            const code = try allocator.dupe(u8, text[code_start..i]);
-            try result.append(allocator, .{ .code = code });
-
-            if (i < text.len) i += 1; // skip closing `
-            text_start = i;
-            continue;
+        const maybe_element = try parseNextInlineElement(allocator, text, &i, &text_start);
+        if (maybe_element) |element| {
+            try result.append(allocator, element);
         }
-
-        // Check for strong: **text**
-        if (text[i] == '*' and i + 1 < text.len and text[i + 1] == '*') {
-            // Flush pending text
-            if (i > text_start) {
-                const txt = try allocator.dupe(u8, text[text_start..i]);
-                try result.append(allocator, .{ .text = txt });
-            }
-
-            // Find closing **
-            i += 2;
-            const strong_start = i;
-            while (i + 1 < text.len and !(text[i] == '*' and text[i + 1] == '*')) {
-                i += 1;
-            }
-
-            if (i + 1 < text.len) {
-                // Parse content recursively
-                const inner = try parseInlineContent(allocator, text[strong_start..i]);
-                try result.append(allocator, .{ .strong = inner });
-                i += 2; // skip closing **
-            } else {
-                // No closing **, treat as text
-                const txt = try allocator.dupe(u8, text[strong_start - 2 .. i]);
-                try result.append(allocator, .{ .text = txt });
-            }
-            text_start = i;
-            continue;
-        }
-
-        // Check for emphasis: *text*
-        if (text[i] == '*') {
-            // Flush pending text
-            if (i > text_start) {
-                const txt = try allocator.dupe(u8, text[text_start..i]);
-                try result.append(allocator, .{ .text = txt });
-            }
-
-            // Find closing *
-            i += 1;
-            const emph_start = i;
-            while (i < text.len and text[i] != '*') {
-                i += 1;
-            }
-
-            if (i < text.len) {
-                // Parse content recursively
-                const inner = try parseInlineContent(allocator, text[emph_start..i]);
-                try result.append(allocator, .{ .emphasis = inner });
-                i += 1; // skip closing *
-            } else {
-                // No closing *, treat as text
-                const txt = try allocator.dupe(u8, text[emph_start - 1 .. i]);
-                try result.append(allocator, .{ .text = txt });
-            }
-            text_start = i;
-            continue;
-        }
-
-        // Check for links: [text](url)
-        if (text[i] == '[') {
-            // Find closing ]
-            var j = i + 1;
-            while (j < text.len and text[j] != ']') {
-                j += 1;
-            }
-
-            // Check for ( following ] - inline link
-            if (j + 1 < text.len and text[j] == ']' and text[j + 1] == '(') {
-                // Flush pending text
-                if (i > text_start) {
-                    const txt = try allocator.dupe(u8, text[text_start..i]);
-                    try result.append(allocator, .{ .text = txt });
-                }
-
-                const link_text = text[i + 1 .. j];
-                j += 2; // skip ](
-
-                // Find closing )
-                const url_start = j;
-                while (j < text.len and text[j] != ')') {
-                    j += 1;
-                }
-                const url = try allocator.dupe(u8, text[url_start..j]);
-                errdefer allocator.free(url);
-
-                // Parse link text
-                const inner = try parseInlineContent(allocator, link_text);
-                errdefer {
-                    for (inner) |*inl| {
-                        inl.deinit(allocator);
-                    }
-                    allocator.free(inner);
-                }
-
-                try result.append(allocator, .{ .link = .{
-                    .text = inner,
-                    .url = url,
-                    .ref_label = null,
-                } });
-
-                if (j < text.len) j += 1; // skip )
-                i = j;
-                text_start = i;
-                continue;
-            }
-
-            // Check for [ following ] - reference-style link [text][label]
-            if (j + 1 < text.len and text[j] == ']' and text[j + 1] == '[') {
-                // Flush pending text
-                if (i > text_start) {
-                    const txt = try allocator.dupe(u8, text[text_start..i]);
-                    try result.append(allocator, .{ .text = txt });
-                }
-
-                const link_text = text[i + 1 .. j];
-                j += 2; // skip ][
-
-                // Find closing ]
-                const label_start = j;
-                while (j < text.len and text[j] != ']') {
-                    j += 1;
-                }
-                const label = if (j > label_start)
-                    try allocator.dupe(u8, text[label_start..j])
-                else
-                    null; // Empty label means use link text as label
-
-                // Parse link text
-                const inner = try parseInlineContent(allocator, link_text);
-                errdefer {
-                    for (inner) |*inl| {
-                        inl.deinit(allocator);
-                    }
-                    allocator.free(inner);
-                }
-
-                // Store with empty URL - will be resolved during conversion
-                try result.append(allocator, .{ .link = .{
-                    .text = inner,
-                    .url = try allocator.dupe(u8, ""),
-                    .ref_label = label,
-                } });
-
-                if (j < text.len) j += 1; // skip ]
-                i = j;
-                text_start = i;
-                continue;
-            }
-
-            // Check for just [text] - reference-style link with implicit label
-            if (j < text.len and text[j] == ']') {
-                // This could be a reference-style link with implicit label
-                // We need to check if there's a matching reference definition
-                // For now, treat it as a link with ref_label = link_text
-
-                // Flush pending text
-                if (i > text_start) {
-                    const txt = try allocator.dupe(u8, text[text_start..i]);
-                    try result.append(allocator, .{ .text = txt });
-                }
-
-                const link_text = text[i + 1 .. j];
-
-                // Parse link text
-                const inner = try parseInlineContent(allocator, link_text);
-                errdefer {
-                    for (inner) |*inl| {
-                        inl.deinit(allocator);
-                    }
-                    allocator.free(inner);
-                }
-
-                // Store with implicit label
-                const label = try allocator.dupe(u8, link_text);
-                errdefer allocator.free(label);
-
-                try result.append(allocator, .{ .link = .{
-                    .text = inner,
-                    .url = try allocator.dupe(u8, ""),
-                    .ref_label = label,
-                } });
-
-                if (j < text.len) j += 1; // skip ]
-                i = j;
-                text_start = i;
-                continue;
-            }
-        }
-
-        // Check for images: ![alt](url)
-        if (text[i] == '!' and i + 1 < text.len and text[i + 1] == '[') {
-            // Find closing ]
-            var j = i + 2;
-            while (j < text.len and text[j] != ']') {
-                j += 1;
-            }
-
-            // Check for ( following ]
-            if (j + 1 < text.len and text[j] == ']' and text[j + 1] == '(') {
-                // Flush pending text
-                if (i > text_start) {
-                    const txt = try allocator.dupe(u8, text[text_start..i]);
-                    try result.append(allocator, .{ .text = txt });
-                }
-
-                const alt_text = text[i + 2 .. j];
-                j += 2; // skip ](
-
-                // Find closing )
-                const url_start = j;
-                while (j < text.len and text[j] != ')') {
-                    j += 1;
-                }
-                const url = try allocator.dupe(u8, text[url_start..j]);
-                errdefer allocator.free(url);
-
-                const alt = try allocator.dupe(u8, alt_text);
-                errdefer allocator.free(alt);
-
-                try result.append(allocator, .{ .image = .{
-                    .alt = alt,
-                    .url = url,
-                } });
-
-                if (j < text.len) j += 1; // skip )
-                i = j;
-                text_start = i;
-                continue;
-            }
-        }
-
-        i += 1;
     }
 
     // Flush remaining text
@@ -785,6 +536,369 @@ fn parseInlineContent(allocator: std.mem.Allocator, text: []const u8) ![]AST.Inl
     }
 
     return try result.toOwnedSlice(allocator);
+}
+
+/// Parse the next inline element starting at position i
+/// Updates i and text_start appropriately
+/// Returns null if no special element found at this position
+fn parseNextInlineElement(
+    allocator: std.mem.Allocator,
+    text: []const u8,
+    i: *usize,
+    text_start: *usize,
+) ParseError!?AST.Inline {
+    const pos = i.*;
+
+    // Try each inline format handler in order of priority
+    if (try parseInlineCode(allocator, text, i, text_start)) |elem| return elem;
+    if (try parseStrong(allocator, text, i, text_start)) |elem| return elem;
+    if (try parseEmphasis(allocator, text, i, text_start)) |elem| return elem;
+    if (try parseLinkOrImage(allocator, text, i, text_start)) |elem| return elem;
+
+    // No special element found, advance and return null
+    i.* = pos + 1;
+    return null;
+}
+
+/// Parse inline code: `code`
+fn parseInlineCode(
+    allocator: std.mem.Allocator,
+    text: []const u8,
+    i: *usize,
+    text_start: *usize,
+) ParseError!?AST.Inline {
+    if (text[i.*] != '`') return null;
+
+    const start = i.*;
+
+    // Flush pending text
+    if (start > text_start.*) {
+        const txt = try allocator.dupe(u8, text[text_start.*..start]);
+        return .{ .text = txt };
+    }
+
+    // Find closing backtick
+    i.* += 1;
+    const code_start = i.*;
+    while (i.* < text.len and text[i.*] != '`') {
+        i.* += 1;
+    }
+    const code = try allocator.dupe(u8, text[code_start..i.*]);
+
+    if (i.* < text.len) i.* += 1; // skip closing `
+    text_start.* = i.*;
+
+    return .{ .code = code };
+}
+
+/// Parse strong text: **text**
+fn parseStrong(
+    allocator: std.mem.Allocator,
+    text: []const u8,
+    i: *usize,
+    text_start: *usize,
+) ParseError!?AST.Inline {
+    const pos = i.*;
+    if (pos + 1 >= text.len or text[pos] != '*' or text[pos + 1] != '*') return null;
+
+    // Flush pending text
+    if (pos > text_start.*) {
+        const txt = try allocator.dupe(u8, text[text_start.*..pos]);
+        return .{ .text = txt };
+    }
+
+    // Find closing **
+    i.* = pos + 2;
+    const strong_start = i.*;
+    while (i.* + 1 < text.len and !(text[i.*] == '*' and text[i.* + 1] == '*')) {
+        i.* += 1;
+    }
+
+    if (i.* + 1 < text.len) {
+        // Parse content recursively
+        const inner = try parseInlineContent(allocator, text[strong_start..i.*]);
+        i.* += 2; // skip closing **
+        text_start.* = i.*;
+        return .{ .strong = inner };
+    } else {
+        // No closing **, treat as text
+        const txt = try allocator.dupe(u8, text[strong_start - 2 .. i.*]);
+        text_start.* = i.*;
+        return .{ .text = txt };
+    }
+}
+
+/// Parse emphasis text: *text*
+fn parseEmphasis(
+    allocator: std.mem.Allocator,
+    text: []const u8,
+    i: *usize,
+    text_start: *usize,
+) ParseError!?AST.Inline {
+    const pos = i.*;
+    if (text[pos] != '*') return null;
+    // Skip if this is the start of strong (**)
+    if (pos + 1 < text.len and text[pos + 1] == '*') return null;
+
+    // Flush pending text
+    if (pos > text_start.*) {
+        const txt = try allocator.dupe(u8, text[text_start.*..pos]);
+        return .{ .text = txt };
+    }
+
+    // Find closing *
+    i.* = pos + 1;
+    const emph_start = i.*;
+    while (i.* < text.len and text[i.*] != '*') {
+        i.* += 1;
+    }
+
+    if (i.* < text.len) {
+        // Parse content recursively
+        const inner = try parseInlineContent(allocator, text[emph_start..i.*]);
+        i.* += 1; // skip closing *
+        text_start.* = i.*;
+        return .{ .emphasis = inner };
+    } else {
+        // No closing *, treat as text
+        const txt = try allocator.dupe(u8, text[emph_start - 1 .. i.*]);
+        text_start.* = i.*;
+        return .{ .text = txt };
+    }
+}
+
+/// Parse links and images: [text](url), [text][label], ![alt](url)
+fn parseLinkOrImage(
+    allocator: std.mem.Allocator,
+    text: []const u8,
+    i: *usize,
+    text_start: *usize,
+) ParseError!?AST.Inline {
+    const pos = i.*;
+
+    // Check for images: ![alt](url)
+    if (text[pos] == '!' and pos + 1 < text.len and text[pos + 1] == '[') {
+        return try parseImage(allocator, text, i, text_start);
+    }
+
+    // Check for links: [text](url) or [text][label]
+    if (text[pos] == '[') {
+        return try parseLink(allocator, text, i, text_start);
+    }
+
+    return null;
+}
+
+/// Parse image: ![alt](url)
+fn parseImage(
+    allocator: std.mem.Allocator,
+    text: []const u8,
+    i: *usize,
+    text_start: *usize,
+) ParseError!?AST.Inline {
+    const pos = i.*;
+    if (text[pos] != '!' or pos + 1 >= text.len or text[pos + 1] != '[') return null;
+
+    // Find closing ]
+    var j = pos + 2;
+    while (j < text.len and text[j] != ']') {
+        j += 1;
+    }
+
+    // Check for ( following ]
+    if (j + 1 >= text.len or text[j] != ']' or text[j + 1] != '(') return null;
+
+    // Flush pending text
+    if (pos > text_start.*) {
+        const txt = try allocator.dupe(u8, text[text_start.*..pos]);
+        return .{ .text = txt };
+    }
+
+    const alt_text = text[pos + 2 .. j];
+    j += 2; // skip ](
+
+    // Find closing )
+    const url_start = j;
+    while (j < text.len and text[j] != ')') {
+        j += 1;
+    }
+    const url = try allocator.dupe(u8, text[url_start..j]);
+    errdefer allocator.free(url);
+
+    const alt = try allocator.dupe(u8, alt_text);
+    errdefer allocator.free(alt);
+
+    if (j < text.len) j += 1; // skip )
+    i.* = j;
+    text_start.* = j;
+
+    return .{ .image = .{
+        .alt = alt,
+        .url = url,
+    } };
+}
+
+/// Parse link: [text](url) or [text][label] or [text]
+fn parseLink(
+    allocator: std.mem.Allocator,
+    text: []const u8,
+    i: *usize,
+    text_start: *usize,
+) ParseError!?AST.Inline {
+    const pos = i.*;
+    if (text[pos] != '[') return null;
+
+    // Find closing ]
+    var j = pos + 1;
+    while (j < text.len and text[j] != ']') {
+        j += 1;
+    }
+    if (j >= text.len or text[j] != ']') return null;
+
+    const link_text = text[pos + 1 .. j];
+
+    // Determine link type based on what follows ]
+    if (j + 1 < text.len and text[j + 1] == '(') {
+        return try parseInlineLink(allocator, text, i, text_start, pos, j, link_text);
+    } else if (j + 1 < text.len and text[j + 1] == '[') {
+        return try parseRefLinkWithLabel(allocator, text, i, text_start, pos, j, link_text);
+    } else {
+        return try parseImplicitRefLink(allocator, text, i, text_start, pos, j, link_text);
+    }
+}
+
+/// Parse inline link: [text](url)
+fn parseInlineLink(
+    allocator: std.mem.Allocator,
+    text: []const u8,
+    i: *usize,
+    text_start: *usize,
+    start_pos: usize,
+    bracket_end: usize,
+    link_text: []const u8,
+) ParseError!?AST.Inline {
+    // Flush pending text
+    if (start_pos > text_start.*) {
+        const txt = try allocator.dupe(u8, text[text_start.*..start_pos]);
+        return .{ .text = txt };
+    }
+
+    var j = bracket_end + 2; // skip ](
+
+    // Find closing )
+    const url_start = j;
+    while (j < text.len and text[j] != ')') {
+        j += 1;
+    }
+    const url = try allocator.dupe(u8, text[url_start..j]);
+    errdefer allocator.free(url);
+
+    // Parse link text
+    const inner = try parseInlineContent(allocator, link_text);
+    errdefer {
+        for (inner) |*inl| {
+            inl.deinit(allocator);
+        }
+        allocator.free(inner);
+    }
+
+    if (j < text.len) j += 1; // skip )
+    i.* = j;
+    text_start.* = j;
+
+    return .{ .link = .{
+        .text = inner,
+        .url = url,
+        .ref_label = null,
+    } };
+}
+
+/// Parse reference-style link with explicit label: [text][label]
+fn parseRefLinkWithLabel(
+    allocator: std.mem.Allocator,
+    text: []const u8,
+    i: *usize,
+    text_start: *usize,
+    start_pos: usize,
+    bracket_end: usize,
+    link_text: []const u8,
+) ParseError!?AST.Inline {
+    // Flush pending text
+    if (start_pos > text_start.*) {
+        const txt = try allocator.dupe(u8, text[text_start.*..start_pos]);
+        return .{ .text = txt };
+    }
+
+    var j = bracket_end + 2; // skip ][
+
+    // Find closing ]
+    const label_start = j;
+    while (j < text.len and text[j] != ']') {
+        j += 1;
+    }
+    const label = if (j > label_start)
+        try allocator.dupe(u8, text[label_start..j])
+    else
+        null; // Empty label means use link text as label
+
+    // Parse link text
+    const inner = try parseInlineContent(allocator, link_text);
+    errdefer {
+        for (inner) |*inl| {
+            inl.deinit(allocator);
+        }
+        allocator.free(inner);
+    }
+
+    if (j < text.len) j += 1; // skip ]
+    i.* = j;
+    text_start.* = j;
+
+    // Store with empty URL - will be resolved during conversion
+    return .{ .link = .{
+        .text = inner,
+        .url = try allocator.dupe(u8, ""),
+        .ref_label = label,
+    } };
+}
+
+/// Parse implicit reference-style link: [text]
+fn parseImplicitRefLink(
+    allocator: std.mem.Allocator,
+    text: []const u8,
+    i: *usize,
+    text_start: *usize,
+    start_pos: usize,
+    bracket_end: usize,
+    link_text: []const u8,
+) ParseError!?AST.Inline {
+    // Flush pending text
+    if (start_pos > text_start.*) {
+        const txt = try allocator.dupe(u8, text[text_start.*..start_pos]);
+        return .{ .text = txt };
+    }
+
+    // Parse link text
+    const inner = try parseInlineContent(allocator, link_text);
+    errdefer {
+        for (inner) |*inl| {
+            inl.deinit(allocator);
+        }
+        allocator.free(inner);
+    }
+
+    // Store with implicit label
+    const label = try allocator.dupe(u8, link_text);
+    errdefer allocator.free(label);
+
+    i.* = bracket_end + 1; // skip ]
+    text_start.* = i.*;
+
+    return .{ .link = .{
+        .text = inner,
+        .url = try allocator.dupe(u8, ""),
+        .ref_label = label,
+    } };
 }
 
 /// Extract speaker note text from HTML comment
