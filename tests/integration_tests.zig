@@ -79,12 +79,12 @@ test "all modules compile" {
     _ = tuia.export_;
 }
 
-// Import parser integration tests - DISABLED: investigating hang
-// comptime {
-//     _ = @import("integration/parser_integration_test.zig");
-// }
+// Import parser integration tests
+comptime {
+    _ = @import("integration/parser_integration_test.zig");
+}
 
-// Import export tests - DISABLED: Still investigating hang
+// Import export tests - DISABLED: needs more debugging
 // comptime {
 //     _ = @import("integration/export_tests.zig");
 // }

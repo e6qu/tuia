@@ -83,13 +83,17 @@ pub const Parser = struct {
         }
 
         // Convert to AST.FrontMatter
-        if (result.front_matter) |fm| {
-            return AST.FrontMatter{
+        if (result.front_matter) |*fm| {
+            // Copy the frontmatter data
+            const ast_fm = AST.FrontMatter{
                 .title = if (fm.title) |t| try self.allocator.dupe(u8, t) else null,
                 .author = if (fm.author) |a| try self.allocator.dupe(u8, a) else null,
                 .date = if (fm.date) |d| try self.allocator.dupe(u8, d) else null,
                 .theme = if (fm.theme) |th| try self.allocator.dupe(u8, th) else null,
             };
+            // Free the temporary frontmatter
+            fm.deinit(self.allocator);
+            return ast_fm;
         }
 
         return null;
@@ -101,7 +105,9 @@ pub const Parser = struct {
 
         var speaker_notes: ?[]const u8 = null;
 
-        while (self.current.type != .end_slide and self.current.type != .eof) {
+        while (self.current.type != .end_slide and 
+               self.current.type != .thematic_break and 
+               self.current.type != .eof) {
             // Handle speaker notes
             if (self.current.type == .speaker_note) {
                 const notes = try extractSpeakerNotes(self.current.text, self.allocator);
@@ -130,8 +136,8 @@ pub const Parser = struct {
             }
         }
 
-        // Consume end_slide or eof
-        if (self.current.type == .end_slide) {
+        // Consume end_slide, thematic_break (slide separator), or eof
+        if (self.current.type == .end_slide or self.current.type == .thematic_break) {
             self.advance();
         }
 
@@ -419,6 +425,8 @@ pub const Parser = struct {
                 // Parse inline formatting within the text
                 const inlines = try parseInlineContent(self.allocator, text);
                 try content.appendSlice(self.allocator, inlines);
+                // Free the temporary inlines slice (elements are now owned by content)
+                self.allocator.free(inlines);
             }
             self.advance();
         }
