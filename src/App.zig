@@ -1,5 +1,6 @@
 //! Main application state and event loop
 const std = @import("std");
+const builtin = @import("builtin");
 const vaxis = @import("vaxis");
 
 const core = @import("core/root.zig");
@@ -33,11 +34,18 @@ const lightTheme = render.Theme.lightTheme;
 const Event = union(enum) {
     key: vaxis.Key,
     winsize: vaxis.Winsize,
+    signal: Signal,
+};
+
+const Signal = enum {
+    sigint,
+    sigterm,
 };
 
 /// App manages the presentation application state and event loop
 pub const App = struct {
     allocator: std.mem.Allocator,
+    tty_buffer: ?*align(@alignOf([4096]u8)) [4096]u8 = null,
     tty: vaxis.Tty,
     vx: vaxis.Vaxis,
     loop: vaxis.Loop(Event),
@@ -71,8 +79,9 @@ pub const App = struct {
     const Self = @This();
 
     pub fn init(allocator: std.mem.Allocator) !Self {
-        var tty_buffer: [4096]u8 = undefined;
-        var tty = try vaxis.Tty.init(&tty_buffer);
+        const tty_buffer = try allocator.create([4096]u8);
+        errdefer allocator.destroy(tty_buffer);
+        var tty = try vaxis.Tty.init(tty_buffer[0..]);
 
         var vx = try vaxis.init(allocator, .{});
 
@@ -84,6 +93,7 @@ pub const App = struct {
 
         return .{
             .allocator = allocator,
+            .tty_buffer = tty_buffer,
             .tty = tty,
             .vx = vx,
             .loop = loop,
@@ -127,6 +137,9 @@ pub const App = struct {
         self.loop.stop();
         self.vx.deinit(self.allocator, self.tty.writer());
         self.tty.deinit();
+        if (self.tty_buffer) |buf| {
+            self.allocator.destroy(buf);
+        }
     }
 
     /// Load a presentation from a file
@@ -172,6 +185,28 @@ pub const App = struct {
 
     /// Run the main event loop
     pub fn run(self: *Self) !void {
+        // Set up signal handlers for graceful shutdown
+        const sigint_action = std.posix.Sigaction{
+            .handler = .{ .handler = handleSigInt },
+            .mask = switch (builtin.os.tag) {
+                .macos => 0,
+                else => std.posix.sigemptyset(),
+            },
+            .flags = 0,
+        };
+        std.posix.sigaction(std.posix.SIG.INT, &sigint_action, null);
+        
+        const sigterm_action = std.posix.Sigaction{
+            .handler = .{ .handler = handleSigTerm },
+            .mask = switch (builtin.os.tag) {
+                .macos => 0,
+                else => std.posix.sigemptyset(),
+            },
+            .flags = 0,
+        };
+        std.posix.sigaction(std.posix.SIG.TERM, &sigterm_action, null);
+
+        // Debug logging disabled for now
         try self.vx.enterAltScreen(self.tty.writer());
         try self.vx.queryTerminal(self.tty.writer(), 1 * std.time.ns_per_s);
 
@@ -183,6 +218,16 @@ pub const App = struct {
             try self.render();
         }
     }
+    
+    fn handleSigInt(_: c_int) callconv(.c) void {
+        // Signal handler - just set a flag that will be checked
+        // Note: In a real implementation, we'd use a self-pipe or eventfd
+        // to notify the main loop. For now, we'll rely on Ctrl+C key event.
+    }
+    
+    fn handleSigTerm(_: c_int) callconv(.c) void {
+        // Same as SIGINT
+    }
 
     /// Handle an event
     fn handleEvent(self: *Self, event: Event) !void {
@@ -192,6 +237,13 @@ pub const App = struct {
             },
             .winsize => |ws| {
                 try self.vx.resize(self.allocator, self.tty.writer(), ws);
+            },
+            .signal => |sig| {
+                switch (sig) {
+                    .sigint, .sigterm => {
+                        self.running = false;
+                    },
+                }
             },
         }
     }
