@@ -151,7 +151,7 @@ pub fn printExportHelp() void {
     std.debug.print("  html       Static HTML presentation\n", .{});
     std.debug.print("  revealjs   Reveal.js web presentation\n", .{});
     std.debug.print("  beamer     LaTeX Beamer slides\n", .{});
-    std.debug.print("  pdf        PDF document (requires pdflatex)\n", .{});
+    std.debug.print("  pdf        LaTeX source for PDF (compile with pdflatex)\n", .{});
     std.debug.print("\nExamples:\n", .{});
     std.debug.print("  tuia -e html presentation.md\n", .{});
     std.debug.print("  tuia -e pdf presentation.md -o ./output/\n", .{});
