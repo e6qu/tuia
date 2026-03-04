@@ -185,28 +185,28 @@ pub const App = struct {
 
     /// Run the main event loop
     pub fn run(self: *Self) !void {
-        // Set up signal handlers for graceful shutdown
-        const sigint_action = std.posix.Sigaction{
-            .handler = .{ .handler = handleSigInt },
-            .mask = switch (builtin.os.tag) {
-                .macos => 0,
-                else => std.posix.sigemptyset(),
-            },
-            .flags = 0,
-        };
-        std.posix.sigaction(std.posix.SIG.INT, &sigint_action, null);
-        
-        const sigterm_action = std.posix.Sigaction{
-            .handler = .{ .handler = handleSigTerm },
-            .mask = switch (builtin.os.tag) {
-                .macos => 0,
-                else => std.posix.sigemptyset(),
-            },
-            .flags = 0,
-        };
-        std.posix.sigaction(std.posix.SIG.TERM, &sigterm_action, null);
+        // Set up signal handlers for graceful shutdown (POSIX only)
+        if (builtin.os.tag != .windows) {
+            const sigint_action = std.posix.Sigaction{
+                .handler = .{ .handler = handleSigInt },
+                .mask = switch (builtin.os.tag) {
+                    .macos => 0,
+                    else => std.posix.sigemptyset(),
+                },
+                .flags = 0,
+            };
+            std.posix.sigaction(std.posix.SIG.INT, &sigint_action, null);
 
-        // Debug logging disabled for now
+            const sigterm_action = std.posix.Sigaction{
+                .handler = .{ .handler = handleSigTerm },
+                .mask = switch (builtin.os.tag) {
+                    .macos => 0,
+                    else => std.posix.sigemptyset(),
+                },
+                .flags = 0,
+            };
+            std.posix.sigaction(std.posix.SIG.TERM, &sigterm_action, null);
+        }
         try self.vx.enterAltScreen(self.tty.writer());
         try self.vx.queryTerminal(self.tty.writer(), 1 * std.time.ns_per_s);
 
@@ -218,13 +218,13 @@ pub const App = struct {
             try self.render();
         }
     }
-    
+
     fn handleSigInt(_: c_int) callconv(.c) void {
         // Signal handler - just set a flag that will be checked
         // Note: In a real implementation, we'd use a self-pipe or eventfd
         // to notify the main loop. For now, we'll rely on Ctrl+C key event.
     }
-    
+
     fn handleSigTerm(_: c_int) callconv(.c) void {
         // Same as SIGINT
     }
