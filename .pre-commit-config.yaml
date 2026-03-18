@@ -1,0 +1,23 @@
+repos:
+  - repo: local
+    hooks:
+      - id: zig-fmt
+        name: zig fmt
+        entry: zig fmt
+        language: system
+        files: '\.zig$'
+        pass_filenames: true
+
+      - id: zig-build
+        name: zig build (lint — no warnings)
+        entry: bash -c 'zig build 2>&1 | tee /tmp/zig-build.log && ! grep -qi warning /tmp/zig-build.log'
+        language: system
+        files: '\.zig$'
+        pass_filenames: false
+
+      - id: zig-unit-test
+        name: zig unit tests
+        entry: zig build unit_test
+        language: system
+        files: '\.zig$'
+        pass_filenames: false

@@ -1,6 +1,6 @@
 # Development Guide
 
-> Setup and workflow for ZIGPRESENTERM development.
+> Setup and workflow for TUIA development.
 
 ---
 
@@ -10,7 +10,7 @@
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| Zig | 0.15.0+ | Language compiler |
+| Zig | 0.15.2+ | Language compiler |
 | git | 2.30+ | Version control |
 
 ### Recommended
@@ -18,7 +18,8 @@
 | Tool | Purpose |
 |------|---------|
 | zls | Language server |
-| zig fmt | Code formatting |
+| pre-commit | Git hooks framework |
+| expect | TUI test runner |
 | valgrind | Memory checking (Linux) |
 
 ## Installation
@@ -47,8 +48,15 @@ zig build -Doptimize=ReleaseSafe
 ### Clone Repository
 
 ```bash
-git clone https://github.com/user/zigpresenterm.git
-cd zigpresenterm
+git clone https://github.com/e6qu/tuia.git
+cd tuia
+```
+
+### Install Pre-commit Hooks
+
+```bash
+pip install pre-commit
+pre-commit install
 ```
 
 ## Development Workflow
@@ -69,14 +77,17 @@ zig build run -- presentation.md
 ### Test
 
 ```bash
-# Run all tests
-zig build test
+# Unit tests
+zig build unit_test
 
-# Run specific test
-zig test src/parser/Parser.zig
+# Integration tests
+zig build integration_test
+
+# TUI tests (requires expect)
+expect scripts/test_tui.exp
 
 # With leak detection
-zig build test -Dleak-check=full
+zig build unit_test -Dleak-check=full
 ```
 
 ### Format
@@ -121,12 +132,15 @@ require('lspconfig').zls.setup{}
 src/
 ├── main.zig          # Entry point
 ├── cli.zig           # CLI parsing
+├── tui/              # Terminal I/O (POSIX-only)
 ├── config/           # Configuration
 ├── core/             # Core models
 ├── parser/           # Markdown parser
 ├── render/           # Rendering
 ├── widgets/          # UI widgets
-├── features/         # Features (images, etc)
+├── export/           # HTML, Reveal.js, Beamer, PDF
+├── features/         # Features (images, execution, transitions)
+├── highlight/        # Syntax highlighting
 └── infra/            # Infrastructure
 ```
 
@@ -145,14 +159,14 @@ test "description" {
 ### Test Commands
 
 ```bash
-# Run all tests
-zig build test
+# Unit tests
+zig build unit_test
 
-# Run with filter
-zig build test -Dtest-filter="parse"
+# Integration tests
+zig build integration_test
 
-# Update golden files
-ZIG_UPDATE_GOLDEN=1 zig build test
+# TUI tests
+expect scripts/test_tui.exp
 ```
 
 ## Debugging
@@ -185,10 +199,17 @@ valgrind --leak-check=full ./tuia presentation.md
 
 ### Pre-commit
 
+Pre-commit hooks run automatically on `git commit`:
+
 ```bash
-# Run before every commit
-zig fmt --check src/ && zig build && zig build test
+# Install hooks (one-time)
+pre-commit install
+
+# Run manually
+pre-commit run --all-files
 ```
+
+Hooks: `zig fmt`, lint (no-warnings build), unit tests.
 
 ### Commit Format
 
@@ -204,4 +225,4 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 
 ---
 
-*Development Guide v0.1*
+*Last updated: 2026-03-19*

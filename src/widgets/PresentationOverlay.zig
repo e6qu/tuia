@@ -1,6 +1,6 @@
 //! Presentation overlay widget for laser pointer, drawing, and annotations
 const std = @import("std");
-const vaxis = @import("vaxis");
+const tui = @import("../tui/root.zig");
 const Theme = @import("../render/Theme.zig").Theme;
 
 /// Overlay mode
@@ -15,7 +15,7 @@ pub const DrawingCell = struct {
     x: usize,
     y: usize,
     char: u21,
-    style: vaxis.Style,
+    style: tui.Style,
 };
 
 /// Presentation overlay for laser pointer, drawing, and annotations
@@ -32,7 +32,7 @@ pub const PresentationOverlay = struct {
     // Drawing state
     drawing_cells: std.ArrayList(DrawingCell),
     current_char: u21 = '█',
-    draw_color: vaxis.Color = .{ .index = 196 }, // Red by default
+    draw_color: tui.Color = .{ .index = 196 }, // Red by default
 
     // Theme switching
     theme_names: []const []const u8 = &.{ "dark", "light" },
@@ -155,7 +155,7 @@ pub const PresentationOverlay = struct {
     }
 
     /// Draw the overlay
-    pub fn draw(self: *Self, win: vaxis.Window, slide_width: usize, slide_height: usize) void {
+    pub fn draw(self: *Self, win: tui.Window, slide_width: usize, slide_height: usize) void {
         // Draw laser pointer
         if (self.mode == .laser) {
             if (self.laser_x < slide_width and self.laser_y < slide_height) {
@@ -199,7 +199,7 @@ pub const PresentationOverlay = struct {
         }
     }
 
-    fn drawThemePicker(self: *Self, win: vaxis.Window, slide_width: usize, slide_height: usize) void {
+    fn drawThemePicker(self: *Self, win: tui.Window, slide_width: usize, slide_height: usize) void {
         _ = self;
         _ = slide_width;
         _ = slide_height;

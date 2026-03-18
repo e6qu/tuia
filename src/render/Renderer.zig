@@ -1,6 +1,6 @@
 //! Main rendering engine for presentations
 const std = @import("std");
-const vaxis = @import("vaxis");
+const tui = @import("../tui/root.zig");
 
 const Presentation = @import("../core/Presentation.zig").Presentation;
 const Slide = @import("../core/Slide.zig").Slide;
@@ -28,7 +28,7 @@ pub const LayoutConfig = struct {
     execution_height_percent: u8 = 40,
 
     /// Get the content area within the window
-    pub fn getContentArea(self: LayoutConfig, win: vaxis.Window) ContentArea {
+    pub fn getContentArea(self: LayoutConfig, win: tui.Window) ContentArea {
         return .{
             .x = self.left_margin,
             .y = self.top_margin,
@@ -58,6 +58,7 @@ pub const Renderer = struct {
     theme: Theme,
     layout: LayoutConfig,
     current_slide_widget: ?*SlideWidget,
+    current_slide_index: ?usize = null,
 
     const Self = @This();
 
@@ -94,12 +95,13 @@ pub const Renderer = struct {
     }
 
     /// Update the current slide widget
-    pub fn setCurrentSlide(self: *Self, slide: Slide) !void {
+    pub fn setCurrentSlide(self: *Self, slide: Slide, index: usize) !void {
         // Store old widget temporarily
         const old_widget = self.current_slide_widget;
 
-        // Create new slide widget first
+        // Create new slide widget first (deep-clones the slide to avoid double-free)
         self.current_slide_widget = try SlideWidget.init(self.allocator, slide);
+        self.current_slide_index = index;
 
         // Only free old widget after successful creation
         if (old_widget) |widget| {
@@ -112,13 +114,14 @@ pub const Renderer = struct {
         if (self.current_slide_widget) |widget| {
             widget.deinit();
             self.current_slide_widget = null;
+            self.current_slide_index = null;
         }
     }
 
     /// Render the complete UI
     pub fn render(
         self: *Self,
-        win: vaxis.Window,
+        win: tui.Window,
         presentation: ?Presentation,
         nav: ?Navigation,
         execution_widget: ?*ExecutionWidget,
@@ -126,6 +129,10 @@ pub const Renderer = struct {
         theme: Theme,
     ) !void {
         _ = theme;
+
+        // Guard against zero-size windows (e.g. expect pty, minimized terminal)
+        if (win.width == 0 or win.height == 0) return;
+
         win.clear();
 
         if (presentation == null or nav == null) {
@@ -137,11 +144,12 @@ pub const Renderer = struct {
         const navigation = nav.?;
 
         // Update current slide widget if needed
-        if (self.current_slide_widget == null or
-            self.getCurrentSlideIndex() != navigation.current_slide)
-        {
+        const need_update = self.current_slide_widget == null or
+            self.getCurrentSlideIndex() == null or
+            self.getCurrentSlideIndex().? != navigation.current_slide;
+        if (need_update) {
             if (pres.getSlide(navigation.current_slide)) |slide| {
-                try self.setCurrentSlide(slide);
+                try self.setCurrentSlide(slide, navigation.current_slide);
             }
         }
 
@@ -184,7 +192,7 @@ pub const Renderer = struct {
         }
 
         // Render status bar
-        try self.renderStatusBar(win, pres, navigation);
+        self.renderStatusBar(win, pres, navigation);
 
         // Render help overlay if visible
         if (help_widget) |help| {
@@ -195,7 +203,7 @@ pub const Renderer = struct {
     }
 
     /// Render welcome screen when no presentation is loaded
-    fn renderWelcomeScreen(self: Self, win: vaxis.Window) !void {
+    fn renderWelcomeScreen(self: Self, win: tui.Window) !void {
         _ = self;
 
         const welcome_text = "Welcome to tuia!";
@@ -210,7 +218,7 @@ pub const Renderer = struct {
         // Draw welcome text
         if (win.width > welcome_text.len and center_row >= 1) {
             const col = @divTrunc(win.width - @as(u16, @intCast(welcome_text.len)), 2);
-            _ = win.writeCell(col, center_row - 1, .{
+            win.writeCell(col, center_row - 1, .{
                 .char = .{ .grapheme = welcome_text },
                 .style = .{ .bold = true },
             });
@@ -219,7 +227,7 @@ pub const Renderer = struct {
         // Draw subtitle
         if (win.width > subtitle.len) {
             const col = @divTrunc(win.width - @as(u16, @intCast(subtitle.len)), 2);
-            _ = win.writeCell(col, center_row + 1, .{
+            win.writeCell(col, center_row + 1, .{
                 .char = .{ .grapheme = subtitle },
             });
         }
@@ -227,10 +235,10 @@ pub const Renderer = struct {
         // Draw hint
         if (win.width > hint.len and center_row + 3 < win.height) {
             const col = @divTrunc(win.width - @as(u16, @intCast(hint.len)), 2);
-            const style = vaxis.Style{
+            const style = tui.Style{
                 .fg = .{ .rgb = .{ 128, 128, 128 } },
             };
-            _ = win.writeCell(col, center_row + 3, .{
+            win.writeCell(col, center_row + 3, .{
                 .char = .{ .grapheme = hint },
                 .style = style,
             });
@@ -238,38 +246,38 @@ pub const Renderer = struct {
     }
 
     /// Render the status bar at the bottom
-    fn renderStatusBar(self: Self, win: vaxis.Window, presentation: Presentation, nav: Navigation) !void {
+    fn renderStatusBar(self: Self, win: tui.Window, presentation: Presentation, nav: Navigation) void {
+        if (win.height < 2) return;
         const status_row = win.height - 1;
-        if (status_row < 0) return;
 
-        // Build status text
-        const slide_info = try std.fmt.allocPrint(self.allocator, " Slide {d}/{d} ", .{
+        // Build status text on stack
+        var slide_buf: [64]u8 = undefined;
+        const slide_info = std.fmt.bufPrint(&slide_buf, " Slide {d}/{d} ", .{
             nav.currentSlideNumber(),
             presentation.slideCount(),
-        });
-        defer self.allocator.free(slide_info);
+        }) catch return;
 
         // Get title if available
         const title = presentation.metadata.title;
 
         // Draw background
         const bg_color = if (self.theme.code_block.bg) |c|
-            if (Theme.toRgb(c)) |rgb| vaxis.Cell.Color{ .rgb = rgb } else .default
+            if (Theme.toRgb(c)) |rgb| tui.Cell.Color{ .rgb = rgb } else .default
         else
-            vaxis.Cell.Color{ .rgb = .{ 40, 40, 40 } };
+            tui.Cell.Color{ .rgb = .{ 40, 40, 40 } };
 
         const fg_color = if (self.theme.code_block.fg) |c|
-            if (Theme.toRgb(c)) |rgb| vaxis.Cell.Color{ .rgb = rgb } else .default
+            if (Theme.toRgb(c)) |rgb| tui.Cell.Color{ .rgb = rgb } else .default
         else
             .default;
 
-        const bg_style = vaxis.Style{
+        const bg_style = tui.Style{
             .bg = bg_color,
             .fg = fg_color,
         };
 
         for (0..win.width) |col| {
-            _ = win.writeCell(@intCast(col), status_row, .{
+            win.writeCell(@intCast(col), status_row, .{
                 .char = .{ .grapheme = " " },
                 .style = bg_style,
             });
@@ -283,12 +291,12 @@ pub const Renderer = struct {
 
         // Draw title if available
         if (title) |t| {
-            const title_display = try std.fmt.allocPrint(self.allocator, " {s} ", .{t});
-            defer self.allocator.free(title_display);
+            var title_buf: [256]u8 = undefined;
+            const title_display = std.fmt.bufPrint(&title_buf, " {s} ", .{t}) catch return;
 
             if (win.width > title_display.len + slide_info.len) {
                 const title_col: u16 = @intCast(slide_info.len);
-                _ = win.writeCell(title_col, status_row, .{
+                win.writeCell(title_col, status_row, .{
                     .char = .{ .grapheme = title_display },
                     .style = bg_style,
                 });
@@ -303,21 +311,21 @@ pub const Renderer = struct {
                 0;
 
             const msg_bg = if (self.theme.code_block.bg) |c|
-                if (Theme.toRgb(c)) |rgb| vaxis.Cell.Color{ .rgb = rgb } else .default
+                if (Theme.toRgb(c)) |rgb| tui.Cell.Color{ .rgb = rgb } else .default
             else
-                vaxis.Cell.Color{ .rgb = .{ 40, 40, 40 } };
+                tui.Cell.Color{ .rgb = .{ 40, 40, 40 } };
 
             const msg_fg = if (self.theme.accent_color.fg) |c|
-                if (Theme.toRgb(c)) |rgb| vaxis.Cell.Color{ .rgb = rgb } else .default
+                if (Theme.toRgb(c)) |rgb| tui.Cell.Color{ .rgb = rgb } else .default
             else
-                vaxis.Cell.Color{ .rgb = .{ 0, 255, 255 } };
+                tui.Cell.Color{ .rgb = .{ 0, 255, 255 } };
 
-            const msg_style = vaxis.Style{
+            const msg_style = tui.Style{
                 .bg = msg_bg,
                 .fg = msg_fg,
             };
 
-            _ = win.writeCell(msg_col, status_row, .{
+            win.writeCell(msg_col, status_row, .{
                 .char = .{ .grapheme = msg },
                 .style = msg_style,
             });
@@ -325,25 +333,23 @@ pub const Renderer = struct {
     }
 
     /// Get current slide index (for comparison)
-    fn getCurrentSlideIndex(self: Self) usize {
-        _ = self;
-        // This is a placeholder - in practice, we'd track the current index
-        // The actual tracking happens through the navigation system
-        return 0;
+    fn getCurrentSlideIndex(self: Self) ?usize {
+        return self.current_slide_index;
     }
 
     /// Render a simple text presentation (for testing/debugging)
-    pub fn renderDebug(self: Self, win: vaxis.Window, presentation: Presentation) !void {
+    pub fn renderDebug(self: Self, win: tui.Window, presentation: Presentation) void {
+        _ = self;
         win.clear();
 
         const title = presentation.metadata.title orelse "Untitled";
         _ = win.writeCell(0, 0, .{
             .char = .{ .grapheme = title },
-            .style = .{ .bold = true, .underline = true },
+            .style = .{ .bold = true, .ul_style = .single },
         });
 
-        const slide_count = try std.fmt.allocPrint(self.allocator, "Slides: {d}", .{presentation.slideCount()});
-        defer self.allocator.free(slide_count);
+        var count_buf: [32]u8 = undefined;
+        const slide_count = std.fmt.bufPrint(&count_buf, "Slides: {d}", .{presentation.slideCount()}) catch return;
 
         _ = win.writeCell(0, 2, .{
             .char = .{ .grapheme = slide_count },
@@ -372,5 +378,5 @@ test "Renderer with theme" {
     defer renderer.deinit();
 }
 
-// Note: LayoutConfig test removed as vaxis.Window cannot be easily mocked
+// Note: LayoutConfig test removed as tui.Window cannot be easily mocked
 // The getContentArea function is tested indirectly through integration tests

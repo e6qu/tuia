@@ -9,5 +9,7 @@ pub const Highlighter = @import("Highlighter.zig").Highlighter;
 pub const highlight = @import("Highlighter.zig").highlight;
 
 test {
-    std.testing.refAllDecls(@This());
+    _ = @import("Token.zig");
+    _ = @import("Language.zig");
+    _ = @import("Highlighter.zig");
 }

@@ -1,6 +1,6 @@
 //! Base widget interface and common types
 const std = @import("std");
-const vaxis = @import("vaxis");
+const tui = @import("../tui/root.zig");
 const Theme = @import("../render/Theme.zig").Theme;
 const Element = @import("../core/Element.zig").Element;
 const Inline = @import("../core/Element.zig").Inline;
@@ -8,10 +8,10 @@ const inlineToPlainText = @import("../core/Element.zig").inlineToPlainText;
 
 /// Draw context containing window and theme
 pub const DrawContext = struct {
-    win: vaxis.Window,
+    win: tui.Window,
     theme: Theme,
 
-    pub fn init(win: vaxis.Window, theme: Theme) DrawContext {
+    pub fn init(win: tui.Window, theme: Theme) DrawContext {
         return .{ .win = win, .theme = theme };
     }
 };
@@ -188,7 +188,7 @@ pub const WidgetFactory = struct {
 /// Utility functions for widget drawing
 pub const DrawUtils = struct {
     /// Fill a rectangular area with a character and style
-    pub fn fill(win: vaxis.Window, x: usize, y: usize, width: usize, height: usize, char: []const u8, style: vaxis.Style) void {
+    pub fn fill(win: tui.Window, x: usize, y: usize, width: usize, height: usize, char: []const u8, style: tui.Style) void {
         for (0..height) |row| {
             const target_row = y + row;
             if (target_row >= win.height) continue;
@@ -197,7 +197,7 @@ pub const DrawUtils = struct {
                 const target_col = x + col;
                 if (target_col >= win.width) continue;
 
-                _ = win.writeCell(@intCast(target_col), @intCast(target_row), .{
+                win.writeCell(@intCast(target_col), @intCast(target_row), .{
                     .char = .{ .grapheme = char },
                     .style = style,
                 });
@@ -206,7 +206,7 @@ pub const DrawUtils = struct {
     }
 
     /// Draw text at a position, wrapping if necessary
-    pub fn drawText(win: vaxis.Window, x: usize, y: usize, text: []const u8, style: vaxis.Style, max_width: usize) usize {
+    pub fn drawText(win: tui.Window, x: usize, y: usize, text: []const u8, style: tui.Style, max_width: usize) usize {
         var col = x;
         var row = y;
 
@@ -224,7 +224,7 @@ pub const DrawUtils = struct {
             }
 
             if (col < win.width and row < win.height) {
-                _ = win.writeCell(@intCast(col), @intCast(row), .{
+                win.writeCell(@intCast(col), @intCast(row), .{
                     .char = .{ .grapheme = &[_]u8{char} },
                     .style = style,
                 });
@@ -236,7 +236,7 @@ pub const DrawUtils = struct {
     }
 
     /// Draw text with word wrapping
-    pub fn drawTextWrapped(win: vaxis.Window, x: usize, y: usize, text: []const u8, style: vaxis.Style, max_width: usize) usize {
+    pub fn drawTextWrapped(win: tui.Window, x: usize, y: usize, text: []const u8, style: tui.Style, max_width: usize) usize {
         var row: usize = y;
         var line_start: usize = 0;
 
@@ -269,7 +269,7 @@ pub const DrawUtils = struct {
             for (line, 0..) |char, col| {
                 if (x + col >= win.width) break;
                 if (char != '\n' and char != '\r') {
-                    _ = win.writeCell(@intCast(x + col), @intCast(row), .{
+                    win.writeCell(@intCast(x + col), @intCast(row), .{
                         .char = .{ .grapheme = &[_]u8{char} },
                         .style = style,
                     });
@@ -322,9 +322,9 @@ pub const DrawUtils = struct {
     }
 };
 
-/// Convert theme ElementStyle to vaxis Style
-pub fn toVaxisStyle(element_style: @import("../render/Theme.zig").ElementStyle) vaxis.Style {
-    var style: vaxis.Style = .{};
+/// Convert theme ElementStyle to tui Style
+pub fn toStyle(element_style: @import("../render/Theme.zig").ElementStyle) tui.Style {
+    var style: tui.Style = .{};
 
     if (element_style.fg) |fg| {
         if (@import("../render/Theme.zig").Theme.toRgb(fg)) |rgb| {

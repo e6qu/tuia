@@ -304,10 +304,14 @@ test "Sandbox basic functionality" {
 
 test "Sandbox security checks" {
     const testing = std.testing;
+    const allocator = testing.allocator;
 
     // Test dangerous code detection
-    try testing.expect(Sandbox.checkCode(.{ .level = .basic }, "rm -rf /") != null);
-    try testing.expect(Sandbox.checkCode(.{ .level = .basic }, "echo hello") == null);
+    var sandbox = try Sandbox.init(allocator, .{ .level = .basic });
+    defer sandbox.deinit();
+
+    try testing.expect(sandbox.checkCode("rm -rf /") != null);
+    try testing.expect(sandbox.checkCode("echo hello") == null);
 
     // Test security warning
     const warning = checkSecurity("rm -rf /tmp/test");

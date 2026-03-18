@@ -1,6 +1,6 @@
 //! Widget for displaying speaker notes
 const std = @import("std");
-const vaxis = @import("vaxis");
+const tui = @import("../tui/root.zig");
 const Note = @import("../core/Note.zig").Note;
 const Theme = @import("../render/Theme.zig").Theme;
 
@@ -63,7 +63,7 @@ pub const NoteWidget = struct {
     }
 
     /// Draw the note widget
-    pub fn draw(self: Self, win: vaxis.Window, theme: Theme) void {
+    pub fn draw(self: Self, win: tui.Window, theme: Theme) void {
         if (!self.visible) return;
         if (!self.hasNote()) {
             self.drawEmpty(win, theme);
@@ -149,7 +149,7 @@ pub const NoteWidget = struct {
     }
 
     /// Draw empty state when no notes
-    fn drawEmpty(_: Self, win: vaxis.Window, theme: Theme) void {
+    fn drawEmpty(_: Self, win: tui.Window, theme: Theme) void {
         const msg = "No notes for this slide";
         const start_col = @divTrunc(win.width, 2) - @divTrunc(msg.len, 2);
 

@@ -4,20 +4,12 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    // Get vaxis dependency
-    const vaxis_dep = b.dependency("vaxis", .{
-        .target = target,
-        .optimize = optimize,
-    });
-
     // Create library module (for tests and imports)
     const root_module = b.createModule(.{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
     });
-    // Add vaxis for TUI/rendering in library modules
-    root_module.addImport("vaxis", vaxis_dep.module("vaxis"));
 
     // Main executable - uses main.zig directly
     const exe_module = b.createModule(.{
@@ -27,8 +19,6 @@ pub fn build(b: *std.Build) void {
     });
     // Add tuia module to executable so it can import other modules
     exe_module.addImport("tuia", root_module);
-    // Add vaxis for TUI
-    exe_module.addImport("vaxis", vaxis_dep.module("vaxis"));
 
     const exe = b.addExecutable(.{
         .name = "tuia",
@@ -49,6 +39,8 @@ pub fn build(b: *std.Build) void {
 
     // Tests
     const test_step = b.step("test", "Run all tests");
+    const unit_test_step = b.step("unit_test", "Run unit tests only");
+    const integration_test_step = b.step("integration_test", "Run integration tests only");
 
     // Main module tests (library tests)
     const main_tests = b.addTest(.{
@@ -56,20 +48,28 @@ pub fn build(b: *std.Build) void {
     });
     const run_main_tests = b.addRunArtifact(main_tests);
     test_step.dependOn(&run_main_tests.step);
+    unit_test_step.dependOn(&run_main_tests.step);
 
-    // Integration tests
+    // Integration tests — use a lightweight root module with no test{} block
+    // to avoid re-discovering all unit tests (COMPILE-4 fix).
+    const integ_root_module = b.createModule(.{
+        .root_source_file = b.path("src/root_integ.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
     const integration_module = b.createModule(.{
         .root_source_file = b.path("tests/integration_tests.zig"),
         .target = target,
         .optimize = optimize,
     });
-    integration_module.addImport("tuia", root_module);
+    integration_module.addImport("tuia", integ_root_module);
 
     const integration_tests = b.addTest(.{
         .root_module = integration_module,
     });
     const run_integration_tests = b.addRunArtifact(integration_tests);
-    test_step.dependOn(&run_integration_tests.step);
+    integration_test_step.dependOn(&run_integration_tests.step);
 
     // Format check
     const fmt_step = b.step("fmt", "Format all source files");

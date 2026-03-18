@@ -1,6 +1,6 @@
 //! Interactive GUI configuration editor
 const std = @import("std");
-const vaxis = @import("vaxis");
+const tui = @import("../tui/root.zig");
 
 const Config = @import("Config.zig").Config;
 
@@ -84,30 +84,30 @@ pub const ConfigEditor = struct {
     }
 
     /// Handle key input
-    pub fn handleKey(self: *Self, key: vaxis.Key) !void {
+    pub fn handleKey(self: *Self, key: tui.Key) !void {
         switch (self.input_mode) {
             .navigate => try self.handleNavigateKey(key),
             .edit => try self.handleEditKey(key),
         }
     }
 
-    fn handleNavigateKey(self: *Self, key: vaxis.Key) !void {
+    fn handleNavigateKey(self: *Self, key: tui.Key) !void {
         switch (key.codepoint) {
             'q', 0x1B => {}, // Quit handled by caller
-            'j', vaxis.Key.down => {
+            'j', tui.Key.down => {
                 self.selected_field += 1;
                 self.clampField();
             },
-            'k', vaxis.Key.up => {
+            'k', tui.Key.up => {
                 if (self.selected_field > 0) {
                     self.selected_field -= 1;
                 }
             },
-            'h', vaxis.Key.left => {
+            'h', tui.Key.left => {
                 self.selected_section = self.selected_section.prev();
                 self.selected_field = 0;
             },
-            'l', vaxis.Key.right => {
+            'l', tui.Key.right => {
                 self.selected_section = self.selected_section.next();
                 self.selected_field = 0;
             },
@@ -119,7 +119,7 @@ pub const ConfigEditor = struct {
         }
     }
 
-    fn handleEditKey(self: *Self, key: vaxis.Key) !void {
+    fn handleEditKey(self: *Self, key: tui.Key) !void {
         switch (key.codepoint) {
             0x1B => { // Escape - cancel edit
                 self.input_mode = .navigate;
@@ -130,7 +130,7 @@ pub const ConfigEditor = struct {
                 self.input_mode = .navigate;
                 self.input_buffer.clearRetainingCapacity();
             },
-            vaxis.Key.backspace => {
+            tui.Key.backspace => {
                 if (self.input_buffer.items.len > 0) {
                     _ = self.input_buffer.pop();
                 }
@@ -252,7 +252,7 @@ pub const ConfigEditor = struct {
     }
 
     /// Draw the config editor UI
-    pub fn draw(self: Self, win: vaxis.Window) void {
+    pub fn draw(self: Self, win: tui.Window) void {
         win.clear();
 
         // Draw header
@@ -273,18 +273,18 @@ pub const ConfigEditor = struct {
         }
     }
 
-    fn drawHeader(self: Self, win: vaxis.Window) void {
+    fn drawHeader(self: Self, win: tui.Window) void {
         _ = self;
         const header_text = "Configuration Editor";
         const col = @divTrunc(win.width, 2) - @divTrunc(@as(u16, @intCast(header_text.len)), 2);
 
-        _ = win.writeCell(col, 0, .{
+        win.writeCell(col, 0, .{
             .char = .{ .grapheme = header_text },
             .style = .{ .bold = true },
         });
     }
 
-    fn drawSidebar(self: Self, win: vaxis.Window) void {
+    fn drawSidebar(self: Self, win: tui.Window) void {
         var row: u16 = 2;
 
         const sections = &[_]Section{ .presentation, .theme, .display, .transitions };
@@ -296,11 +296,11 @@ pub const ConfigEditor = struct {
             const text = std.fmt.bufPrint(&buf, "{s}{s}", .{ prefix, section.toString() }) catch continue;
 
             const style = if (is_selected)
-                vaxis.Style{ .bold = true, .fg = .{ .rgb = .{ 0, 150, 255 } } }
+                tui.Style{ .bold = true, .fg = .{ .rgb = .{ 0, 150, 255 } } }
             else
-                vaxis.Style{};
+                tui.Style{};
 
-            _ = win.writeCell(0, row, .{
+            win.writeCell(0, row, .{
                 .char = .{ .grapheme = text },
                 .style = style,
             });
@@ -309,12 +309,12 @@ pub const ConfigEditor = struct {
         }
     }
 
-    fn drawContent(self: Self, win: vaxis.Window) void {
+    fn drawContent(self: Self, win: tui.Window) void {
         const start_col: u16 = 22;
         var row: u16 = 2;
 
         // Draw section title
-        _ = win.writeCell(start_col, row, .{
+        win.writeCell(start_col, row, .{
             .char = .{ .grapheme = self.selected_section.toString() },
             .style = .{ .bold = true },
         });
@@ -336,28 +336,28 @@ pub const ConfigEditor = struct {
             const line = std.fmt.bufPrint(&buf, "  {s}: ", .{field_text}) catch continue;
 
             const style = if (is_selected)
-                vaxis.Style{
+                tui.Style{
                     .bg = .{ .rgb = .{ 40, 40, 40 } },
                     .fg = .{ .rgb = .{ 0, 200, 255 } },
                 }
             else
-                vaxis.Style{};
+                tui.Style{};
 
             // Draw field name
-            _ = win.writeCell(start_col, row, .{
+            win.writeCell(start_col, row, .{
                 .char = .{ .grapheme = line },
                 .style = style,
             });
 
             // Draw value
-            _ = win.writeCell(start_col + 25, row, .{
+            win.writeCell(start_col + 25, row, .{
                 .char = .{ .grapheme = value_text },
                 .style = style,
             });
         }
     }
 
-    fn drawFooter(self: Self, win: vaxis.Window) void {
+    fn drawFooter(self: Self, win: tui.Window) void {
         const footer_row = win.height - 1;
 
         const help_text = if (self.input_mode == .edit)
@@ -365,31 +365,31 @@ pub const ConfigEditor = struct {
         else
             "j/k: navigate | h/l: sections | Enter: edit | q: quit";
 
-        _ = win.writeCell(0, footer_row, .{
+        win.writeCell(0, footer_row, .{
             .char = .{ .grapheme = help_text },
             .style = .{ .fg = .{ .rgb = .{ 128, 128, 128 } } },
         });
 
         if (self.dirty and self.input_mode == .navigate) {
             const dirty_text = " [modified]";
-            _ = win.writeCell(@intCast(help_text.len), footer_row, .{
+            win.writeCell(@intCast(help_text.len), footer_row, .{
                 .char = .{ .grapheme = dirty_text },
                 .style = .{ .fg = .{ .rgb = .{ 255, 165, 0 } } },
             });
         }
     }
 
-    fn drawInputPrompt(self: Self, win: vaxis.Window) void {
+    fn drawInputPrompt(self: Self, win: tui.Window) void {
         const row = win.height - 4;
         const prompt = "Enter value: ";
 
-        _ = win.writeCell(0, row, .{
+        win.writeCell(0, row, .{
             .char = .{ .grapheme = prompt },
             .style = .{ .bold = true },
         });
 
         if (self.input_buffer.items.len > 0) {
-            _ = win.writeCell(@intCast(prompt.len), row, .{
+            win.writeCell(@intCast(prompt.len), row, .{
                 .char = .{ .grapheme = self.input_buffer.items },
                 .style = .{ .fg = .{ .rgb = .{ 0, 200, 255 } } },
             });

@@ -10,5 +10,6 @@ pub const MediaDirective = @import("MediaElement.zig").MediaDirective;
 pub const PlaybackState = @import("MediaPlayer.zig").PlaybackState;
 
 test {
-    std.testing.refAllDecls(@This());
+    _ = @import("MediaPlayer.zig");
+    _ = @import("MediaElement.zig");
 }

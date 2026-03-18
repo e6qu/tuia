@@ -18,5 +18,7 @@ pub const ConfigManager = @import("ConfigManager.zig").ConfigManager;
 pub const ConfigOverrides = @import("ConfigManager.zig").ConfigOverrides;
 
 test {
-    std.testing.refAllDecls(@This());
+    _ = @import("Config.zig");
+    _ = @import("ConfigParser.zig");
+    _ = @import("ConfigManager.zig");
 }

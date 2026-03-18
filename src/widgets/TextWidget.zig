@@ -1,12 +1,12 @@
 //! Text widget for rendering headings, paragraphs, and blockquotes
 const std = @import("std");
-const vaxis = @import("vaxis");
+const tui = @import("../tui/root.zig");
 const Widget = @import("Widget.zig").Widget;
 const DrawContext = @import("Widget.zig").DrawContext;
 const Constraints = @import("Widget.zig").Constraints;
 const Size = @import("Widget.zig").Size;
 const DrawUtils = @import("Widget.zig").DrawUtils;
-const toVaxisStyle = @import("Widget.zig").toVaxisStyle;
+const toStyle = @import("Widget.zig").toStyle;
 
 /// Text widget types
 pub const TextType = enum {
@@ -64,7 +64,7 @@ pub const TextWidget = struct {
         const self = try allocator.create(Self);
         self.* = .{
             .allocator = allocator,
-            .text = &.{}, // Empty slice (not a literal), won't be freed
+            .text = try allocator.alloc(u8, 0),
             .text_type = .thematic_break,
         };
         return self;
@@ -89,7 +89,7 @@ pub const TextWidget = struct {
     /// Draw the text widget
     pub fn draw(self: *Self, ctx: DrawContext, x: usize, y: usize) void {
         const style = self.getStyle(ctx.theme);
-        const vaxis_style = toVaxisStyle(style);
+        const vaxis_style = toStyle(style);
 
         switch (self.text_type) {
             .thematic_break => {
@@ -125,7 +125,7 @@ pub const TextWidget = struct {
         };
     }
 
-    fn drawThematicBreak(self: Self, ctx: DrawContext, x: usize, y: usize, style: vaxis.Style) void {
+    fn drawThematicBreak(self: Self, ctx: DrawContext, x: usize, y: usize, style: tui.Style) void {
         _ = self;
         const width = @min(40, ctx.win.width - x);
         if (width == 0) return;
@@ -134,19 +134,19 @@ pub const TextWidget = struct {
             const target_col = x + col;
             if (target_col >= ctx.win.width) break;
 
-            _ = ctx.win.writeCell(@intCast(target_col), @intCast(y), .{
+            ctx.win.writeCell(@intCast(target_col), @intCast(y), .{
                 .char = .{ .grapheme = "─" },
                 .style = style,
             });
         }
     }
 
-    fn drawBlockquote(self: *Self, ctx: DrawContext, x: usize, y: usize, style: vaxis.Style) void {
+    fn drawBlockquote(self: *Self, ctx: DrawContext, x: usize, y: usize, style: tui.Style) void {
         const max_width = if (ctx.win.width > x + 2) ctx.win.width - x - 2 else 0;
 
         // Draw border line
         if (x < ctx.win.width) {
-            _ = ctx.win.writeCell(@intCast(x), @intCast(y), .{
+            ctx.win.writeCell(@intCast(x), @intCast(y), .{
                 .char = .{ .grapheme = "│" },
                 .style = style,
             });

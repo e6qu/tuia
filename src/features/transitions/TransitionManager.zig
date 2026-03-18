@@ -1,6 +1,6 @@
 //! Manages slide transitions
 const std = @import("std");
-const vaxis = @import("vaxis");
+const tui = @import("../../tui/root.zig");
 
 const TransitionModule = @import("Transition.zig");
 const Transition = TransitionModule.TransitionInterface;
@@ -106,7 +106,7 @@ pub const TransitionManager = struct {
         self: *Self,
         from_slide: usize,
         to_slide: usize,
-        capture_window: vaxis.Window,
+        capture_window: tui.Window,
     ) !void {
         // Don't transition if disabled
         if (!self.config.enabled) {
@@ -147,7 +147,7 @@ pub const TransitionManager = struct {
 
     /// Complete the transition by capturing the destination slide
     /// Call this AFTER the slide has changed
-    pub fn completeTransition(self: *Self, capture_window: vaxis.Window) void {
+    pub fn completeTransition(self: *Self, capture_window: tui.Window) void {
         // Capture new slide (to)
         if (self.to_buffer) |*buf| {
             buf.clear();
@@ -171,7 +171,7 @@ pub const TransitionManager = struct {
     }
 
     /// Render the current transition state to a window
-    pub fn render(self: *Self, target_win: vaxis.Window) void {
+    pub fn render(self: *Self, target_win: tui.Window) void {
         const state = self.current_transition orelse return;
 
         const from_buf = self.from_buffer orelse return;

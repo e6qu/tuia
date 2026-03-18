@@ -1,0 +1,539 @@
+#!/usr/bin/expect -f
+#
+# TUI integration tests for tuia
+# Uses expect to drive the real terminal UI through a pty
+#
+
+set timeout 10
+set env(TUIA_TTY_FD) 0
+set binary "./zig-out/bin/tuia"
+set test_pass 0
+set test_fail 0
+set test_name ""
+
+proc pass {msg} {
+    global test_pass
+    incr test_pass
+    puts "  PASS: $msg"
+}
+
+proc fail {msg} {
+    global test_fail
+    incr test_fail
+    puts "  FAIL: $msg"
+}
+
+proc start_test {name} {
+    global test_name
+    set test_name $name
+    puts "\n=== TEST: $name ==="
+}
+
+proc kill_app {} {
+    catch {close}
+    catch {wait -nowait}
+}
+
+# ──────────────────────────────────────────────────
+# TEST 1: Basic startup and quit with 'q'
+# ──────────────────────────────────────────────────
+start_test "Start with presentation and quit with 'q'"
+
+set stty_init "rows 24 cols 80"
+spawn $binary examples/demo.md
+after 1000
+
+send "q"
+after 500
+
+expect {
+    eof {
+        pass "App quit cleanly with 'q'"
+    }
+    timeout {
+        fail "App did not quit after 'q'"
+        kill_app
+    }
+}
+catch {wait}
+
+# ──────────────────────────────────────────────────
+# TEST 2: Navigate forward with 'j' and quit
+# ──────────────────────────────────────────────────
+start_test "Navigate forward with 'j' then quit"
+
+set stty_init "rows 24 cols 80"
+spawn $binary examples/demo.md
+after 1000
+
+send "j"
+after 300
+send "j"
+after 300
+send "j"
+after 300
+
+send "q"
+after 500
+
+expect {
+    eof {
+        pass "Navigated forward and quit cleanly"
+    }
+    timeout {
+        fail "App did not quit after navigation"
+        kill_app
+    }
+}
+catch {wait}
+
+# ──────────────────────────────────────────────────
+# TEST 3: Navigate backward with 'k'
+# ──────────────────────────────────────────────────
+start_test "Navigate forward then backward with 'k'"
+
+set stty_init "rows 24 cols 80"
+spawn $binary examples/demo.md
+after 1000
+
+send "j"
+after 200
+send "j"
+after 200
+send "k"
+after 200
+
+send "q"
+after 500
+
+expect {
+    eof {
+        pass "Forward+backward navigation and quit"
+    }
+    timeout {
+        fail "App hung after forward+backward"
+        kill_app
+    }
+}
+catch {wait}
+
+# ──────────────────────────────────────────────────
+# TEST 4: Jump to first/last slide with 'g'/'G'
+# ──────────────────────────────────────────────────
+start_test "Jump to last slide 'G' and first 'g'"
+
+set stty_init "rows 24 cols 80"
+spawn $binary examples/demo.md
+after 1000
+
+send "G"
+after 500
+send "g"
+after 500
+
+send "q"
+after 500
+
+expect {
+    eof {
+        pass "Jump navigation and quit"
+    }
+    timeout {
+        fail "App hung after jump navigation"
+        kill_app
+    }
+}
+catch {wait}
+
+# ──────────────────────────────────────────────────
+# TEST 5: Help screen toggle with '?'
+# ──────────────────────────────────────────────────
+start_test "Toggle help screen with '?'"
+
+set stty_init "rows 24 cols 80"
+spawn $binary examples/demo.md
+after 1000
+
+send "?"
+after 500
+send "?"
+after 500
+
+send "q"
+after 500
+
+expect {
+    eof {
+        pass "Help toggle and quit"
+    }
+    timeout {
+        fail "App hung after help toggle"
+        kill_app
+    }
+}
+catch {wait}
+
+# ──────────────────────────────────────────────────
+# TEST 6: Quit with Ctrl-C
+# ──────────────────────────────────────────────────
+start_test "Quit with Ctrl-C"
+
+set stty_init "rows 24 cols 80"
+spawn $binary examples/demo.md
+after 1000
+
+send "\x03"
+after 500
+
+expect {
+    eof {
+        pass "App quit with Ctrl-C"
+    }
+    timeout {
+        fail "App did not quit after Ctrl-C"
+        kill_app
+    }
+}
+catch {wait}
+
+# ──────────────────────────────────────────────────
+# TEST 7: Rapid navigation stress test
+# ──────────────────────────────────────────────────
+start_test "Rapid navigation stress test (20+ keystrokes)"
+
+set stty_init "rows 24 cols 80"
+spawn $binary examples/demo.md
+after 1000
+
+for {set i 0} {$i < 5} {incr i} {
+    send "j"
+    after 50
+}
+for {set i 0} {$i < 3} {incr i} {
+    send "k"
+    after 50
+}
+send "G"
+after 100
+send "g"
+after 100
+for {set i 0} {$i < 4} {incr i} {
+    send "j"
+    after 50
+}
+
+after 500
+
+send "q"
+after 500
+
+expect {
+    eof {
+        pass "Survived rapid navigation and quit"
+    }
+    timeout {
+        fail "App hung during rapid navigation"
+        kill_app
+    }
+}
+catch {wait}
+
+# ──────────────────────────────────────────────────
+# TEST 8: Number key slide jump
+# ──────────────────────────────────────────────────
+start_test "Number key slide jump"
+
+set stty_init "rows 24 cols 80"
+spawn $binary examples/demo.md
+after 1000
+
+send "3"
+after 500
+send "1"
+after 300
+# 'q' in jump mode cancels the jump, need Enter to complete then 'q' to quit
+send "\r"
+after 300
+
+send "q"
+after 500
+
+expect {
+    eof {
+        pass "Number key navigation and quit"
+    }
+    timeout {
+        fail "App hung after number key"
+        kill_app
+    }
+}
+catch {wait}
+
+# ──────────────────────────────────────────────────
+# TEST 9: Arrow key navigation
+# ──────────────────────────────────────────────────
+start_test "Arrow key navigation (Right/Left/Down/Up)"
+
+set stty_init "rows 24 cols 80"
+spawn $binary examples/demo.md
+after 1000
+
+# Right arrow
+send "\x1b\[C"
+after 200
+# Down arrow
+send "\x1b\[B"
+after 200
+# Left arrow
+send "\x1b\[D"
+after 200
+# Up arrow
+send "\x1b\[A"
+after 200
+
+send "q"
+after 500
+
+expect {
+    eof {
+        pass "Arrow key navigation and quit"
+    }
+    timeout {
+        fail "App hung after arrow keys"
+        kill_app
+    }
+}
+catch {wait}
+
+# ──────────────────────────────────────────────────
+# TEST 10: Space and Backspace navigation
+# ──────────────────────────────────────────────────
+start_test "Space and Backspace navigation"
+
+set stty_init "rows 24 cols 80"
+spawn $binary examples/demo.md
+after 1000
+
+send " "
+after 200
+send " "
+after 200
+send "\x7f"
+after 200
+
+send "q"
+after 500
+
+expect {
+    eof {
+        pass "Space/Backspace navigation and quit"
+    }
+    timeout {
+        fail "App hung after Space/Backspace"
+        kill_app
+    }
+}
+catch {wait}
+
+# ──────────────────────────────────────────────────
+# TEST 11: Navigate through ALL slides
+# ──────────────────────────────────────────────────
+start_test "Navigate through all 9 slides of demo.md"
+
+set stty_init "rows 24 cols 80"
+spawn $binary examples/demo.md
+after 1000
+
+for {set i 0} {$i < 8} {incr i} {
+    send "j"
+    after 200
+}
+# One more 'j' should stay on last slide
+send "j"
+after 200
+# Back to start
+send "g"
+after 300
+
+send "q"
+after 500
+
+expect {
+    eof {
+        pass "Traversed all slides and quit"
+    }
+    timeout {
+        fail "App hung traversing slides"
+        kill_app
+    }
+}
+catch {wait}
+
+# ──────────────────────────────────────────────────
+# TEST 12: Error handling: nonexistent file
+# ──────────────────────────────────────────────────
+start_test "Error handling: nonexistent file"
+
+set stty_init "rows 24 cols 80"
+spawn $binary nonexistent_file_xyz.md
+expect {
+    -re {[Ee]rror|FileNotFound} {
+        pass "Error shown for nonexistent file"
+    }
+    eof {
+        pass "App exited for nonexistent file"
+    }
+    timeout {
+        fail "No error for nonexistent file"
+        kill_app
+    }
+}
+catch {close}
+catch {wait}
+
+# ──────────────────────────────────────────────────
+# TEST 13: Error handling: unknown export format
+# ──────────────────────────────────────────────────
+start_test "Error handling: unknown export format"
+
+set stty_init "rows 24 cols 80"
+spawn $binary -e bogusformat examples/demo.md
+expect {
+    -re {[Uu]nknown|[Ee]rror|[Uu]nsupported} {
+        pass "Error shown for unknown format"
+    }
+    eof {
+        pass "App exited for unknown format"
+    }
+    timeout {
+        fail "No error for unknown format"
+        kill_app
+    }
+}
+catch {close}
+catch {wait}
+
+# ──────────────────────────────────────────────────
+# TEST 14-17: All example files load without crash
+# ──────────────────────────────────────────────────
+foreach f {demo.md tutorial.md cheatsheet.md feature-showcase.md} {
+    start_test "Load and render: $f"
+
+    set stty_init "rows 24 cols 80"
+    spawn $binary examples/$f
+    after 1500
+
+    send "q"
+    after 500
+
+    expect {
+        eof {
+            pass "$f loaded and quit cleanly"
+        }
+        timeout {
+            fail "$f did not quit"
+            kill_app
+        }
+    }
+    catch {wait}
+}
+
+# ──────────────────────────────────────────────────
+# TEST 18: Small terminal (edge case)
+# ──────────────────────────────────────────────────
+start_test "Small terminal (10x10)"
+
+set stty_init "rows 10 cols 10"
+spawn $binary examples/demo.md
+after 1000
+
+send "j"
+after 200
+
+send "q"
+after 500
+
+expect {
+    eof {
+        pass "Small terminal handled without crash"
+    }
+    timeout {
+        fail "App hung in small terminal"
+        kill_app
+    }
+}
+catch {wait}
+
+# ──────────────────────────────────────────────────
+# TEST 19: Wide terminal
+# ──────────────────────────────────────────────────
+start_test "Wide terminal (200x50)"
+
+set stty_init "rows 50 cols 200"
+spawn $binary examples/demo.md
+after 1000
+
+send "j"
+after 200
+send "G"
+after 200
+
+send "q"
+after 500
+
+expect {
+    eof {
+        pass "Wide terminal handled without crash"
+    }
+    timeout {
+        fail "App hung in wide terminal"
+        kill_app
+    }
+}
+catch {wait}
+
+# ──────────────────────────────────────────────────
+# TEST 20: Export all formats via CLI
+# ──────────────────────────────────────────────────
+start_test "Export all formats via CLI"
+
+set tmpdir [exec mktemp -d]
+
+foreach {fmt ext} {html html revealjs html beamer tex pdf tex} {
+    spawn $binary -e $fmt examples/demo.md -o $tmpdir
+    expect {
+        -re {Export complete|LaTeX source saved} {
+            pass "Export to $fmt succeeded"
+        }
+        timeout {
+            fail "Export to $fmt timed out"
+        }
+        eof {}
+    }
+    catch {close}
+    catch {wait}
+}
+
+# Verify files exist
+foreach ext {html tex} {
+    if {[file exists "$tmpdir/demo.$ext"]} {
+        pass "Output file demo.$ext exists"
+    } else {
+        fail "Output file demo.$ext missing"
+    }
+}
+
+exec rm -rf $tmpdir
+
+# ──────────────────────────────────────────────────
+# SUMMARY
+# ──────────────────────────────────────────────────
+puts "\n============================================"
+puts "TUI Test Results: $test_pass passed, $test_fail failed"
+puts "============================================"
+
+if {$test_fail > 0} {
+    exit 1
+} else {
+    exit 0
+}

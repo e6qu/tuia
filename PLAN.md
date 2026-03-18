@@ -30,6 +30,7 @@ TUIA is a fast, lightweight terminal presentation tool that:
 | M4: Polish & Release | ✅ | Documentation, v1.0.0 release |
 | Security Hardening | ✅ | Semgrep, ziglint, fuzzing, CI checks |
 | Bug Hunt Phases 1-12 | ✅ | 27 bugs fixed (17 critical, 10 high/med/low) |
+| Phases 13-16 | ✅ | 30 more bugs fixed, TUI layer, TUI tests, pre-commit |
 
 ---
 
@@ -40,7 +41,9 @@ TUIA is a fast, lightweight terminal presentation tool that:
 | Version | 1.0.0 |
 | Lines of Code | ~20,000 |
 | Test Coverage | >80% |
+| Total Bugs Fixed | 57 |
 | Open Bugs | 0 |
+| Tests | 117 unit/integration + 25 TUI |
 | CI Checks | 30+ |
 
 ---

@@ -1,11 +1,11 @@
 //! Code widget for rendering code blocks with syntax highlighting
 const std = @import("std");
-const vaxis = @import("vaxis");
+const tui = @import("../tui/root.zig");
 const DrawContext = @import("Widget.zig").DrawContext;
 const Constraints = @import("Widget.zig").Constraints;
 const Size = @import("Widget.zig").Size;
 const DrawUtils = @import("Widget.zig").DrawUtils;
-const toVaxisStyle = @import("Widget.zig").toVaxisStyle;
+const toStyle = @import("Widget.zig").toStyle;
 const Highlighter = @import("../highlight/Highlighter.zig").Highlighter;
 const Language = @import("../highlight/Language.zig").Language;
 const Token = @import("../highlight/Token.zig").Token;
@@ -113,7 +113,7 @@ pub const CodeWidget = struct {
         if (y < ctx.win.height) {
             for (0..width) |col| {
                 if (x + col >= ctx.win.width) break;
-                _ = ctx.win.writeCell(@intCast(x + col), @intCast(y), .{
+                ctx.win.writeCell(@intCast(x + col), @intCast(y), .{
                     .char = .{ .grapheme = "─" },
                     .style = .{ .fg = .{ .rgb = .{ 100, 100, 100 } } },
                 });
@@ -128,7 +128,7 @@ pub const CodeWidget = struct {
 
             // Left border
             if (x < ctx.win.width) {
-                _ = ctx.win.writeCell(@intCast(x), @intCast(target_row), .{
+                ctx.win.writeCell(@intCast(x), @intCast(target_row), .{
                     .char = .{ .grapheme = "│" },
                     .style = .{ .fg = .{ .rgb = .{ 100, 100, 100 } } },
                 });
@@ -136,7 +136,7 @@ pub const CodeWidget = struct {
 
             // Right border
             if (x + width - 1 < ctx.win.width) {
-                _ = ctx.win.writeCell(@intCast(x + width - 1), @intCast(target_row), .{
+                ctx.win.writeCell(@intCast(x + width - 1), @intCast(target_row), .{
                     .char = .{ .grapheme = "│" },
                     .style = .{ .fg = .{ .rgb = .{ 100, 100, 100 } } },
                 });
@@ -148,7 +148,7 @@ pub const CodeWidget = struct {
         if (bottom_row < ctx.win.height) {
             for (0..width) |col| {
                 if (x + col >= ctx.win.width) break;
-                _ = ctx.win.writeCell(@intCast(x + col), @intCast(bottom_row), .{
+                ctx.win.writeCell(@intCast(x + col), @intCast(bottom_row), .{
                     .char = .{ .grapheme = "─" },
                     .style = .{ .fg = .{ .rgb = .{ 100, 100, 100 } } },
                 });
@@ -201,7 +201,7 @@ pub const CodeWidget = struct {
 
             const token_color = token.kind.defaultColor();
             const rgb = defaultColorToRgb(token_color);
-            const style: vaxis.Style = if (rgb) |c| .{ .fg = c } else .{};
+            const style: tui.Style = if (rgb) |c| .{ .fg = c } else .{};
 
             for (token.text) |c| {
                 if (c == '\n') {
@@ -216,7 +216,7 @@ pub const CodeWidget = struct {
                 }
 
                 if (col < ctx.win.width and row < ctx.win.height) {
-                    _ = ctx.win.writeCell(@intCast(col), @intCast(row), .{
+                    ctx.win.writeCell(@intCast(col), @intCast(row), .{
                         .char = .{ .grapheme = &[_]u8{c} },
                         .style = style,
                     });
@@ -227,7 +227,7 @@ pub const CodeWidget = struct {
     }
 
     fn drawPlainCode(self: *Self, ctx: DrawContext, x: usize, y: usize, max_width: usize) void {
-        const code_style = toVaxisStyle(ctx.theme.code_block);
+        const code_style = toStyle(ctx.theme.code_block);
 
         var row = y;
         var col = x;
@@ -245,7 +245,7 @@ pub const CodeWidget = struct {
             }
 
             if (col < ctx.win.width and row < ctx.win.height) {
-                _ = ctx.win.writeCell(@intCast(col), @intCast(row), .{
+                ctx.win.writeCell(@intCast(col), @intCast(row), .{
                     .char = .{ .grapheme = &[_]u8{c} },
                     .style = code_style,
                 });
@@ -272,7 +272,7 @@ pub const CodeWidget = struct {
         return lines;
     }
 
-    fn defaultColorToRgb(color: @import("../highlight/Token.zig").DefaultColor) ?@import("vaxis").Cell.Color {
+    fn defaultColorToRgb(color: @import("../highlight/Token.zig").DefaultColor) ?tui.Cell.Color {
         return switch (color) {
             .default => null,
             .black => .{ .rgb = .{ 0, 0, 0 } },

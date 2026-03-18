@@ -70,15 +70,29 @@ pub const Parser = struct {
         // Parse front matter and get remaining content
         const result = try FrontMatterParser.parseWithContent(self.allocator, source_to_check);
 
-        // Advance scanner past the front matter
+        // Advance scanner past the front matter by setting its position
+        // directly to after the closing "---" delimiter
         const front_matter_end = std.mem.indexOf(u8, source_to_check[3..], "---");
         if (front_matter_end) |end| {
-            // Skip past the second ---
-            const skip_len = 3 + end + 3;
-            for (0..skip_len) |_| {
-                _ = self.scanner.nextToken();
+            const content_start = 3 + end + 3; // past opening --- + yaml + closing ---
+            // Calculate absolute position in the original source
+            const base_offset = @intFromPtr(source_to_check.ptr) - @intFromPtr(self.scanner.source.ptr);
+            var abs_pos = base_offset + content_start;
+            // Skip any trailing newline after closing ---
+            while (abs_pos < self.scanner.source.len and
+                (self.scanner.source[abs_pos] == '\n' or self.scanner.source[abs_pos] == '\r'))
+            {
+                abs_pos += 1;
             }
-            // Update current token
+            self.scanner.pos = abs_pos;
+            self.scanner.col = 1;
+            // Count lines up to this position
+            var line_count: usize = 1;
+            for (self.scanner.source[0..abs_pos]) |ch| {
+                if (ch == '\n') line_count += 1;
+            }
+            self.scanner.line = line_count;
+            // Read the next token from the new position
             self.current = self.scanner.nextToken();
         }
 
@@ -255,10 +269,19 @@ pub const Parser = struct {
     fn parseHeading(self: *Self) !AST.Element {
         const text = self.current.text;
         const level = countHeadingLevel(text);
-        self.advance();
 
-        // Parse inline content
-        const content = try self.parseInlineText();
+        // Extract heading content from the token itself (scanner now consumes full line)
+        var skip: usize = 0;
+        while (skip < text.len and text[skip] == '#') skip += 1;
+        while (skip < text.len and (text[skip] == ' ' or text[skip] == '\t')) skip += 1;
+        const heading_text = std.mem.trim(u8, text[skip..], " \t\n");
+
+        const content = if (heading_text.len > 0)
+            try parseInlineContent(self.allocator, heading_text)
+        else
+            try self.allocator.alloc(AST.Inline, 0);
+
+        self.advance();
 
         return .{ .heading = .{
             .level = level,
@@ -320,7 +343,7 @@ pub const Parser = struct {
         var content: std.ArrayList(AST.Element) = .empty;
         defer content.deinit(self.allocator);
 
-        while (self.current.type != .blank_line and self.current.type != .eof and self.current.type != .end_slide) {
+        while (self.current.type != .blank_line and self.current.type != .eof and self.current.type != .end_slide and self.current.type != .thematic_break) {
             const elem = try self.parseBlockElement();
             if (elem) |e| {
                 try content.append(self.allocator, e);
@@ -659,6 +682,7 @@ fn parseLineBreak(
             // Flush pending text before the line break
             if (pos > text_start.*) {
                 const txt = try unescapeText(allocator, text[text_start.*..pos]);
+                text_start.* = pos;
                 return .{ .text = txt };
             }
 
@@ -699,6 +723,7 @@ fn parseInlineCode(
     // Flush pending text
     if (start > text_start.*) {
         const txt = try unescapeText(allocator, text[text_start.*..start]);
+        text_start.* = start;
         return .{ .text = txt };
     }
 
@@ -729,6 +754,7 @@ fn parseStrong(
     // Flush pending text
     if (pos > text_start.*) {
         const txt = try allocator.dupe(u8, text[text_start.*..pos]);
+        text_start.* = pos;
         return .{ .text = txt };
     }
 
@@ -768,6 +794,7 @@ fn parseEmphasis(
     // Flush pending text
     if (pos > text_start.*) {
         const txt = try allocator.dupe(u8, text[text_start.*..pos]);
+        text_start.* = pos;
         return .{ .text = txt };
     }
 
@@ -837,6 +864,7 @@ fn parseImage(
     // Flush pending text
     if (pos > text_start.*) {
         const txt = try allocator.dupe(u8, text[text_start.*..pos]);
+        text_start.* = pos;
         return .{ .text = txt };
     }
 
@@ -906,6 +934,7 @@ fn parseInlineLink(
     // Flush pending text
     if (start_pos > text_start.*) {
         const txt = try allocator.dupe(u8, text[text_start.*..start_pos]);
+        text_start.* = start_pos;
         return .{ .text = txt };
     }
 
@@ -952,6 +981,7 @@ fn parseRefLinkWithLabel(
     // Flush pending text
     if (start_pos > text_start.*) {
         const txt = try allocator.dupe(u8, text[text_start.*..start_pos]);
+        text_start.* = start_pos;
         return .{ .text = txt };
     }
 
@@ -1001,6 +1031,7 @@ fn parseImplicitRefLink(
     // Flush pending text
     if (start_pos > text_start.*) {
         const txt = try allocator.dupe(u8, text[text_start.*..start_pos]);
+        text_start.* = start_pos;
         return .{ .text = txt };
     }
 
