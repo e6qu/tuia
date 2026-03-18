@@ -97,7 +97,7 @@ pub const Terminal = struct {
         const back_buf = cell_storage[MAX_CELLS .. 2 * MAX_CELLS];
 
         const screen = Screen.init(screen_buf, cols, rows);
-        @memset(back_buf[0..@as(usize, cols) * rows], Cell{});
+        @memset(back_buf[0 .. @as(usize, cols) * rows], Cell{});
 
         const pipe = try posix.pipe();
 
@@ -106,7 +106,7 @@ pub const Terminal = struct {
             .owned_fd = owned_fd,
             .original_termios = original,
             .screen = screen,
-            .back_buf = back_buf[0..@as(usize, cols) * rows],
+            .back_buf = back_buf[0 .. @as(usize, cols) * rows],
             .cell_storage = cell_storage,
             ._allocator = allocator,
             .signal_pipe = pipe,
