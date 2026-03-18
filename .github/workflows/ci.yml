@@ -72,7 +72,6 @@ jobs:
         target:
           - x86_64-linux
           - aarch64-linux
-          - x86_64-windows
     steps:
       - uses: actions/checkout@v4
       
@@ -142,9 +141,6 @@ jobs:
           - target: aarch64-macos
             os: macos-latest
             name: tuia-aarch64-macos
-          - target: x86_64-windows
-            os: ubuntu-latest
-            name: tuia-x86_64-windows.exe
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -158,12 +154,7 @@ jobs:
         run: zig build -Dtarget=${{ matrix.target }} -Doptimize=ReleaseFast
       
       - name: Rename binary
-        run: |
-          if [ "${{ matrix.target }}" = "x86_64-windows" ]; then
-            mv zig-out/bin/tuia.exe zig-out/bin/${{ matrix.name }}
-          else
-            mv zig-out/bin/tuia zig-out/bin/${{ matrix.name }}
-          fi
+        run: mv zig-out/bin/tuia zig-out/bin/${{ matrix.name }}
       
       - name: Upload artifact
         uses: actions/upload-artifact@v4

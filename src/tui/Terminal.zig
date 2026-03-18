@@ -47,6 +47,8 @@ pub const Terminal = struct {
     // ── lifecycle ────────────────────────────────────────────────────
 
     pub fn init(allocator: std.mem.Allocator) !Terminal {
+        comptime if (builtin.os.tag == .windows) @compileError("Terminal requires a POSIX system");
+
         var owned_fd = true;
         const fd = if (std.posix.getenv("TUIA_TTY_FD")) |fd_str| blk: {
             owned_fd = false;
