@@ -37,3 +37,4 @@ zig-out/
 
 # OS files
 Thumbs.db
+examples/output/
