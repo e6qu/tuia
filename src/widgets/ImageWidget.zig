@@ -1,10 +1,10 @@
 //! Image widget for rendering images
 const std = @import("std");
-const vaxis = @import("vaxis");
+const tui = @import("../tui/root.zig");
 const DrawContext = @import("Widget.zig").DrawContext;
 const Constraints = @import("Widget.zig").Constraints;
 const Size = @import("Widget.zig").Size;
-const toVaxisStyle = @import("Widget.zig").toVaxisStyle;
+const toStyle = @import("Widget.zig").toStyle;
 
 /// ImageWidget renders images (or placeholder for unsupported terminals)
 pub const ImageWidget = struct {
@@ -34,7 +34,7 @@ pub const ImageWidget = struct {
 
     /// Draw the image widget (placeholder implementation)
     pub fn draw(self: *Self, ctx: DrawContext, x: usize, y: usize) void {
-        const image_style = toVaxisStyle(ctx.theme.image);
+        const image_style = toStyle(ctx.theme.image);
 
         // Draw placeholder box with image indicator
         const display_text = if (self.alt.len > 0)
@@ -51,7 +51,7 @@ pub const ImageWidget = struct {
             for (display_text, 0..) |char, i| {
                 const col = text_x + i;
                 if (col >= ctx.win.width) break;
-                _ = ctx.win.writeCell(@intCast(col), @intCast(y + 1), .{
+                ctx.win.writeCell(@intCast(col), @intCast(y + 1), .{
                     .char = .{ .grapheme = &[_]u8{char} },
                     .style = image_style,
                 });
@@ -74,13 +74,13 @@ pub const ImageWidget = struct {
 
     fn drawBorder(self: Self, ctx: DrawContext, x: usize, y: usize, width: usize) void {
         _ = self;
-        const style: vaxis.Style = .{ .fg = .{ .rgb = .{ 100, 100, 100 } } };
+        const style: tui.Style = .{ .fg = .{ .rgb = .{ 100, 100, 100 } } };
 
         // Top border
         if (y < ctx.win.height) {
             for (0..width) |col| {
                 if (x + col >= ctx.win.width) break;
-                _ = ctx.win.writeCell(@intCast(x + col), @intCast(y), .{
+                ctx.win.writeCell(@intCast(x + col), @intCast(y), .{
                     .char = .{ .grapheme = "─" },
                     .style = style,
                 });
@@ -91,7 +91,7 @@ pub const ImageWidget = struct {
         if (y + 2 < ctx.win.height) {
             for (0..width) |col| {
                 if (x + col >= ctx.win.width) break;
-                _ = ctx.win.writeCell(@intCast(x + col), @intCast(y + 2), .{
+                ctx.win.writeCell(@intCast(x + col), @intCast(y + 2), .{
                     .char = .{ .grapheme = "─" },
                     .style = style,
                 });
@@ -100,13 +100,13 @@ pub const ImageWidget = struct {
 
         // Side borders
         if (x < ctx.win.width and y + 1 < ctx.win.height) {
-            _ = ctx.win.writeCell(@intCast(x), @intCast(y + 1), .{
+            ctx.win.writeCell(@intCast(x), @intCast(y + 1), .{
                 .char = .{ .grapheme = "│" },
                 .style = style,
             });
         }
         if (x + width - 1 < ctx.win.width and y + 1 < ctx.win.height) {
-            _ = ctx.win.writeCell(@intCast(x + width - 1), @intCast(y + 1), .{
+            ctx.win.writeCell(@intCast(x + width - 1), @intCast(y + 1), .{
                 .char = .{ .grapheme = "│" },
                 .style = style,
             });
@@ -114,25 +114,25 @@ pub const ImageWidget = struct {
 
         // Corners
         if (x < ctx.win.width and y < ctx.win.height) {
-            _ = ctx.win.writeCell(@intCast(x), @intCast(y), .{
+            ctx.win.writeCell(@intCast(x), @intCast(y), .{
                 .char = .{ .grapheme = "┌" },
                 .style = style,
             });
         }
         if (x + width - 1 < ctx.win.width and y < ctx.win.height) {
-            _ = ctx.win.writeCell(@intCast(x + width - 1), @intCast(y), .{
+            ctx.win.writeCell(@intCast(x + width - 1), @intCast(y), .{
                 .char = .{ .grapheme = "┐" },
                 .style = style,
             });
         }
         if (x < ctx.win.width and y + 2 < ctx.win.height) {
-            _ = ctx.win.writeCell(@intCast(x), @intCast(y + 2), .{
+            ctx.win.writeCell(@intCast(x), @intCast(y + 2), .{
                 .char = .{ .grapheme = "└" },
                 .style = style,
             });
         }
         if (x + width - 1 < ctx.win.width and y + 2 < ctx.win.height) {
-            _ = ctx.win.writeCell(@intCast(x + width - 1), @intCast(y + 2), .{
+            ctx.win.writeCell(@intCast(x + width - 1), @intCast(y + 2), .{
                 .char = .{ .grapheme = "┘" },
                 .style = style,
             });

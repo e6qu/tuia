@@ -14,5 +14,6 @@ pub const CellBuffer = TransitionModule.CellBuffer;
 
 // Tests
 test {
-    std.testing.refAllDecls(@This());
+    _ = @import("Transition.zig");
+    _ = @import("TransitionManager.zig");
 }

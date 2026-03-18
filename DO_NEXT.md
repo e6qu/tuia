@@ -4,17 +4,18 @@
 
 ---
 
-## 🎉 Project Complete!
+## Current Status
 
-All milestones, security checks, and bug fixes are complete. Version 1.0.0 is released with **0 open bugs**.
+All milestones, security checks, and bug fixes are complete. **57 bugs fixed, 0 remaining.** 25 automated TUI tests pass.
 
 ## Potential Future Enhancements
 
-- PDF export improvements
+- PDF export improvements (currently generates .tex, needs pdflatex)
 - Additional image protocols
 - Plugin system exploration
 - Advanced transitions
 - Remote control enhancements
+- CI integration for TUI tests (`expect scripts/test_tui.exp`)
 
 ## Maintenance
 
@@ -24,4 +25,4 @@ All milestones, security checks, and bug fixes are complete. Version 1.0.0 is re
 
 ---
 
-*Last updated: 2026-03-04*
+*Last updated: 2026-03-19*

@@ -1,12 +1,12 @@
 //! Inline text widget for rendering styled text (bold, italic, code, links)
 const std = @import("std");
-const vaxis = @import("vaxis");
+const tui = @import("../tui/root.zig");
 const Widget = @import("Widget.zig").Widget;
 const DrawContext = @import("Widget.zig").DrawContext;
 const Constraints = @import("Widget.zig").Constraints;
 const Size = @import("Widget.zig").Size;
 const DrawUtils = @import("Widget.zig").DrawUtils;
-const toVaxisStyle = @import("Widget.zig").toVaxisStyle;
+const toStyle = @import("Widget.zig").toStyle;
 const Inline = @import("../parser/AST.zig").Inline;
 const ElementStyle = @import("../render/Theme.zig").ElementStyle;
 const Theme = @import("../render/Theme.zig").Theme;
@@ -184,7 +184,7 @@ pub const InlineTextWidget = struct {
 
         for (self.segments) |segment| {
             const seg_style = self.computeSegmentStyle(segment.style, ctx.theme);
-            const vaxis_style = toVaxisStyle(seg_style);
+            const vaxis_style = toStyle(seg_style);
 
             // Handle newlines
             if (std.mem.eql(u8, segment.text, "\n")) {

@@ -12,5 +12,13 @@ pub const ExecutionWidget = @import("ExecutionWidget.zig");
 pub const PresentationOverlay = @import("PresentationOverlay.zig").PresentationOverlay;
 
 test {
-    std.testing.refAllDecls(@This());
+    _ = @import("Widget.zig");
+    _ = @import("SlideWidget.zig");
+    _ = @import("TextWidget.zig");
+    _ = @import("CodeWidget.zig");
+    _ = @import("HelpWidget.zig");
+    _ = @import("StatusBar.zig");
+    _ = @import("NoteWidget.zig");
+    _ = @import("ExecutionWidget.zig");
+    _ = @import("PresentationOverlay.zig");
 }

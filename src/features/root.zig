@@ -27,5 +27,9 @@ pub const MediaElement = media.MediaElement;
 pub const MediaType = media.MediaType;
 
 test {
-    std.testing.refAllDecls(@This());
+    _ = @import("images/root.zig");
+    _ = @import("executor/root.zig");
+    _ = @import("transitions/root.zig");
+    _ = @import("remote/root.zig");
+    _ = @import("media/root.zig");
 }

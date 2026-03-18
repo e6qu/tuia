@@ -14,5 +14,11 @@ pub const InputHandler = @import("InputHandler.zig").InputHandler;
 pub const Note = @import("Note.zig").Note;
 
 test {
-    std.testing.refAllDecls(@This());
+    _ = @import("Element.zig");
+    _ = @import("Slide.zig");
+    _ = @import("Presentation.zig");
+    _ = @import("Navigation.zig");
+    _ = @import("KeyBindings.zig");
+    _ = @import("InputHandler.zig");
+    _ = @import("Note.zig");
 }

@@ -239,7 +239,7 @@ pub const BeamerExporter = struct {
             .image => |img| {
                 try writer.writeAll("    \\begin{center}\n");
                 try writer.writeAll("        \\includegraphics[width=0.8\\textwidth]{");
-                try writer.writeAll(img.url);
+                try writeEscapedLatex(writer, img.url);
                 try writer.writeAll("}\n");
                 try writer.writeAll("    \\end{center}\n\n");
             },
@@ -284,7 +284,9 @@ pub const BeamerExporter = struct {
             .media => |m| {
                 // Media in LaTeX - use href for audio/video links
                 try writer.writeAll("    \\begin{center}\n");
-                try writer.print("        \\href{{{s}}}{{", .{m.url});
+                try writer.writeAll("        \\href{");
+                try writeEscapedLatex(writer, m.url);
+                try writer.writeAll("}{");
                 if (m.title) |title| {
                     try writer.print("[{s}: {s}]", .{ @tagName(m.media_type), title });
                 } else {
@@ -317,14 +319,14 @@ pub const BeamerExporter = struct {
                 },
                 .link => |l| {
                     try writer.writeAll("\\href{");
-                    try writer.writeAll(l.url);
+                    try writeEscapedLatex(writer, l.url);
                     try writer.writeAll("}{");
                     try self.writeInlines(writer, l.content);
                     try writer.writeAll("}");
                 },
                 .image => |img| {
                     try writer.writeAll("\\includegraphics[width=0.5\\textwidth]{");
-                    try writer.writeAll(img.url);
+                    try writeEscapedLatex(writer, img.url);
                     try writer.writeAll("}");
                 },
             }

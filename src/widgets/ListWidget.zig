@@ -1,11 +1,11 @@
 //! List widget for rendering bullet and numbered lists
 const std = @import("std");
-const vaxis = @import("vaxis");
+const tui = @import("../tui/root.zig");
 const DrawContext = @import("Widget.zig").DrawContext;
 const Constraints = @import("Widget.zig").Constraints;
 const Size = @import("Widget.zig").Size;
 const DrawUtils = @import("Widget.zig").DrawUtils;
-const toVaxisStyle = @import("Widget.zig").toVaxisStyle;
+const toStyle = @import("Widget.zig").toStyle;
 const List = @import("../core/Element.zig").List;
 const ListItem = @import("../core/Element.zig").ListItem;
 const Inline = @import("../core/Element.zig").Inline;
@@ -66,12 +66,12 @@ pub const ListWidget = struct {
 
     /// Draw the list widget
     pub fn draw(self: *Self, ctx: DrawContext, x: usize, y: usize) void {
-        const bullet_style = toVaxisStyle(if (self.ordered)
+        const bullet_style = toStyle(if (self.ordered)
             ctx.theme.list_number
         else
             ctx.theme.list_bullet);
 
-        const text_style = toVaxisStyle(ctx.theme.paragraph);
+        const text_style = toStyle(ctx.theme.paragraph);
 
         var row = y;
         const indent_size = self.getIndentSize();
@@ -82,7 +82,7 @@ pub const ListWidget = struct {
             // Draw bullet/number
             const marker = self.getMarker(i);
             if (x < ctx.win.width) {
-                _ = ctx.win.writeCell(@intCast(x), @intCast(row), .{
+                ctx.win.writeCell(@intCast(x), @intCast(row), .{
                     .char = .{ .grapheme = marker },
                     .style = bullet_style,
                 });

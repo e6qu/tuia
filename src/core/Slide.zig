@@ -72,16 +72,16 @@ pub const Slide = struct {
 
     /// Get all code blocks on this slide
     pub fn getCodeBlocks(self: Self, allocator: std.mem.Allocator) ![]ElementMod.CodeBlock {
-        var blocks = std.ArrayList(ElementMod.CodeBlock).init(allocator);
-        defer blocks.deinit();
+        var blocks: std.ArrayList(ElementMod.CodeBlock) = .empty;
+        errdefer blocks.deinit(allocator);
 
         for (self.elements) |element| {
             if (element == .code_block) {
-                try blocks.append(element.code_block);
+                try blocks.append(allocator, element.code_block);
             }
         }
 
-        return blocks.toOwnedSlice();
+        return blocks.toOwnedSlice(allocator);
     }
 };
 

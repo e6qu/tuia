@@ -1,6 +1,6 @@
 //! Help widget for displaying keyboard shortcuts
 const std = @import("std");
-const vaxis = @import("vaxis");
+const tui = @import("../tui/root.zig");
 const Widget = @import("Widget.zig").Widget;
 const Slide = @import("../core/Slide.zig").Slide;
 const Theme = @import("../render/Theme.zig").Theme;
@@ -72,7 +72,7 @@ pub const HelpWidget = struct {
     }
 
     /// Draw the help overlay centered on screen
-    pub fn draw(self: Self, win: vaxis.Window, theme: Theme) void {
+    pub fn draw(self: Self, win: tui.Window, theme: Theme) void {
         if (!self.visible) return;
 
         // Calculate dimensions
@@ -99,13 +99,13 @@ pub const HelpWidget = struct {
                 if (c >= win.width) continue;
                 const bg_color = if (theme.code_block.bg) |color|
                     if (@import("../render/Theme.zig").Theme.toRgb(color)) |rgb|
-                        @import("vaxis").Cell.Color{ .rgb = rgb }
+                        tui.Cell.Color{ .rgb = rgb }
                     else
                         .default
                 else
                     .default;
 
-                _ = win.writeCell(@intCast(c), @intCast(r), .{
+                win.writeCell(@intCast(c), @intCast(r), .{
                     .char = .{ .grapheme = " " },
                     .style = .{
                         .bg = bg_color,
@@ -127,13 +127,13 @@ pub const HelpWidget = struct {
 
                 const fg_color = if (theme.code_block.fg) |color|
                     if (@import("../render/Theme.zig").Theme.toRgb(color)) |rgb|
-                        @import("vaxis").Cell.Color{ .rgb = rgb }
+                        tui.Cell.Color{ .rgb = rgb }
                     else
                         .default
                 else
                     .default;
 
-                _ = win.writeCell(@intCast(c), @intCast(r), .{
+                win.writeCell(@intCast(c), @intCast(r), .{
                     .char = .{ .grapheme = &[_]u8{char} },
                     .style = .{
                         .fg = fg_color,

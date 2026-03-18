@@ -2,5 +2,5 @@
 const std = @import("std");
 
 test {
-    std.testing.refAllDecls(@This());
+    // No test files in infra currently
 }

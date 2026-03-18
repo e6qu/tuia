@@ -77,10 +77,13 @@ pub const Scanner = struct {
             return self.makeToken(.link_ref_def, start, line, col, indent);
         }
 
-        // Headings
+        // Headings — consume rest of line (like code blocks)
         if (c == '#') {
             _ = self.countPrefix('#');
             self.skipWhitespace();
+            while (!self.isAtEnd() and self.peek() != '\n') {
+                _ = self.advance();
+            }
             return self.makeToken(.heading, start, line, col, indent);
         }
 
@@ -101,8 +104,11 @@ pub const Scanner = struct {
             }
         }
 
-        // Code block
+        // Code block — consume rest of line to capture language specifier
         if (c == '`' and self.matchString("``")) {
+            while (!self.isAtEnd() and self.peek() != '\n') {
+                _ = self.advance();
+            }
             return self.makeToken(.code_block, start, line, col, indent);
         }
 

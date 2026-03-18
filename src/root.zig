@@ -20,7 +20,18 @@ pub const test_utils = @import("test_utils.zig");
 /// Library version
 pub const version = "1.0.0";
 
-// Tests
+// Tests — explicit imports to run inline tests without refAllDecls
+// (refAllDecls causes exponential compile-time memory with complex generics)
 test {
-    std.testing.refAllDecls(@This());
+    _ = @import("core/root.zig");
+    _ = @import("parser/root.zig");
+    _ = @import("render/root.zig");
+    _ = @import("widgets/root.zig");
+    _ = @import("config/root.zig");
+    _ = @import("features/root.zig");
+    _ = @import("infra/root.zig");
+    _ = @import("highlight/root.zig");
+    _ = @import("export/root.zig");
+    _ = @import("cli.zig");
+    _ = @import("test_utils.zig");
 }

@@ -1,6 +1,5 @@
 //! Slide widget - container for slide elements
 const std = @import("std");
-const vaxis = @import("vaxis");
 const DrawContext = @import("Widget.zig").DrawContext;
 const Constraints = @import("Widget.zig").Constraints;
 const Size = @import("Widget.zig").Size;
@@ -61,8 +60,8 @@ pub const SlideWidget = struct {
             widget.destroy(self.allocator);
         }
         self.widgets.deinit(self.allocator);
-        // Deinit slide (frees original element data)
-        self.slide.deinit(self.allocator);
+        // Note: slide data is borrowed from Presentation, not owned by SlideWidget.
+        // The Presentation is responsible for freeing slide elements.
         self.allocator.destroy(self);
     }
 
@@ -202,7 +201,7 @@ test "SlideWidget basic" {
         .elements = try elements.toOwnedSlice(allocator),
         .speaker_notes = null,
     };
-    // SlideWidget takes ownership of slide, so no defer cleanup needed
+    defer slide.deinit(allocator);
 
     var widget = try SlideWidget.init(allocator, slide);
     defer widget.deinit();
@@ -241,7 +240,7 @@ test "SlideWidget with multiple elements" {
         .elements = try elements.toOwnedSlice(allocator),
         .speaker_notes = null,
     };
-    // SlideWidget takes ownership of slide, so no defer cleanup needed
+    defer slide.deinit(allocator);
 
     var widget = try SlideWidget.init(allocator, slide);
     defer widget.deinit();
@@ -276,7 +275,7 @@ test "SlideWidget getTitle" {
         .elements = try elements.toOwnedSlice(allocator),
         .speaker_notes = null,
     };
-    // SlideWidget takes ownership of slide, so no defer cleanup needed
+    defer slide.deinit(allocator);
 
     var widget = try SlideWidget.init(allocator, slide);
     defer widget.deinit();
@@ -308,7 +307,7 @@ test "SlideWidget padding" {
         .speaker_notes = null,
         .elements = try elements.toOwnedSlice(allocator),
     };
-    // SlideWidget takes ownership of slide, so no defer cleanup needed
+    defer slide.deinit(allocator);
 
     var widget = try SlideWidget.init(allocator, slide);
     defer widget.deinit();

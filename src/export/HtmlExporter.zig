@@ -62,6 +62,11 @@ pub const HtmlExporter = struct {
         try writer.writeAll("    <title>");
         try writer.writeAll(title);
         try writer.writeAll("</title>\n");
+        if (presentation.metadata.author) |author| {
+            try writer.writeAll("    <meta name=\"author\" content=\"");
+            try writeEscapedHtml(writer, author);
+            try writer.writeAll("\">\n");
+        }
         try writer.writeAll("    <style>\n");
 
         // Generate and write CSS

@@ -1,6 +1,6 @@
 //! Input handler for processing keyboard events
 const std = @import("std");
-const vaxis = @import("vaxis");
+const tui = @import("../tui/root.zig");
 const Navigation = @import("Navigation.zig").Navigation;
 const KeyBindings = @import("KeyBindings.zig").KeyBindings;
 const Action = @import("KeyBindings.zig").Action;
@@ -31,7 +31,7 @@ pub const InputHandler = struct {
     }
 
     /// Process a key event and return true if the app should quit
-    pub fn handleKey(self: *Self, key: vaxis.Key, nav: *Navigation, allocator: std.mem.Allocator) !bool {
+    pub fn handleKey(self: *Self, key: tui.Key, nav: *Navigation, allocator: std.mem.Allocator) !bool {
         // Handle jump mode (entering slide number)
         if (self.in_jump_mode) {
             return try self.handleJumpMode(key, nav);
@@ -91,9 +91,9 @@ pub const InputHandler = struct {
     }
 
     /// Handle keys while in jump mode
-    fn handleJumpMode(self: *Self, key: vaxis.Key, nav: *Navigation) (std.mem.Allocator.Error || error{OutOfMemory})!bool {
+    fn handleJumpMode(self: *Self, key: tui.Key, nav: *Navigation) (std.mem.Allocator.Error || error{OutOfMemory})!bool {
         // Exit jump mode on escape or 'q'
-        if (key.codepoint == vaxis.Key.escape or key.codepoint == 'q') {
+        if (key.codepoint == tui.Key.escape or key.codepoint == 'q') {
             self.in_jump_mode = false;
             self.jump_buffer.clearRetainingCapacity();
             nav.clearMessage(self.allocator);
@@ -101,7 +101,7 @@ pub const InputHandler = struct {
         }
 
         // Enter key completes the jump
-        if (key.codepoint == vaxis.Key.enter or key.codepoint == '\r') {
+        if (key.codepoint == tui.Key.enter or key.codepoint == '\r') {
             self.in_jump_mode = false;
             const slide_num = std.fmt.parseInt(usize, self.jump_buffer.items, 10) catch 1;
             nav.gotoSlide(slide_num);
@@ -111,7 +111,7 @@ pub const InputHandler = struct {
         }
 
         // Backspace removes last digit
-        if (key.codepoint == vaxis.Key.backspace) {
+        if (key.codepoint == tui.Key.backspace) {
             if (self.jump_buffer.items.len > 0) {
                 _ = self.jump_buffer.pop();
                 if (self.jump_buffer.items.len == 0) {

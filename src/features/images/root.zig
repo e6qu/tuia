@@ -12,5 +12,10 @@ pub const ImageRenderer = @import("ImageRenderer.zig").ImageRenderer;
 pub const Protocol = @import("ImageRenderer.zig").Protocol;
 
 test {
-    std.testing.refAllDecls(@This());
+    _ = @import("ImageLoader.zig");
+    _ = @import("ImageRenderer.zig");
+    _ = @import("KittyGraphics.zig");
+    _ = @import("ITerm2Graphics.zig");
+    _ = @import("SixelGraphics.zig");
+    _ = @import("AsciiArt.zig");
 }

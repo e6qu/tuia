@@ -64,27 +64,15 @@ test "no memory leaks in example" {
     allocator.free(data);
 }
 
-// Module reference tests to ensure compilation
-test "all modules compile" {
-    // Just referencing modules ensures they compile
-    _ = tuia.core;
-    _ = tuia.parser;
-    _ = tuia.render;
-    _ = tuia.widgets;
-    _ = tuia.config;
-    _ = tuia.features;
-    _ = tuia.infra;
-    _ = tuia.highlight;
-    _ = tuia.cli;
-    _ = tuia.export_;
-}
+// Module compilation is verified by unit tests (zig build unit_test)
+// Integration tests only test end-to-end behavior
 
 // Import parser integration tests
 comptime {
     _ = @import("integration/parser_integration_test.zig");
 }
 
-// Import export tests - DISABLED: needs more debugging
-// comptime {
-//     _ = @import("integration/export_tests.zig");
-// }
+// Import export tests
+comptime {
+    _ = @import("integration/export_tests.zig");
+}

@@ -493,7 +493,7 @@ pub const RevealJsExporter = struct {
             },
             .image => |img| {
                 try writer.writeAll("                <img src=\"");
-                try writer.writeAll(img.url);
+                try writeEscapedHtml(writer, img.url);
                 try writer.writeAll("\" alt=\"");
                 try writeEscapedHtml(writer, img.alt);
                 try writer.writeAll("\">\n");
@@ -526,13 +526,17 @@ pub const RevealJsExporter = struct {
                     if (m.autoplay) try writer.writeAll(" autoplay");
                     if (m.loop) try writer.writeAll(" loop");
                     if (m.controls) try writer.writeAll(" controls");
-                    try writer.print(" src=\"{s}\"></audio>\n", .{m.url});
+                    try writer.writeAll(" src=\"");
+                    try writeEscapedHtml(writer, m.url);
+                    try writer.writeAll("\"></audio>\n");
                 } else {
                     try writer.writeAll("                <video");
                     if (m.autoplay) try writer.writeAll(" autoplay");
                     if (m.loop) try writer.writeAll(" loop");
                     if (m.controls) try writer.writeAll(" controls");
-                    try writer.print(" src=\"{s}\"></video>\n", .{m.url});
+                    try writer.writeAll(" src=\"");
+                    try writeEscapedHtml(writer, m.url);
+                    try writer.writeAll("\"></video>\n");
                 }
             },
         }
@@ -559,14 +563,14 @@ pub const RevealJsExporter = struct {
                 },
                 .link => |l| {
                     try writer.writeAll("<a href=\"");
-                    try writer.writeAll(l.url);
+                    try writeEscapedHtml(writer, l.url);
                     try writer.writeAll("\">");
                     try self.writeInlines(writer, l.content);
                     try writer.writeAll("</a>");
                 },
                 .image => |img| {
                     try writer.writeAll("<img src=\"");
-                    try writer.writeAll(img.url);
+                    try writeEscapedHtml(writer, img.url);
                     try writer.writeAll("\" alt=\"");
                     try writeEscapedHtml(writer, img.alt);
                     try writer.writeAll("\">");

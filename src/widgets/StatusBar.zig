@@ -1,6 +1,6 @@
 //! Status bar widget for displaying slide info and messages
 const std = @import("std");
-const vaxis = @import("vaxis");
+const tui = @import("../tui/root.zig");
 const Theme = @import("../render/Theme.zig").Theme;
 const Navigation = @import("../core/Navigation.zig").Navigation;
 
@@ -24,7 +24,7 @@ pub const StatusBar = struct {
     /// Draw the status bar at the bottom of the screen
     pub fn draw(
         self: Self,
-        win: vaxis.Window,
+        win: tui.Window,
         nav: Navigation,
         theme: Theme,
         presentation_title: ?[]const u8,
@@ -58,7 +58,7 @@ pub const StatusBar = struct {
         // Draw background for entire row
         const bg_color = if (theme.code_block.bg) |c|
             if (@import("../render/Theme.zig").Theme.toRgb(c)) |rgb|
-                @import("vaxis").Cell.Color{ .rgb = rgb }
+                tui.Cell.Color{ .rgb = rgb }
             else
                 .default
         else
@@ -66,14 +66,14 @@ pub const StatusBar = struct {
 
         const fg_color = if (theme.code_block.fg) |c|
             if (@import("../render/Theme.zig").Theme.toRgb(c)) |rgb|
-                @import("vaxis").Cell.Color{ .rgb = rgb }
+                tui.Cell.Color{ .rgb = rgb }
             else
                 .default
         else
             .default;
 
         for (0..win.width) |col| {
-            _ = win.writeCell(@intCast(col), @intCast(row), .{
+            win.writeCell(@intCast(col), @intCast(row), .{
                 .char = .{ .grapheme = " " },
                 .style = .{
                     .fg = fg_color,
@@ -85,7 +85,7 @@ pub const StatusBar = struct {
         // Draw status text
         for (status, 0..) |char, col| {
             if (col >= win.width) break;
-            _ = win.writeCell(@intCast(col), @intCast(row), .{
+            win.writeCell(@intCast(col), @intCast(row), .{
                 .char = .{ .grapheme = &[_]u8{char} },
                 .style = .{
                     .fg = fg_color,

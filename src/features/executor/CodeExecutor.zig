@@ -123,15 +123,16 @@ pub const CodeExecutor = struct {
         const stdout_pipe = try std.posix.pipe();
         const stderr_pipe = try std.posix.pipe();
 
-        errdefer {
+        // Fork and execute
+        const pid_result = std.posix.fork();
+        const pid = pid_result catch |err| {
+            // Fork failed — close all pipe fds
             std.posix.close(stdout_pipe[0]);
             std.posix.close(stdout_pipe[1]);
             std.posix.close(stderr_pipe[0]);
             std.posix.close(stderr_pipe[1]);
-        }
-
-        // Fork and execute
-        const pid = try std.posix.fork();
+            return err;
+        };
 
         if (pid == 0) {
             // Child process
@@ -162,9 +163,12 @@ pub const CodeExecutor = struct {
             std.process.exit(127);
         }
 
-        // Parent process
+        // Parent process — close write ends (child uses these)
         std.posix.close(stdout_pipe[1]);
         std.posix.close(stderr_pipe[1]);
+        // Read ends still open; ensure they are closed on all paths
+        defer std.posix.close(stdout_pipe[0]);
+        defer std.posix.close(stderr_pipe[0]);
 
         // Read output with timeout
         var stdout_buf: std.ArrayList(u8) = .empty;
@@ -173,11 +177,15 @@ pub const CodeExecutor = struct {
         defer stderr_buf.deinit(self.allocator);
 
         var killed = false;
+        var child_exited = false;
         var exit_code: u32 = 0;
+
+        // Stack buffer for reads (avoid per-iteration heap alloc)
+        var buf: [4096]u8 = undefined;
 
         if (self.config.timeout_seconds > 0) {
             // Use poll with timeout
-            const timeout_ms = self.config.timeout_seconds * 1000;
+            const timeout_ms: u64 = @as(u64, self.config.timeout_seconds) * 1000;
             var elapsed: u64 = 0;
             const poll_interval: u64 = 100; // 100ms
 
@@ -191,43 +199,52 @@ pub const CodeExecutor = struct {
 
                 if (ready > 0) {
                     if (poll_fds[0].revents & std.posix.POLL.IN != 0) {
-                        const buf = try self.allocator.alloc(u8, 4096);
-                        defer self.allocator.free(buf);
-                        const n = std.posix.read(stdout_pipe[0], buf) catch 0;
+                        const n = std.posix.read(stdout_pipe[0], &buf) catch 0;
                         if (n > 0) {
                             try stdout_buf.appendSlice(self.allocator, buf[0..n]);
                         }
                     }
 
                     if (poll_fds[1].revents & std.posix.POLL.IN != 0) {
-                        const buf = try self.allocator.alloc(u8, 4096);
-                        defer self.allocator.free(buf);
-                        const n = std.posix.read(stderr_pipe[0], buf) catch 0;
+                        const n = std.posix.read(stderr_pipe[0], &buf) catch 0;
                         if (n > 0) {
                             try stderr_buf.appendSlice(self.allocator, buf[0..n]);
                         }
                     }
                 }
 
-                // Check if child exited
+                // Check if child exited (pid != 0 means child state changed)
                 const wait_result = std.posix.waitpid(pid, std.posix.W.NOHANG);
-                if (wait_result.status != 0) {
+                if (wait_result.pid != 0) {
                     exit_code = wait_result.status;
+                    child_exited = true;
                     break;
                 }
 
                 elapsed += poll_interval;
             }
 
-            if (elapsed >= timeout_ms and exit_code == -1) {
-                // Kill the process
+            if (!child_exited) {
+                // Timeout — kill the process
                 std.posix.kill(pid, std.posix.SIG.TERM) catch {};
                 std.Thread.sleep(100 * std.time.ns_per_ms);
                 std.posix.kill(pid, std.posix.SIG.KILL) catch {};
                 killed = true;
 
-                // Wait for child
+                // Reap the child
                 _ = std.posix.waitpid(pid, 0);
+            }
+
+            // Drain remaining pipe data after child exits
+            while (true) {
+                const n = std.posix.read(stdout_pipe[0], &buf) catch break;
+                if (n == 0) break;
+                try stdout_buf.appendSlice(self.allocator, buf[0..n]);
+            }
+            while (true) {
+                const n = std.posix.read(stderr_pipe[0], &buf) catch break;
+                if (n == 0) break;
+                try stderr_buf.appendSlice(self.allocator, buf[0..n]);
             }
         } else {
             // No timeout - just wait
@@ -235,7 +252,6 @@ pub const CodeExecutor = struct {
             exit_code = wait_result.status;
 
             // Read remaining output
-            var buf: [4096]u8 = undefined;
             while (true) {
                 const n = std.posix.read(stdout_pipe[0], &buf) catch break;
                 if (n == 0) break;
@@ -247,9 +263,6 @@ pub const CodeExecutor = struct {
                 try stderr_buf.appendSlice(self.allocator, buf[0..n]);
             }
         }
-
-        std.posix.close(stdout_pipe[0]);
-        std.posix.close(stderr_pipe[0]);
 
         const end_time = std.time.milliTimestamp();
 

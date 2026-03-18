@@ -1,6 +1,6 @@
 //! Widget for displaying code execution status and results
 const std = @import("std");
-const vaxis = @import("vaxis");
+const tui = @import("../tui/root.zig");
 const ExecutionResult = @import("../features/executor/root.zig").ExecutionResult;
 const ExecutionOutputWidget = @import("../features/executor/root.zig").ExecutionOutputWidget;
 
@@ -179,7 +179,7 @@ pub const ExecutionWidget = struct {
     }
 
     /// Draw the execution widget
-    pub fn draw(self: Self, win: vaxis.Window, theme: anytype) void {
+    pub fn draw(self: Self, win: tui.Window, theme: anytype) void {
         if (!self.visible) return;
 
         // Clear the window area
@@ -236,10 +236,9 @@ pub const ExecutionWidget = struct {
         // Draw status bar at bottom
         if (win.height > 2) {
             const status_row = win.height - 1;
-            const status = self.getStatusText() catch blk: {
-                break :blk "Error";
-            };
-            defer self.allocator.free(status);
+            const status_owned: ?[]const u8 = self.getStatusText() catch null;
+            const status = status_owned orelse "Error";
+            defer if (status_owned) |s| self.allocator.free(s);
 
             for (0..win.width) |col| {
                 win.writeCell(@intCast(col), @intCast(status_row), .{
@@ -268,7 +267,7 @@ pub const ExecutionWidget = struct {
     }
 
     /// Get style based on state
-    fn getStateStyle(self: Self, theme: anytype) vaxis.Style {
+    fn getStateStyle(self: Self, theme: anytype) tui.Style {
         const element_style = switch (self.state) {
             .idle => theme.paragraph,
             .executing => theme.accent_color,
@@ -280,9 +279,9 @@ pub const ExecutionWidget = struct {
         return elementStyleToVaxis(element_style);
     }
 
-    /// Convert ElementStyle to vaxis.Style
-    fn elementStyleToVaxis(es: @import("../render/Theme.zig").ElementStyle) vaxis.Style {
-        var style: vaxis.Style = .{};
+    /// Convert ElementStyle to tui.Style
+    fn elementStyleToVaxis(es: @import("../render/Theme.zig").ElementStyle) tui.Style {
+        var style: tui.Style = .{};
         if (es.fg) |fg| {
             if (@import("../render/Theme.zig").Theme.toRgb(fg)) |rgb| {
                 style.fg = .{ .rgb = rgb };

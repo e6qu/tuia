@@ -1,6 +1,6 @@
 //! Key bindings configuration for presentation navigation
 const std = @import("std");
-const vaxis = @import("vaxis");
+const tui = @import("../tui/root.zig");
 
 /// Available actions in the presentation
 pub const Action = enum {
@@ -19,7 +19,7 @@ pub const Action = enum {
 
 /// Key binding definition
 pub const KeyBinding = struct {
-    key: vaxis.Key,
+    key: tui.Key,
     action: Action,
     description: []const u8,
 };
@@ -58,12 +58,12 @@ pub const KeyBindings = struct {
         try self.bind(.{ .codepoint = 'k', .mods = .{} }, .prev_slide, "Previous slide");
         try self.bind(.{ .codepoint = 'l', .mods = .{} }, .next_slide, "Next slide");
         try self.bind(.{ .codepoint = 'h', .mods = .{} }, .prev_slide, "Previous slide");
-        try self.bind(.{ .codepoint = vaxis.Key.right, .mods = .{} }, .next_slide, "Next slide");
-        try self.bind(.{ .codepoint = vaxis.Key.left, .mods = .{} }, .prev_slide, "Previous slide");
-        try self.bind(.{ .codepoint = vaxis.Key.down, .mods = .{} }, .next_slide, "Next slide");
-        try self.bind(.{ .codepoint = vaxis.Key.up, .mods = .{} }, .prev_slide, "Previous slide");
+        try self.bind(.{ .codepoint = tui.Key.right, .mods = .{} }, .next_slide, "Next slide");
+        try self.bind(.{ .codepoint = tui.Key.left, .mods = .{} }, .prev_slide, "Previous slide");
+        try self.bind(.{ .codepoint = tui.Key.down, .mods = .{} }, .next_slide, "Next slide");
+        try self.bind(.{ .codepoint = tui.Key.up, .mods = .{} }, .prev_slide, "Previous slide");
         try self.bind(.{ .codepoint = ' ', .mods = .{} }, .next_slide, "Next slide");
-        try self.bind(.{ .codepoint = vaxis.Key.backspace, .mods = .{} }, .prev_slide, "Previous slide");
+        try self.bind(.{ .codepoint = tui.Key.backspace, .mods = .{} }, .prev_slide, "Previous slide");
 
         // Jump to slide
         try self.bind(.{ .codepoint = 'g', .mods = .{} }, .first_slide, "First slide");
@@ -80,7 +80,7 @@ pub const KeyBindings = struct {
 
         // UI toggles
         try self.bind(.{ .codepoint = '?', .mods = .{} }, .toggle_help, "Toggle help");
-        try self.bind(.{ .codepoint = vaxis.Key.f1, .mods = .{} }, .toggle_help, "Toggle help");
+        try self.bind(.{ .codepoint = tui.Key.f1, .mods = .{} }, .toggle_help, "Toggle help");
         try self.bind(.{ .codepoint = 'o', .mods = .{} }, .toggle_overview, "Toggle overview");
 
         // Code execution
@@ -89,11 +89,11 @@ pub const KeyBindings = struct {
 
         // Quit
         try self.bind(.{ .codepoint = 'q', .mods = .{} }, .quit, "Quit");
-        try self.bind(.{ .codepoint = vaxis.Key.escape, .mods = .{} }, .quit, "Quit");
+        try self.bind(.{ .codepoint = tui.Key.escape, .mods = .{} }, .quit, "Quit");
     }
 
     /// Add a key binding
-    pub fn bind(self: *Self, key: vaxis.Key, action: Action, description: []const u8) !void {
+    pub fn bind(self: *Self, key: tui.Key, action: Action, description: []const u8) !void {
         try self.bindings.append(self.allocator, .{
             .key = key,
             .action = action,
@@ -102,7 +102,7 @@ pub const KeyBindings = struct {
     }
 
     /// Lookup action for a key event
-    pub fn lookup(self: Self, key_event: vaxis.Key) Action {
+    pub fn lookup(self: Self, key_event: tui.Key) Action {
         for (self.bindings.items) |binding| {
             if (keysEqual(binding.key, key_event)) {
                 return binding.action;
@@ -112,7 +112,7 @@ pub const KeyBindings = struct {
     }
 
     /// Check if two keys are equal
-    fn keysEqual(a: vaxis.Key, b: vaxis.Key) bool {
+    fn keysEqual(a: tui.Key, b: tui.Key) bool {
         // Compare codepoint
         if (a.codepoint != b.codepoint) return false;
         if (a.mods.shift != b.mods.shift) return false;
@@ -166,8 +166,8 @@ test "KeyBindings defaults" {
     // Test navigation keys
     try testing.expectEqual(Action.next_slide, bindings.lookup(.{ .codepoint = 'j', .mods = .{} }));
     try testing.expectEqual(Action.prev_slide, bindings.lookup(.{ .codepoint = 'k', .mods = .{} }));
-    try testing.expectEqual(Action.next_slide, bindings.lookup(.{ .codepoint = vaxis.Key.right, .mods = .{} }));
-    try testing.expectEqual(Action.prev_slide, bindings.lookup(.{ .codepoint = vaxis.Key.left, .mods = .{} }));
+    try testing.expectEqual(Action.next_slide, bindings.lookup(.{ .codepoint = tui.Key.right, .mods = .{} }));
+    try testing.expectEqual(Action.prev_slide, bindings.lookup(.{ .codepoint = tui.Key.left, .mods = .{} }));
 
     // Test slide jumping
     try testing.expectEqual(Action.first_slide, bindings.lookup(.{ .codepoint = 'g', .mods = .{} }));
@@ -179,7 +179,7 @@ test "KeyBindings defaults" {
 
     // Test quit
     try testing.expectEqual(Action.quit, bindings.lookup(.{ .codepoint = 'q', .mods = .{} }));
-    try testing.expectEqual(Action.quit, bindings.lookup(.{ .codepoint = vaxis.Key.escape, .mods = .{} }));
+    try testing.expectEqual(Action.quit, bindings.lookup(.{ .codepoint = tui.Key.escape, .mods = .{} }));
 
     // Test unbound key
     try testing.expectEqual(Action.none, bindings.lookup(.{ .codepoint = 'z', .mods = .{} }));

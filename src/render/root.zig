@@ -8,5 +8,7 @@ pub const LayoutConfig = @import("Renderer.zig").LayoutConfig;
 pub const ContentArea = @import("Renderer.zig").ContentArea;
 
 test {
-    std.testing.refAllDecls(@This());
+    _ = @import("Theme.zig");
+    _ = @import("ThemeLoader.zig");
+    _ = @import("Renderer.zig");
 }

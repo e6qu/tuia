@@ -1,6 +1,6 @@
 //! Slide transition interface and types
 const std = @import("std");
-const vaxis = @import("vaxis");
+const tui = @import("../../tui/root.zig");
 
 /// Types of slide transitions
 pub const TransitionType = enum {
@@ -146,14 +146,14 @@ pub const TransitionConfig = struct {
 pub const CellBuffer = struct {
     width: usize,
     height: usize,
-    cells: []vaxis.Cell,
+    cells: []tui.Cell,
 
     const Self = @This();
 
     /// Initialize cell buffer
     pub fn init(allocator: std.mem.Allocator, width: usize, height: usize) !Self {
-        const cells = try allocator.alloc(vaxis.Cell, width * height);
-        @memset(cells, vaxis.Cell{});
+        const cells = try allocator.alloc(tui.Cell, width * height);
+        @memset(cells, tui.Cell{});
         return .{
             .width = width,
             .height = height,
@@ -167,24 +167,24 @@ pub const CellBuffer = struct {
     }
 
     /// Get cell at position
-    pub fn getCell(self: Self, x: usize, y: usize) ?vaxis.Cell {
+    pub fn getCell(self: Self, x: usize, y: usize) ?tui.Cell {
         if (x >= self.width or y >= self.height) return null;
         return self.cells[y * self.width + x];
     }
 
     /// Set cell at position
-    pub fn setCell(self: *Self, x: usize, y: usize, cell: vaxis.Cell) void {
+    pub fn setCell(self: *Self, x: usize, y: usize, cell: tui.Cell) void {
         if (x >= self.width or y >= self.height) return;
         self.cells[y * self.width + x] = cell;
     }
 
     /// Clear buffer
     pub fn clear(self: *Self) void {
-        @memset(self.cells, vaxis.Cell{});
+        @memset(self.cells, tui.Cell{});
     }
 
     /// Capture window contents
-    pub fn captureFromWindow(self: *Self, win: vaxis.Window) void {
+    pub fn captureFromWindow(self: *Self, win: tui.Window) void {
         const w = @min(self.width, win.width);
         const h = @min(self.height, win.height);
 
@@ -479,7 +479,7 @@ test "CellBuffer operations" {
     try testing.expectEqual(@as(usize, 5), buffer.height);
 
     // Test get/set
-    const cell = vaxis.Cell{
+    const cell = tui.Cell{
         .char = .{ .grapheme = "X" },
     };
     buffer.setCell(5, 2, cell);

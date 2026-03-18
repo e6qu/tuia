@@ -1,7 +1,8 @@
 //! Main application state and event loop
 const std = @import("std");
 const builtin = @import("builtin");
-const vaxis = @import("vaxis");
+const tui = @import("tui/root.zig");
+const Terminal = @import("tui/Terminal.zig").Terminal;
 
 const core = @import("core/root.zig");
 const parser_module = @import("parser/root.zig");
@@ -31,12 +32,6 @@ const Theme = render.Theme.Theme;
 const darkTheme = render.Theme.darkTheme;
 const lightTheme = render.Theme.lightTheme;
 
-const Event = union(enum) {
-    key: vaxis.Key,
-    winsize: vaxis.Winsize,
-    signal: Signal,
-};
-
 const Signal = enum {
     sigint,
     sigterm,
@@ -45,10 +40,7 @@ const Signal = enum {
 /// App manages the presentation application state and event loop
 pub const App = struct {
     allocator: std.mem.Allocator,
-    tty_buffer: ?*align(@alignOf([4096]u8)) [4096]u8 = null,
-    tty: vaxis.Tty,
-    vx: vaxis.Vaxis,
-    loop: vaxis.Loop(Event),
+    terminal: Terminal,
 
     presentation: ?Presentation = null,
     navigation: ?Navigation = null,
@@ -79,24 +71,12 @@ pub const App = struct {
     const Self = @This();
 
     pub fn init(allocator: std.mem.Allocator) !Self {
-        const tty_buffer = try allocator.create([4096]u8);
-        errdefer allocator.destroy(tty_buffer);
-        var tty = try vaxis.Tty.init(tty_buffer[0..]);
-
-        var vx = try vaxis.init(allocator, .{});
-
-        var loop: vaxis.Loop(Event) = .{
-            .tty = &tty,
-            .vaxis = &vx,
-        };
-        try loop.init();
+        var terminal = try Terminal.init(allocator);
+        errdefer terminal.deinit();
 
         return .{
             .allocator = allocator,
-            .tty_buffer = tty_buffer,
-            .tty = tty,
-            .vx = vx,
-            .loop = loop,
+            .terminal = terminal,
             .input_handler = InputHandler.init(allocator),
             .execution_widget = ExecutionWidget.init(allocator),
             .help_widget = HelpWidget.init(allocator),
@@ -134,12 +114,8 @@ pub const App = struct {
             ce.deinit();
         }
         self.input_handler.deinit();
-        self.loop.stop();
-        self.vx.deinit(self.allocator, self.tty.writer());
-        self.tty.deinit();
-        if (self.tty_buffer) |buf| {
-            self.allocator.destroy(buf);
-        }
+        self.terminal.stop();
+        self.terminal.deinit();
     }
 
     /// Load a presentation from a file
@@ -185,71 +161,32 @@ pub const App = struct {
 
     /// Run the main event loop
     pub fn run(self: *Self) !void {
-        // Set up signal handlers for graceful shutdown (POSIX only)
-        if (builtin.os.tag != .windows) {
-            const sigint_action = std.posix.Sigaction{
-                .handler = .{ .handler = handleSigInt },
-                .mask = switch (builtin.os.tag) {
-                    .macos => 0,
-                    else => std.posix.sigemptyset(),
-                },
-                .flags = 0,
-            };
-            std.posix.sigaction(std.posix.SIG.INT, &sigint_action, null);
+        try self.terminal.enterAltScreen();
+        self.terminal.queryTerminal();
 
-            const sigterm_action = std.posix.Sigaction{
-                .handler = .{ .handler = handleSigTerm },
-                .mask = switch (builtin.os.tag) {
-                    .macos => 0,
-                    else => std.posix.sigemptyset(),
-                },
-                .flags = 0,
-            };
-            std.posix.sigaction(std.posix.SIG.TERM, &sigterm_action, null);
-        }
-        try self.vx.enterAltScreen(self.tty.writer());
-        try self.vx.queryTerminal(self.tty.writer(), 1 * std.time.ns_per_s);
-
-        try self.loop.start();
+        try self.terminal.start();
 
         while (self.running) {
-            const event = self.loop.nextEvent();
+            const event = self.terminal.nextEvent();
             try self.handleEvent(event);
             try self.render();
         }
     }
 
-    fn handleSigInt(_: c_int) callconv(.c) void {
-        // Signal handler - just set a flag that will be checked
-        // Note: In a real implementation, we'd use a self-pipe or eventfd
-        // to notify the main loop. For now, we'll rely on Ctrl+C key event.
-    }
-
-    fn handleSigTerm(_: c_int) callconv(.c) void {
-        // Same as SIGINT
-    }
-
     /// Handle an event
-    fn handleEvent(self: *Self, event: Event) !void {
+    fn handleEvent(self: *Self, event: tui.Event) !void {
         switch (event) {
             .key => |key| {
                 try self.handleKey(key);
             },
             .winsize => |ws| {
-                try self.vx.resize(self.allocator, self.tty.writer(), ws);
-            },
-            .signal => |sig| {
-                switch (sig) {
-                    .sigint, .sigterm => {
-                        self.running = false;
-                    },
-                }
+                self.terminal.resize(ws);
             },
         }
     }
 
     /// Handle a key press
-    fn handleKey(self: *Self, key: vaxis.Key) !void {
+    fn handleKey(self: *Self, key: tui.Key) !void {
         // Handle config editor mode
         if (self.show_config_editor) {
             if (self.config_editor) |*ce| {
@@ -281,19 +218,19 @@ pub const App = struct {
         // Handle laser pointer movement
         if (self.overlay.isLaserMode()) {
             switch (key.codepoint) {
-                'h', vaxis.Key.left => {
+                'h', tui.Key.left => {
                     self.overlay.moveLaser(-1, 0, 80, 24);
                     return;
                 },
-                'j', vaxis.Key.down => {
+                'j', tui.Key.down => {
                     self.overlay.moveLaser(0, 1, 80, 24);
                     return;
                 },
-                'k', vaxis.Key.up => {
+                'k', tui.Key.up => {
                     self.overlay.moveLaser(0, -1, 80, 24);
                     return;
                 },
-                'l', vaxis.Key.right => {
+                'l', tui.Key.right => {
                     self.overlay.moveLaser(1, 0, 80, 24);
                     return;
                 },
@@ -339,11 +276,11 @@ pub const App = struct {
         // Theme selection in picker mode
         if (self.overlay.show_theme_picker) {
             switch (key.codepoint) {
-                'j', vaxis.Key.down => {
+                'j', tui.Key.down => {
                     self.overlay.nextTheme();
                     return;
                 },
-                'k', vaxis.Key.up => {
+                'k', tui.Key.up => {
                     self.overlay.prevTheme();
                     return;
                 },
@@ -373,7 +310,7 @@ pub const App = struct {
 
         // Capture current slide for transition BEFORE navigation
         if (will_change_slide and self.transition_manager.config.enabled) {
-            const win = self.vx.window();
+            const win = self.terminal.window();
             // Render current state to capture "from" slide
             try self.renderer.render(
                 win,
@@ -397,8 +334,6 @@ pub const App = struct {
         }
 
         // Check if code execution was requested
-        // This is a bit hacky - we need a better way to signal this
-        // For now, check if 'e' was pressed and we're not in jump mode
         if (key.codepoint == 'e' and !self.input_handler.isInJumpMode()) {
             try self.executeCurrentCodeBlock();
         }
@@ -412,7 +347,9 @@ pub const App = struct {
         if (key.codepoint == 'T' and !self.input_handler.isInJumpMode()) {
             self.transition_manager.toggleEnabled();
             const status = if (self.transition_manager.config.enabled) "enabled" else "disabled";
-            try nav.setMessage(self.allocator, try std.fmt.allocPrint(self.allocator, "Transitions {s}", .{status}), 60);
+            const msg = try std.fmt.allocPrint(self.allocator, "Transitions {s}", .{status});
+            defer self.allocator.free(msg);
+            try nav.setMessage(self.allocator, msg, 60);
         }
 
         // Toggle remote control with 'R'
@@ -423,7 +360,9 @@ pub const App = struct {
                 try nav.setMessage(self.allocator, "Remote control disabled", 60);
             } else {
                 self.remote_server.start(nav) catch |err| {
-                    try nav.setMessage(self.allocator, try std.fmt.allocPrint(self.allocator, "Remote error: {s}", .{@errorName(err)}), 120);
+                    const err_msg = try std.fmt.allocPrint(self.allocator, "Remote error: {s}", .{@errorName(err)});
+                    defer self.allocator.free(err_msg);
+                    try nav.setMessage(self.allocator, err_msg, 120);
                     return;
                 };
                 self.remote_enabled = true;
@@ -433,8 +372,6 @@ pub const App = struct {
 
         // Media controls
         if (key.codepoint == 'm' and !self.input_handler.isInJumpMode()) {
-            // Play sample media (for testing)
-            // In real use, this would be triggered by media elements in slides
             try nav.setMessage(self.allocator, "Media: Press 'M' to toggle playback", 60);
         }
 
@@ -446,23 +383,23 @@ pub const App = struct {
     }
 
     /// Check if a key press will change the current slide
-    fn willChangeSlide(self: *Self, key: vaxis.Key, nav: *Navigation) bool {
+    fn willChangeSlide(self: *Self, key: tui.Key, nav: *Navigation) bool {
         _ = self;
         return switch (key.codepoint) {
-            'j', 'k', 'g', 'G', vaxis.Key.space, vaxis.Key.backspace, vaxis.Key.left, vaxis.Key.right, vaxis.Key.up, vaxis.Key.down => !nav.show_help and !nav.show_overview,
+            'j', 'k', 'g', 'G', tui.Key.space, tui.Key.backspace, tui.Key.left, tui.Key.right, tui.Key.up, tui.Key.down => !nav.show_help and !nav.show_overview,
             else => false,
         };
     }
 
     /// Get the next slide index based on key press
-    fn getNextSlideIndex(self: *Self, key: vaxis.Key, nav: *Navigation) usize {
+    fn getNextSlideIndex(self: *Self, key: tui.Key, nav: *Navigation) usize {
         _ = self;
         const total = nav.total_slides;
         const current = nav.current_slide;
 
         return switch (key.codepoint) {
-            'j', vaxis.Key.down, vaxis.Key.right, vaxis.Key.space => if (current < total - 1) current + 1 else current,
-            'k', vaxis.Key.up, vaxis.Key.left, vaxis.Key.backspace => if (current > 0) current - 1 else current,
+            'j', tui.Key.down, tui.Key.right, tui.Key.space => if (current < total - 1) current + 1 else current,
+            'k', tui.Key.up, tui.Key.left, tui.Key.backspace => if (current > 0) current - 1 else current,
             'g' => 0,
             'G' => if (total > 0) total - 1 else 0,
             else => current,
@@ -525,7 +462,7 @@ pub const App = struct {
 
     /// Render the UI using the Renderer
     fn render(self: *Self) !void {
-        const win = self.vx.window();
+        const win = self.terminal.window();
 
         // Update transition manager
         const transition_just_completed = self.transition_manager.update();
@@ -557,7 +494,6 @@ pub const App = struct {
             );
 
             // Capture the "to" slide if we haven't yet
-            // We check if the first cell has any content to determine if we've captured
             if (self.transition_manager.to_buffer) |to_buf| {
                 // Skip if buffer is empty (e.g., zero window dimensions)
                 if (to_buf.cells.len == 0) return;
@@ -585,7 +521,7 @@ pub const App = struct {
         if (self.presentation != null and self.navigation != null) {
             // Get slide dimensions (approximate)
             const slide_width = win.width;
-            const slide_height = win.height - 2; // Account for status bar
+            const slide_height = if (win.height > 2) win.height - 2 else win.height; // Account for status bar
 
             self.overlay.draw(win, slide_width, slide_height);
         }
@@ -597,7 +533,7 @@ pub const App = struct {
             }
         }
 
-        try self.vx.render(self.tty.writer());
+        try self.terminal.render();
     }
 };
 
@@ -608,13 +544,27 @@ test "App initialization" {
     // Can't fully test App without TTY, but we can test the struct
     var app = App{
         .allocator = allocator,
-        .tty = undefined,
-        .vx = undefined,
-        .loop = undefined,
+        .terminal = undefined,
         .input_handler = InputHandler.init(allocator),
         .execution_widget = ExecutionWidget.init(allocator),
+        .help_widget = HelpWidget.init(allocator),
+        .overlay = PresentationOverlay.init(allocator),
+        .transition_manager = transitions.TransitionManager.init(allocator),
+        .remote_server = features.remote.RemoteServer.init(allocator, 8765),
+        .remote_enabled = false,
+        .media_player = features.media.MediaPlayer.init(allocator),
+        .config_editor = null,
+        .show_config_editor = false,
+        .renderer = Renderer.init(allocator),
+        .current_theme = darkTheme(),
     };
 
     app.input_handler.deinit();
     app.execution_widget.deinit();
+    app.help_widget.deinit();
+    app.overlay.deinit();
+    app.transition_manager.deinit();
+    app.remote_server.stop();
+    app.media_player.deinit();
+    app.renderer.deinit();
 }

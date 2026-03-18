@@ -251,8 +251,8 @@ fn convertBlockquoteContent(allocator: std.mem.Allocator, bq: AST.Blockquote, li
         switch (elem) {
             .paragraph => |p| {
                 const inlines = try convertInlines(allocator, p.content, link_refs);
-                errdefer allocator.free(inlines);
                 try result.appendSlice(allocator, inlines);
+                allocator.free(inlines); // Free the temporary slice after copying
                 // Add space between paragraphs
                 try result.append(allocator, .{ .text = try allocator.dupe(u8, " ") });
             },
@@ -418,8 +418,10 @@ test "convert simple presentation" {
     // Verify
     try std.testing.expectEqual(@as(usize, 1), core_pres.slides.len);
     try std.testing.expectEqual(@as(usize, 2), core_pres.slides[0].elements.len);
-    try std.testing.expectEqualStrings("Test Slide", core_pres.slides[0].elements[0].heading.text);
-    try std.testing.expectEqualStrings("This is a test paragraph.", core_pres.slides[0].elements[1].paragraph.text);
+    const heading_text = @import("../core/Element.zig").extractFirstText(core_pres.slides[0].elements[0].heading.content);
+    try std.testing.expectEqualStrings("Test Slide", heading_text.?);
+    const para_text = @import("../core/Element.zig").extractFirstText(core_pres.slides[0].elements[1].paragraph.content);
+    try std.testing.expectEqualStrings("This is a test paragraph.", para_text.?);
 }
 
 test "convert presentation with metadata" {

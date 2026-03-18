@@ -79,9 +79,10 @@ pub const ImageLoader = struct {
     }
 
     /// Load image from file path
-    pub fn loadFromFile(self: *Self, path: []const u8) !Image {
+    /// Returns a borrowed Image. The ImageLoader owns the data — do NOT call deinit on the result.
+    pub fn loadFromFile(self: *Self, path: []const u8) !*const Image {
         // Check cache first
-        if (self.cache.get(path)) |cached| {
+        if (self.cache.getPtr(path)) |cached| {
             return cached;
         }
 
@@ -101,7 +102,7 @@ pub const ImageLoader = struct {
         errdefer self.allocator.free(path_copy);
         try self.cache.put(path_copy, image);
 
-        return image;
+        return self.cache.getPtr(path).?;
     }
 
     /// Load image from memory
