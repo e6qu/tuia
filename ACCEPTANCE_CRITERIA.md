@@ -1,6 +1,6 @@
 # Acceptance Criteria
 
-> Standard acceptance criteria for all tasks in the ZIGPRESENTERM project.
+> Standard acceptance criteria for all tasks in the TUIA project.
 
 ## Global Acceptance Criteria
 
@@ -321,4 +321,4 @@ gitleaks detect
 ---
 
 *Version: 1.0*  
-*Applies to: All ZIGPRESENTERM tasks*
+*Applies to: All TUIA tasks*

@@ -1,159 +1,84 @@
 # Testing TUIA
 
-TUIA has a comprehensive testing strategy including unit tests, integration tests, and end-to-end (E2E) tests.
+TUIA has three levels of testing: unit tests, integration tests, and TUI tests.
 
 ## Test Types
 
 ### 1. Unit Tests
 
-Unit tests are embedded in source files and run with `zig build test`.
+Unit tests are embedded in source files and test individual functions.
 
 ```bash
-# Run all unit tests
-zig build test
-
-# Run tests for a specific file
-zig test src/parser/Parser.zig
+zig build unit_test
 ```
 
 ### 2. Integration Tests
 
-Integration tests are in the `tests/` directory and test module interactions.
+Integration tests are in `tests/` and test cross-module interactions (parser + converter + exporters).
 
 ```bash
-# Run integration tests
-zig build test
+zig build integration_test
 ```
 
-### 3. End-to-End Tests
+### 3. TUI Tests
 
-E2E tests use [Microsoft TUI Test](https://github.com/microsoft/tui-test) to test the actual terminal UI.
+TUI tests use `expect` to drive the real terminal UI through a pty. They test startup, navigation, key handling, error cases, and export via CLI.
 
 ```bash
-cd e2e
-npm install
-npm test
+# Requires: expect (usually pre-installed on macOS/Linux)
+expect scripts/test_tui.exp
 ```
 
-## Snapshot Testing
+The `TUIA_TTY_FD` environment variable is set by the test script so that tuia reads input from the pty instead of `/dev/tty`.
 
-### Zig Snapshot Testing
+**25 tests** covering:
+- Startup and quit (q, Ctrl-C)
+- Navigation (j/k, arrows, space/backspace, g/G, number keys)
+- Help toggle, rapid keystrokes, slide traversal
+- Error handling (nonexistent file, unknown export format)
+- All example files load without crash
+- Small/wide terminal sizes
+- CLI export (HTML, Reveal.js, Beamer, PDF)
 
-The Zig codebase includes snapshot testing utilities:
+## Pre-commit Hooks
 
-```zig
-const tuia = @import("tuia");
-
-// In your test
-test "render output matches snapshot" {
-    const output = try renderSomething(allocator);
-    defer allocator.free(output);
-    
-    try tuia.test_utils.Snapshot.expectEqual(
-        allocator,
-        output,
-        "render_test.snap",
-        .{},
-    );
-}
-```
-
-Update snapshots:
-```bash
-ZIG_UPDATE_SNAPSHOTS=1 zig build test
-```
-
-### E2E Snapshot Testing
-
-The E2E tests also use snapshot testing for visual regression:
+Pre-commit hooks run `zig fmt`, lint, and unit tests automatically on every commit.
 
 ```bash
-cd e2e
-npm test -- --update-snapshots
-```
+# Install (one-time)
+pre-commit install
 
-Snapshots are stored in:
-- `e2e/snapshots/` - Visual screenshots from E2E tests
-- `tests/__snapshots__/` - Text snapshots from Zig tests
-
-## Writing E2E Tests
-
-E2E tests are TypeScript files in `e2e/tests/`:
-
-```typescript
-import { test, expect } from '@microsoft/tui-test';
-
-test('navigation works', async ({ terminal }) => {
-  // Start TUIA
-  await terminal.spawn('tuia', ['presentation.md']);
-  
-  // Wait for content
-  await expect(terminal.getByText('Slide 1')).toBeVisible();
-  
-  // Interact
-  terminal.write('j');
-  
-  // Assert
-  await expect(terminal.getByText('Slide 2')).toBeVisible();
-  
-  // Screenshot for visual regression
-  const screenshot = await terminal.screenshot();
-  await expect(screenshot).toMatchSnapshot('slide-2.png');
-});
+# Run manually
+pre-commit run --all-files
 ```
 
 ## Test Fixtures
 
 Test fixtures are in `tests/fixtures/`:
 
-- `fixtures/*.md` - Sample presentations
-- `fixtures/golden/*.txt` - Golden files for comparison
-
-Create fixtures programmatically:
-
-```typescript
-import { createTestPresentation } from './fixtures.js';
-
-const path = createTestPresentation('test', '# Hello\n\nWorld');
-```
+- `export_test_basic.md` — HTML export
+- `export_test_elements.md` — Reveal.js export with all element types
+- `export_test_latex.md` — Beamer/LaTeX export
+- `export_test_special_chars.md` — LaTeX character escaping
+- `export_test_table.md` — Table rendering
+- `export_test_image.md` — Image handling
+- `export_test_pdf.md` — PDF export
+- `export_test_multi_format.md` — Round-trip across all formats
 
 ## CI Testing
 
 Tests run automatically in GitHub Actions:
 
-- **Unit/Integration Tests**: Run on every PR
-- **E2E Tests**: Run on Ubuntu and macOS with bash and zsh
-- **Snapshot Updates**: Can be triggered manually
+- **Unit/Integration Tests**: Run on every PR (Ubuntu + macOS)
+- **TUI Tests**: Run via `expect` on Linux
+- **Format Check**: `zig fmt --check`
+- **Lint**: Build with no warnings
+- **Cross-compilation**: x86_64-linux, aarch64-linux, x86_64-macos, aarch64-macos
 
-### Debugging CI Failures
+## Platform Support
 
-1. Download test results artifact from GitHub Actions
-2. View HTML report in `test-results/html-report/`
-3. Check traces in `test-results/traces/`
+TUIA requires a POSIX system (Linux or macOS). Windows is not supported — the terminal layer uses `/dev/tty`, termios, ioctl, and SIGWINCH.
 
-## Best Practices
+---
 
-1. **Unit tests**: Test pure functions, avoid I/O
-2. **Integration tests**: Test module interactions
-3. **E2E tests**: Test critical user journeys
-4. **Snapshots**: Update intentionally, review carefully
-5. **Fixtures**: Keep minimal but realistic
-6. **Timeouts**: Use explicit waits, not fixed delays
-
-## Troubleshooting
-
-### Flaky Tests
-
-If E2E tests are flaky:
-- Increase timeout values
-- Add explicit wait conditions
-- Use `await terminal.waitForIdle()`
-- Check for race conditions
-
-### Snapshot Mismatches
-
-If snapshots don't match:
-1. Run locally with same terminal size (80x24)
-2. Check for timing issues
-3. Review visual differences carefully
-4. Update only if changes are intentional
+*Last updated: 2026-03-19*

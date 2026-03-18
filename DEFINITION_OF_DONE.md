@@ -1,6 +1,6 @@
 # Definition of Done
 
-> The Definition of Done (DoD) defines the exit criteria for all tasks in the ZIGPRESENTERM project.
+> The Definition of Done (DoD) defines the exit criteria for all tasks in the TUIA project.
 
 ## Universal Definition of Done
 
@@ -239,4 +239,4 @@ This DoD may be updated as the project matures. Proposed changes:
 
 *Version: 1.0*  
 *Last Updated: 2026-03-01*  
-*Applies to: All ZIGPRESENTERM tasks from Milestone 1 onwards*
+*Applies to: All TUIA tasks from Milestone 1 onwards*

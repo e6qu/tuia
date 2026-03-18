@@ -17,7 +17,7 @@
 - 🖼️ **Images** - Kitty, iTerm2, Sixel, and ASCII art fallbacks
 - 💻 **Code Execution** - Run code snippets in 8+ languages
 - 🎯 **Syntax Highlighting** - 10+ programming languages
-- 📤 **Export** - Self-contained HTML export
+- 📤 **Export** - HTML, Reveal.js, Beamer/LaTeX, PDF
 - 🗒️ **Speaker Notes** - Hidden notes for presenters
 - ⚡ **Fast** - ~3MB binary, smooth rendering
 - 🔧 **Configurable** - YAML configuration, CLI overrides
@@ -126,7 +126,7 @@ tuia --help
 | `--loop` | Loop presentation |
 | `--auto-advance <SEC>` | Auto-advance slides |
 | `--timeout <SEC>` | Code execution timeout |
-| `-e, --export <FORMAT>` | Export to format (html) |
+| `-e, --export <FORMAT>` | Export to format (html, revealjs, beamer, pdf) |
 | `-o, --output <DIR>` | Output directory for export |
 | `--init` | Generate sample config |
 | `-h, --help` | Show help |
@@ -222,7 +222,7 @@ tuia --init > ~/.config/tuia/tuia.yaml
 | 1: Foundation | ✅ Complete | Build system, TUI, testing |
 | 2: Core | ✅ Complete | Parser, widgets, themes, highlighting |
 | 3: Features | ✅ Complete | Images, execution, export, config |
-| 4: Polish | 🔄 In Progress | Documentation, packaging |
+| 4: Polish | ✅ Complete | Documentation, packaging |
 
 See [PLAN.md](PLAN.md) for detailed roadmap.
 
@@ -248,10 +248,15 @@ zig build
 zig build run -- examples/demo.md
 
 # Run tests
-zig build test
+zig build unit_test
+zig build integration_test
 
-# Format check + tests
-zig build verify
+# Run TUI tests (requires expect)
+expect scripts/test_tui.exp
+
+# Pre-commit hooks (zig fmt, lint, unit tests)
+pre-commit install
+pre-commit run --all-files
 ```
 
 ### Project Structure
@@ -261,15 +266,18 @@ tuia/
 ├── src/
 │   ├── main.zig          # Entry point
 │   ├── cli.zig           # CLI parsing
+│   ├── tui/              # Terminal I/O (POSIX-only)
 │   ├── config/           # Configuration system
 │   ├── core/             # Data models (Slide, Presentation)
 │   ├── parser/           # Markdown parser
 │   ├── render/           # Theme & styling
 │   ├── widgets/          # UI components
-│   ├── features/         # Images, execution, export
+│   ├── export/           # HTML, Reveal.js, Beamer, PDF
+│   ├── features/         # Images, execution, transitions
 │   ├── highlight/        # Syntax highlighting
 │   └── infra/            # File watching, logging
 ├── tests/                # Test suite
+├── scripts/              # TUI tests (expect)
 ├── examples/             # Example presentations
 ├── docs/                 # Documentation
 └── themes/               # Built-in themes
@@ -281,7 +289,7 @@ tuia/
 
 - Inspired by [presenterm](https://github.com/mfontanini/presenterm)
 - Built with [Zig](https://ziglang.org/)
-- TUI powered by [libvaxis](https://github.com/rockorager/libvaxis)
+- Custom POSIX TUI layer (zero-allocation rendering)
 - Image support via [zigimg](https://github.com/zigimg/zigimg)
 
 ---
