@@ -196,9 +196,7 @@ pub const Renderer = struct {
 
         // Render help overlay if visible
         if (help_widget) |help| {
-            if (help.visible) {
-                help.draw(win, self.theme);
-            }
+            help.draw(win, self.theme);
         }
     }
 
@@ -283,11 +281,14 @@ pub const Renderer = struct {
             });
         }
 
-        // Draw slide info
-        _ = win.writeCell(0, status_row, .{
-            .char = .{ .grapheme = slide_info },
-            .style = bg_style,
-        });
+        // Draw slide info char-by-char
+        for (slide_info, 0..) |ch, i| {
+            if (i >= win.width) break;
+            win.writeCell(@intCast(i), status_row, .{
+                .char = .{ .grapheme = tui.Cell.grapheme(ch) },
+                .style = bg_style,
+            });
+        }
 
         // Draw title if available
         if (title) |t| {
@@ -295,17 +296,20 @@ pub const Renderer = struct {
             const title_display = std.fmt.bufPrint(&title_buf, " {s} ", .{t}) catch return;
 
             if (win.width > title_display.len + slide_info.len) {
-                const title_col: u16 = @intCast(slide_info.len);
-                win.writeCell(title_col, status_row, .{
-                    .char = .{ .grapheme = title_display },
-                    .style = bg_style,
-                });
+                for (title_display, 0..) |ch, i| {
+                    const col: u16 = @intCast(slide_info.len + i);
+                    if (col >= win.width) break;
+                    win.writeCell(col, status_row, .{
+                        .char = .{ .grapheme = tui.Cell.grapheme(ch) },
+                        .style = bg_style,
+                    });
+                }
             }
         }
 
         // Draw message if any
         if (nav.message) |msg| {
-            const msg_col = if (win.width > msg.len + 2)
+            const msg_col: u16 = if (win.width > msg.len + 2)
                 win.width - @as(u16, @intCast(msg.len)) - 2
             else
                 0;
@@ -325,10 +329,14 @@ pub const Renderer = struct {
                 .fg = msg_fg,
             };
 
-            win.writeCell(msg_col, status_row, .{
-                .char = .{ .grapheme = msg },
-                .style = msg_style,
-            });
+            for (msg, 0..) |ch, i| {
+                const col: u16 = msg_col + @as(u16, @intCast(i));
+                if (col >= win.width) break;
+                win.writeCell(col, status_row, .{
+                    .char = .{ .grapheme = tui.Cell.grapheme(ch) },
+                    .style = msg_style,
+                });
+            }
         }
     }
 
@@ -343,17 +351,23 @@ pub const Renderer = struct {
         win.clear();
 
         const title = presentation.metadata.title orelse "Untitled";
-        _ = win.writeCell(0, 0, .{
-            .char = .{ .grapheme = title },
-            .style = .{ .bold = true, .ul_style = .single },
-        });
+        for (title, 0..) |ch, i| {
+            if (i >= win.width) break;
+            win.writeCell(@intCast(i), 0, .{
+                .char = .{ .grapheme = tui.Cell.grapheme(ch) },
+                .style = .{ .bold = true, .ul_style = .single },
+            });
+        }
 
         var count_buf: [32]u8 = undefined;
         const slide_count = std.fmt.bufPrint(&count_buf, "Slides: {d}", .{presentation.slideCount()}) catch return;
 
-        _ = win.writeCell(0, 2, .{
-            .char = .{ .grapheme = slide_count },
-        });
+        for (slide_count, 0..) |ch, i| {
+            if (i >= win.width) break;
+            win.writeCell(@intCast(i), 2, .{
+                .char = .{ .grapheme = tui.Cell.grapheme(ch) },
+            });
+        }
     }
 };
 
