@@ -193,6 +193,7 @@ pub const Inline = union(enum) {
     text: []const u8,
     emphasis: []Inline,
     strong: []Inline,
+    strikethrough: []Inline,
     code: []const u8,
     link: Link,
     image: Image,
@@ -212,6 +213,12 @@ pub const Inline = union(enum) {
                     inline_elem.deinit(allocator);
                 }
                 allocator.free(s.*);
+            },
+            .strikethrough => |*st| {
+                for (st.*) |*inline_elem| {
+                    inline_elem.deinit(allocator);
+                }
+                allocator.free(st.*);
             },
             .code => |c| allocator.free(c),
             .link => |*l| l.deinit(allocator),

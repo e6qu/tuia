@@ -100,7 +100,7 @@ pub const Renderer = struct {
         const old_widget = self.current_slide_widget;
 
         // Create new slide widget first (deep-clones the slide to avoid double-free)
-        self.current_slide_widget = try SlideWidget.init(self.allocator, slide);
+        self.current_slide_widget = try SlideWidget.init(self.allocator, slide, self.theme);
         self.current_slide_index = index;
 
         // Only free old widget after successful creation

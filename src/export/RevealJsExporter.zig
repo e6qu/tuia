@@ -561,6 +561,11 @@ pub const RevealJsExporter = struct {
                     try self.writeInlines(writer, i);
                     try writer.writeAll("</em>");
                 },
+                .strikethrough => |st| {
+                    try writer.writeAll("<del>");
+                    try self.writeInlines(writer, st);
+                    try writer.writeAll("</del>");
+                },
                 .link => |l| {
                     try writer.writeAll("<a href=\"");
                     try writeEscapedHtml(writer, l.url);

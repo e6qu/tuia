@@ -654,6 +654,7 @@ fn parseNextInlineElement(
     // Try each inline format handler in order of priority
     if (try parseInlineCode(allocator, text, i, text_start)) |elem| return elem;
     if (try parseLineBreak(allocator, text, i, text_start)) |elem| return elem;
+    if (try parseStrikethrough(allocator, text, i, text_start)) |elem| return elem;
     if (try parseStrong(allocator, text, i, text_start)) |elem| return elem;
     if (try parseEmphasis(allocator, text, i, text_start)) |elem| return elem;
     if (try parseLinkOrImage(allocator, text, i, text_start)) |elem| return elem;
@@ -814,6 +815,44 @@ fn parseEmphasis(
     } else {
         // No closing *, treat as text
         const txt = try allocator.dupe(u8, text[emph_start - 1 .. i.*]);
+        text_start.* = i.*;
+        return .{ .text = txt };
+    }
+}
+
+/// Parse strikethrough text: ~~text~~
+fn parseStrikethrough(
+    allocator: std.mem.Allocator,
+    text: []const u8,
+    i: *usize,
+    text_start: *usize,
+) ParseError!?AST.Inline {
+    const pos = i.*;
+    if (pos + 1 >= text.len or text[pos] != '~' or text[pos + 1] != '~') return null;
+
+    // Flush pending text
+    if (pos > text_start.*) {
+        const txt = try allocator.dupe(u8, text[text_start.*..pos]);
+        text_start.* = pos;
+        return .{ .text = txt };
+    }
+
+    // Find closing ~~
+    i.* = pos + 2;
+    const strike_start = i.*;
+    while (i.* + 1 < text.len and !(text[i.*] == '~' and text[i.* + 1] == '~')) {
+        i.* += 1;
+    }
+
+    if (i.* + 1 < text.len) {
+        // Parse content recursively
+        const inner = try parseInlineContent(allocator, text[strike_start..i.*]);
+        i.* += 2; // skip closing ~~
+        text_start.* = i.*;
+        return .{ .strikethrough = inner };
+    } else {
+        // No closing ~~, treat as text
+        const txt = try allocator.dupe(u8, text[strike_start - 2 .. i.*]);
         text_start.* = i.*;
         return .{ .text = txt };
     }

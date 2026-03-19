@@ -7,11 +7,13 @@ const Widget = @import("Widget.zig").Widget;
 const WidgetFactory = @import("Widget.zig").WidgetFactory;
 const Slide = @import("../core/Slide.zig").Slide;
 const Inline = @import("../core/Element.zig").Inline;
+const Theme = @import("../render/Theme.zig").Theme;
 
 /// SlideWidget renders a complete slide with all its elements
 pub const SlideWidget = struct {
     allocator: std.mem.Allocator,
     slide: Slide,
+    theme: Theme,
     widgets: std.ArrayList(Widget),
     padding: Padding,
 
@@ -34,7 +36,7 @@ pub const SlideWidget = struct {
     const Self = @This();
 
     /// Initialize slide widget
-    pub fn init(allocator: std.mem.Allocator, slide: Slide) !*Self {
+    pub fn init(allocator: std.mem.Allocator, slide: Slide, theme: Theme) !*Self {
         const self = try allocator.create(Self);
         errdefer allocator.destroy(self);
 
@@ -43,6 +45,7 @@ pub const SlideWidget = struct {
         self.* = .{
             .allocator = allocator,
             .slide = slide,
+            .theme = theme,
             .widgets = widgets,
             .padding = .{},
         };
@@ -67,7 +70,7 @@ pub const SlideWidget = struct {
 
     /// Build child widgets from slide elements
     fn buildWidgets(self: *Self) !void {
-        const factory = WidgetFactory.init(self.allocator);
+        const factory = WidgetFactory.init(self.allocator, self.theme);
 
         for (self.slide.elements) |element| {
             const widget = factory.createWidget(element) catch |err| {
@@ -105,11 +108,8 @@ pub const SlideWidget = struct {
             };
             const size = widget.getSize(constraints);
 
-            // Check if widget fits
-            if (current_y + size.height > ctx.win.height - self.padding.bottom) {
-                // Skip remaining widgets if they don't fit
-                break;
-            }
+            // Stop only when we're completely past the visible area
+            if (current_y >= ctx.win.height) break;
 
             // Create constrained context for this widget
             const widget_ctx = DrawContext{
@@ -182,6 +182,7 @@ test "SlideWidget basic" {
     const testing = std.testing;
     const allocator = testing.allocator;
     const Element = @import("../core/Element.zig").Element;
+    const darkTheme = @import("../render/Theme.zig").darkTheme;
 
     // Create a slide with one element
     var elements: std.ArrayList(Element) = .empty;
@@ -203,7 +204,7 @@ test "SlideWidget basic" {
     };
     defer slide.deinit(allocator);
 
-    var widget = try SlideWidget.init(allocator, slide);
+    var widget = try SlideWidget.init(allocator, slide, darkTheme());
     defer widget.deinit();
 
     try testing.expect(!widget.isEmpty());
@@ -214,6 +215,7 @@ test "SlideWidget with multiple elements" {
     const testing = std.testing;
     const allocator = testing.allocator;
     const Element = @import("../core/Element.zig").Element;
+    const darkTheme = @import("../render/Theme.zig").darkTheme;
 
     var elements: std.ArrayList(Element) = .empty;
     defer elements.deinit(allocator);
@@ -242,7 +244,7 @@ test "SlideWidget with multiple elements" {
     };
     defer slide.deinit(allocator);
 
-    var widget = try SlideWidget.init(allocator, slide);
+    var widget = try SlideWidget.init(allocator, slide, darkTheme());
     defer widget.deinit();
 
     try testing.expectEqual(@as(usize, 2), widget.elementCount());
@@ -257,6 +259,7 @@ test "SlideWidget getTitle" {
     const testing = std.testing;
     const allocator = testing.allocator;
     const Element = @import("../core/Element.zig").Element;
+    const darkTheme = @import("../render/Theme.zig").darkTheme;
 
     var elements: std.ArrayList(Element) = .empty;
     defer elements.deinit(allocator);
@@ -277,7 +280,7 @@ test "SlideWidget getTitle" {
     };
     defer slide.deinit(allocator);
 
-    var widget = try SlideWidget.init(allocator, slide);
+    var widget = try SlideWidget.init(allocator, slide, darkTheme());
     defer widget.deinit();
 
     const title = widget.getTitle();
@@ -289,6 +292,7 @@ test "SlideWidget padding" {
     const testing = std.testing;
     const allocator = testing.allocator;
     const Element = @import("../core/Element.zig").Element;
+    const darkTheme = @import("../render/Theme.zig").darkTheme;
 
     var elements: std.ArrayList(Element) = .empty;
     defer elements.deinit(allocator);
@@ -309,7 +313,7 @@ test "SlideWidget padding" {
     };
     defer slide.deinit(allocator);
 
-    var widget = try SlideWidget.init(allocator, slide);
+    var widget = try SlideWidget.init(allocator, slide, darkTheme());
     defer widget.deinit();
 
     // Test custom padding
