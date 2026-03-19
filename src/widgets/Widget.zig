@@ -225,7 +225,7 @@ pub const DrawUtils = struct {
 
             if (col < win.width and row < win.height) {
                 win.writeCell(@intCast(col), @intCast(row), .{
-                    .char = .{ .grapheme = &[_]u8{char} },
+                    .char = .{ .grapheme = tui.Cell.grapheme(char) },
                     .style = style,
                 });
                 col += 1;
@@ -270,7 +270,7 @@ pub const DrawUtils = struct {
                 if (x + col >= win.width) break;
                 if (char != '\n' and char != '\r') {
                     win.writeCell(@intCast(x + col), @intCast(row), .{
-                        .char = .{ .grapheme = &[_]u8{char} },
+                        .char = .{ .grapheme = tui.Cell.grapheme(char) },
                         .style = style,
                     });
                 }

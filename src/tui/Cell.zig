@@ -16,4 +16,19 @@ pub const Cell = struct {
         grapheme: []const u8 = " ",
         width: u8 = 1,
     };
+
+    /// Static lookup table for single-byte graphemes.
+    /// Returns a stable slice pointing to static memory, avoiding use-after-free
+    /// when writing individual characters to cells.
+    const byte_graphemes = init: {
+        var table: [256][1]u8 = undefined;
+        for (0..256) |i| {
+            table[i] = .{@intCast(i)};
+        }
+        break :init table;
+    };
+
+    pub fn grapheme(byte: u8) []const u8 {
+        return &byte_graphemes[byte];
+    }
 };

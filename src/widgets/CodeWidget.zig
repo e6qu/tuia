@@ -217,7 +217,7 @@ pub const CodeWidget = struct {
 
                 if (col < ctx.win.width and row < ctx.win.height) {
                     ctx.win.writeCell(@intCast(col), @intCast(row), .{
-                        .char = .{ .grapheme = &[_]u8{c} },
+                        .char = .{ .grapheme = tui.Cell.grapheme(c) },
                         .style = style,
                     });
                     col += 1;
@@ -246,7 +246,7 @@ pub const CodeWidget = struct {
 
             if (col < ctx.win.width and row < ctx.win.height) {
                 ctx.win.writeCell(@intCast(col), @intCast(row), .{
-                    .char = .{ .grapheme = &[_]u8{c} },
+                    .char = .{ .grapheme = tui.Cell.grapheme(c) },
                     .style = code_style,
                 });
                 col += 1;

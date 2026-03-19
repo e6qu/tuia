@@ -41,7 +41,11 @@ pub fn main() !void {
         return;
     }
 
-    var app = try App.init(allocator);
+    var app = App.init(allocator) catch |err| {
+        std.debug.print("Error: could not initialize terminal: {s}\n", .{@errorName(err)});
+        std.debug.print("tuia requires a terminal. Run it from a terminal emulator.\n", .{});
+        std.process.exit(1);
+    };
     defer app.deinit();
 
     // Load presentation file if provided
@@ -52,5 +56,8 @@ pub fn main() !void {
         };
     }
 
-    try app.run();
+    app.run() catch |err| {
+        std.debug.print("Runtime error: {s}\n", .{@errorName(err)});
+        std.process.exit(1);
+    };
 }

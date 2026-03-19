@@ -5,7 +5,6 @@
 #
 
 set timeout 10
-set env(TUIA_TTY_FD) 0
 set binary "./zig-out/bin/tuia"
 set test_pass 0
 set test_fail 0
@@ -35,14 +34,25 @@ proc kill_app {} {
 }
 
 # ──────────────────────────────────────────────────
-# TEST 1: Basic startup and quit with 'q'
+# TEST 1: Basic startup, rendering validation, and quit with 'q'
 # ──────────────────────────────────────────────────
-start_test "Start with presentation and quit with 'q'"
+start_test "Start with presentation, validate rendering, and quit with 'q'"
 
 set stty_init "rows 24 cols 80"
 spawn $binary examples/demo.md
-after 1000
 
+# Verify alt screen + rendering escape sequences appear (proves terminal rendering works)
+expect {
+    -re {\x1b\[} {
+        pass "Terminal rendering active (escape sequences detected)"
+    }
+    timeout {
+        fail "No rendering output detected"
+        kill_app
+    }
+}
+
+after 500
 send "q"
 after 500
 
@@ -524,6 +534,76 @@ foreach ext {html tex} {
 }
 
 exec rm -rf $tmpdir
+
+# ──────────────────────────────────────────────────
+# TEST 21: Rendering validation with quickstart.md and navigation
+# ──────────────────────────────────────────────────
+start_test "Rendering validation: quickstart.md renders and navigates"
+
+set stty_init "rows 24 cols 80"
+spawn $binary examples/quickstart.md
+
+# Verify rendering starts
+expect {
+    -re {\x1b\[} {
+        pass "Quickstart rendering started"
+    }
+    timeout {
+        fail "No rendering output for quickstart"
+        kill_app
+    }
+}
+
+after 500
+send "j"
+after 500
+
+# After navigation, more escape sequences prove re-render happened
+expect {
+    -re {\x1b\[} {
+        pass "Re-render after navigation detected"
+    }
+    timeout {
+        fail "No re-render after navigation"
+        kill_app
+    }
+}
+
+send "q"
+after 500
+expect {
+    eof {
+        pass "Quickstart quit cleanly"
+    }
+    timeout {
+        fail "Quickstart did not quit"
+        kill_app
+    }
+}
+catch {wait}
+
+# ──────────────────────────────────────────────────
+# TEST 22: Welcome screen (no file argument)
+# ──────────────────────────────────────────────────
+start_test "Welcome screen without file argument"
+
+set stty_init "rows 24 cols 80"
+spawn $binary
+after 1500
+
+send "q"
+after 500
+
+expect {
+    eof {
+        pass "No-file mode quit cleanly"
+    }
+    timeout {
+        fail "No-file mode did not quit"
+        kill_app
+    }
+}
+catch {wait}
 
 # ──────────────────────────────────────────────────
 # SUMMARY

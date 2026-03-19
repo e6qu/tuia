@@ -41,6 +41,8 @@ pub const Terminal = struct {
     should_quit: std.atomic.Value(bool) = std.atomic.Value(bool).init(false),
     // Self-pipe for waking the reader on SIGWINCH / quit
     signal_pipe: [2]posix.fd_t = .{ -1, -1 },
+    readloop_alive: std.atomic.Value(bool) = std.atomic.Value(bool).init(false),
+    render_failed: bool = false,
 
     const EventQueue = Queue(Event, 512);
 
@@ -55,7 +57,16 @@ pub const Terminal = struct {
             break :blk std.fmt.parseInt(posix.fd_t, fd_str, 10) catch
                 return error.InvalidTtyFd;
         } else blk: {
-            break :blk try posix.open("/dev/tty", .{ .ACCMODE = .RDWR }, 0);
+            // Prefer stdin when it's a tty (works in both real terminals and pty contexts),
+            // fall back to /dev/tty for cases where stdin is redirected (pipes, etc.)
+            if (posix.isatty(posix.STDIN_FILENO)) {
+                owned_fd = false;
+                break :blk posix.STDIN_FILENO;
+            }
+            // Use raw syscall to avoid Zig's unexpectedErrno stack trace on ENXIO
+            const rc = std.posix.system.open("/dev/tty", @bitCast(std.posix.O{ .ACCMODE = .RDWR }), @as(posix.mode_t, 0));
+            if (rc < 0) return error.NoTerminal;
+            break :blk @as(posix.fd_t, @intCast(rc));
         };
         errdefer if (owned_fd) posix.close(fd);
 
@@ -121,7 +132,7 @@ pub const Terminal = struct {
         file.writeAll("\x1b[?1049l\x1b[0m\x1b[?25h") catch {};
 
         posix.tcsetattr(self.fd, .FLUSH, self.original_termios) catch {};
-        if (self.owned_fd and builtin.os.tag != .macos) posix.close(self.fd);
+        if (self.owned_fd) posix.close(self.fd);
 
         self.screen.deinit();
         self._allocator.free(self.cell_storage);
@@ -228,6 +239,8 @@ pub const Terminal = struct {
         // Final flush
         self.flushRenderBuf();
 
+        if (self.render_failed) return error.RenderFailed;
+
         // Copy screen → back buffer
         if (self.screen.buf.len == self.back_buf.len) {
             @memcpy(self.back_buf, self.screen.buf);
@@ -258,7 +271,9 @@ pub const Terminal = struct {
     fn flushRenderBuf(self: *Terminal) void {
         if (self.render_len == 0) return;
         const file = std.fs.File{ .handle = self.fd };
-        file.writeAll(self.render_buf[0..self.render_len]) catch {};
+        file.writeAll(self.render_buf[0..self.render_len]) catch {
+            self.render_failed = true;
+        };
         self.render_len = 0;
     }
 
@@ -328,13 +343,20 @@ pub const Terminal = struct {
         }
     }
 
-    pub fn nextEvent(self: *Terminal) Event {
-        return self.queue.pop();
+    pub fn nextEvent(self: *Terminal) ?Event {
+        while (true) {
+            if (self.queue.tryPopTimeout(500_000_000)) |event| return event;
+            if (self.should_quit.load(.acquire)) return null;
+            if (!self.readloop_alive.load(.acquire)) return null;
+        }
     }
 
     // ── background reader ───────────────────────────────────────────
 
     fn readLoop(self: *Terminal) void {
+        self.readloop_alive.store(true, .release);
+        defer self.readloop_alive.store(false, .release);
+
         var parse_buf: [256]u8 = undefined;
         var buf_len: usize = 0;
 
@@ -641,6 +663,18 @@ fn Queue(comptime T: type, comptime N: usize) type {
             defer self.mutex.unlock();
             while (self.count == 0) {
                 self.not_empty.wait(&self.mutex);
+            }
+            const item = self.buf[self.head];
+            self.head = (self.head + 1) % N;
+            self.count -= 1;
+            return item;
+        }
+
+        pub fn tryPopTimeout(self: *Self, timeout_ns: u64) ?T {
+            self.mutex.lock();
+            defer self.mutex.unlock();
+            while (self.count == 0) {
+                self.not_empty.timedWait(&self.mutex, timeout_ns) catch return null;
             }
             const item = self.buf[self.head];
             self.head = (self.head + 1) % N;

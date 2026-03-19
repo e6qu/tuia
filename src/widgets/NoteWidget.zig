@@ -89,7 +89,7 @@ pub const NoteWidget = struct {
             if (i >= win.width) break;
             const cell = win.cellIndex(.{ .row = 1, .col = @intCast(i) });
             win.setCell(cell, .{
-                .char = .{ .grapheme = &[_]u8{char} },
+                .char = .{ .grapheme = tui.Cell.grapheme(char) },
                 .style = .{
                     .fg = theme.heading3.fg,
                     .bold = true,
@@ -137,7 +137,7 @@ pub const NoteWidget = struct {
                 if (col < win.width) {
                     const cell = win.cellIndex(.{ .row = @intCast(row), .col = @intCast(col) });
                     win.setCell(cell, .{
-                        .char = .{ .grapheme = &[_]u8{char} },
+                        .char = .{ .grapheme = tui.Cell.grapheme(char) },
                         .style = .{
                             .fg = theme.paragraph.fg,
                         },
@@ -170,7 +170,7 @@ pub const NoteWidget = struct {
             if (col >= win.width) break;
             const cell = win.cellIndex(.{ .row = 1, .col = @intCast(col) });
             win.setCell(cell, .{
-                .char = .{ .grapheme = &[_]u8{char} },
+                .char = .{ .grapheme = tui.Cell.grapheme(char) },
                 .style = .{
                     .fg = theme.bright_black,
                     .italic = true,
