@@ -205,15 +205,18 @@ pub const DrawUtils = struct {
         }
     }
 
-    /// Draw text at a position, wrapping if necessary
+    /// Draw text at a position, wrapping if necessary. Handles UTF-8/emoji.
     pub fn drawText(win: tui.Window, x: usize, y: usize, text: []const u8, style: tui.Style, max_width: usize) usize {
         var col = x;
         var row = y;
+        var i: usize = 0;
 
-        for (text) |char| {
-            if (char == '\n') {
+        while (i < text.len) {
+            const byte = text[i];
+            if (byte == '\n') {
                 row += 1;
                 col = x;
+                i += 1;
                 continue;
             }
 
@@ -223,40 +226,49 @@ pub const DrawUtils = struct {
                 if (row >= win.height) break;
             }
 
+            // Decode UTF-8 sequence length
+            const seq_len = std.unicode.utf8ByteSequenceLength(byte) catch 1;
+            const end = @min(i + seq_len, text.len);
+
             if (col < win.width and row < win.height) {
+                const grapheme = text[i..end];
                 win.writeCell(@intCast(col), @intCast(row), .{
-                    .char = .{ .grapheme = tui.Cell.grapheme(char) },
+                    .char = .{ .grapheme = grapheme },
                     .style = style,
                 });
                 col += 1;
             }
+            i = end;
         }
 
         return row - y + 1; // Return number of lines used
     }
 
-    /// Draw text with word wrapping
+    /// Draw text with word wrapping. Handles UTF-8/emoji.
     pub fn drawTextWrapped(win: tui.Window, x: usize, y: usize, text: []const u8, style: tui.Style, max_width: usize) usize {
         var row: usize = y;
         var line_start: usize = 0;
 
         while (line_start < text.len and row < win.height) {
-            // Find the end of this line
+            // Find the end of this line (byte-level for wrapping)
             var line_end = line_start;
             var last_space: ?usize = null;
+            var visual_len: usize = 0;
 
-            while (line_end < text.len and line_end - line_start < max_width) {
+            while (line_end < text.len and visual_len < max_width) {
                 if (text[line_end] == ' ') {
                     last_space = line_end;
                 } else if (text[line_end] == '\n') {
                     line_end += 1;
                     break;
                 }
-                line_end += 1;
+                const seq_len = std.unicode.utf8ByteSequenceLength(text[line_end]) catch 1;
+                line_end += seq_len;
+                visual_len += 1;
             }
 
             // If we went past max_width, back up to last space
-            if (line_end - line_start > max_width) {
+            if (visual_len > max_width) {
                 if (last_space) |space| {
                     if (space > line_start) {
                         line_end = space + 1;
@@ -264,16 +276,25 @@ pub const DrawUtils = struct {
                 }
             }
 
-            // Draw the line
+            // Draw the line — iterate by UTF-8 codepoints
             const line = text[line_start..line_end];
-            for (line, 0..) |char, col| {
+            var col: usize = 0;
+            var j: usize = 0;
+            while (j < line.len) {
                 if (x + col >= win.width) break;
-                if (char != '\n' and char != '\r') {
-                    win.writeCell(@intCast(x + col), @intCast(row), .{
-                        .char = .{ .grapheme = tui.Cell.grapheme(char) },
-                        .style = style,
-                    });
+                const b = line[j];
+                if (b == '\n' or b == '\r') {
+                    j += 1;
+                    continue;
                 }
+                const slen = std.unicode.utf8ByteSequenceLength(b) catch 1;
+                const send = @min(j + slen, line.len);
+                win.writeCell(@intCast(x + col), @intCast(row), .{
+                    .char = .{ .grapheme = line[j..send] },
+                    .style = style,
+                });
+                col += 1;
+                j = send;
             }
 
             line_start = line_end;

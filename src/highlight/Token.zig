@@ -36,6 +36,9 @@ pub const TokenKind = enum {
     function_name,
     property_name,
 
+    // Whitespace
+    whitespace,
+
     // Special for specific languages
     preprocessor, // #include, #define, etc.
     regex, // Regular expression literals
@@ -47,7 +50,7 @@ pub const TokenKind = enum {
     /// Get a color index for this token kind (for theme lookup)
     pub fn colorIndex(self: Self) usize {
         return switch (self) {
-            .eof, .unknown => 0,
+            .eof, .unknown, .whitespace => 0,
             .identifier => 1,
             .string => 2,
             .number => 3,
@@ -68,7 +71,7 @@ pub const TokenKind = enum {
     /// Get default color for this token kind (fallback if theme doesn't define)
     pub fn defaultColor(self: Self) DefaultColor {
         return switch (self) {
-            .eof, .unknown => .default,
+            .eof, .unknown, .whitespace => .default,
             .identifier => .default,
             .string => .green,
             .number => .cyan,

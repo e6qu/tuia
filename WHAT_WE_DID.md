@@ -15,63 +15,60 @@
 | M4 | Weeks 17-20 | Polish | Documentation, v1.0.0 release |
 | Security | Post-release | Hardening | Semgrep, ziglint, fuzzing, CI checks |
 | Phases 1-12 | Post-release | Bug Fixes | 27 bugs fixed (17 critical, 10 high/med/low) |
-| Phase 13 | Post-release | Memory & Safety | 14 bugs fixed (3 critical, 4 high, 5 medium, 2 compile) |
+| Phase 13 | Post-release | Memory & Safety | 14 bugs fixed |
 | Phase 14 | Post-release | TUI Layer | Replaced libvaxis with custom POSIX terminal layer |
-| Phase 15-15b | Post-release | Fixes | 8 more bugs (compile, URL escaping, render crashes) |
-| Phase 16 | Post-release | TUI Bugs | 5 parser/exporter fixes, 25 expect tests, pre-commit hooks |
-| **Phase 17** | Post-release | **Make It Work** | **App starts, renders, navigates, quits. Text rendering fixed.** |
+| Phase 15-15b | Post-release | Fixes | 8 more bugs |
+| Phase 16 | Post-release | TUI Bugs | 5 parser/exporter fixes, 25 expect tests |
+| Phase 17 | Post-release | Make It Work | App starts, renders, navigates, quits cleanly |
+| **Phase 18** | Post-release | **Rendering Quality** | **Code blocks, help overlay, status bar, unicode/emoji** |
 
 ---
 
-## Phase 17: Make tuia Actually Work
+## Phase 18: Rendering Quality
 
 ### What was broken
-- App crashed or hung when started from a terminal
-- 57 bugs "fixed" across 16 phases but the app was never tested as a running program
-- Text content was invisible (use-after-free in grapheme storage)
-- Transitions caused off-by-one slide rendering
-- `TUIA_TTY_FD=0` hack in tests masked real terminal issues
+- Code blocks rendered without whitespace between tokens ("constx=42" instead of "const x = 42")
+- Help overlay (`?`) didn't render (HelpWidget.visible never synced with nav.show_help)
+- Status bar showed garbled characters (entire strings written to single cells)
+- No unicode/emoji support (byte-by-byte iteration missed multi-byte sequences)
+- Transitions enabled by default caused off-by-one slide rendering
 
 ### What we fixed
 
-**Terminal init (fd fallback chain)**
-- Prefer stdin when it's a tty (works in real terminals and pty contexts)
-- Fall back to `/dev/tty` via raw syscall (avoids Zig's `unexpectedErrno` stack trace on ENXIO)
-- Clean "tuia requires a terminal" error message for non-tty contexts
+**Highlighter whitespace preservation**
+- Changed `Highlighter.nextToken()` to emit whitespace as tokens instead of skipping it
+- Added `.whitespace` to `TokenKind` enum with appropriate color/index mappings
+- Code blocks now render with proper spacing between tokens
 
-**Event loop reliability**
-- Added `tryPopTimeout` to the event queue (500ms timeout, prevents infinite blocking)
-- Added `readloop_alive` flag so main thread detects reader thread death
-- `nextEvent` returns `?Event` — main loop exits if reader dies or quit is signaled
+**Help overlay rendering**
+- Removed redundant `if (help.visible)` check in Renderer — the caller already gates via `nav.show_help`
+- Removed `if (!self.visible) return` guard in HelpWidget.draw()
+- Help overlay now renders keyboard shortcuts when `?` is pressed
 
-**Text rendering (critical fix)**
-- Found and fixed use-after-free: `&[_]u8{char}` created stack-allocated graphemes that became dangling pointers
-- Added `Cell.grapheme()` static lookup table — 256 pre-allocated single-byte strings
-- Fixed 10 call sites across 6 widget files (Widget, StatusBar, NoteWidget, ImageWidget, HelpWidget, CodeWidget)
+**Status bar char-by-char rendering**
+- Rewrote `renderStatusBar()` and `renderDebug()` in Renderer.zig to iterate character-by-character
+- Uses `tui.Cell.grapheme(ch)` for each byte instead of writing entire strings to single cells
+- Status bar now shows clean "Slide N/M" and title text
 
-**Navigation**
-- Added null navigation guard in `handleKey()` — prevents panic when no presentation loaded
-- Disabled transitions by default (broken — pre-navigation render caused off-by-one display)
+**Full unicode and emoji support**
+- Updated `drawText()` and `drawTextWrapped()` in Widget.zig to iterate by UTF-8 codepoints
+- Uses `std.unicode.utf8ByteSequenceLength()` to detect multi-byte sequences
+- Writes multi-byte grapheme slices directly to cells (stable memory from source text)
+- Updated `drawHighlightedCode()` and `drawPlainCode()` in CodeWidget.zig for UTF-8
+- Japanese, CJK, math symbols, and emoji all render correctly
 
-**Other fixes**
-- Fixed macOS fd leak in `deinit()` (removed `builtin.os.tag != .macos` guard on close)
-- Added `render_failed` flag for detecting write errors during rendering
-- Wrapped `App.init` and `app.run()` in catch blocks for human-readable errors
+**Transitions disabled**
+- Set `TransitionConfig.enabled` default to `false`
+- Fixed transition manager tests for new default
 
-**Tests**
-- Removed `TUIA_TTY_FD=0` hack from expect tests
-- Added rendering validation (escape sequence detection)
-- Added navigation validation (re-render detection after keypress)
-- Added welcome screen test (no-file mode)
-- 30 expect tests pass through real pty, 120 unit/integration tests pass
-
-### Lessons Learned
-- 57 "bug fixes" across 16 phases, but the app was never started and used
-- Unit tests and integration tests don't prove the app works — they prove individual components work in isolation
-- `&[_]u8{char}` is a classic Zig footgun — the temporary lives only as long as the expression
-- Fake interfaces (`TUIA_TTY_FD`) mask real problems instead of exposing them
-- A program that can't be started by a user is not a program
+### Verified via tmux screenshots
+- All text renders correctly (headings, paragraphs, lists, blockquotes)
+- Code blocks show syntax-highlighted code with proper spacing (single-slide)
+- Status bar shows "Slide N/M" and title cleanly
+- Help overlay shows keyboard shortcuts
+- Theme picker works (dark/light switching)
+- Unicode (こんにちは, ∑∫∂√π, →←↑↓) and emoji (🎉🚀📝) render correctly
 
 ---
 
-*Last updated: 2026-03-19 (Phase 17 complete)*
+*Last updated: 2026-03-20 (Phase 18 complete)*

@@ -37,7 +37,14 @@ pub const Highlighter = struct {
 
     /// Get the next token
     pub fn nextToken(self: *Self) Token {
-        self.skipWhitespace();
+        // Emit whitespace as its own token so code rendering preserves spacing
+        if (self.pos < self.source.len and std.ascii.isWhitespace(self.source[self.pos])) {
+            const start = self.pos;
+            while (self.pos < self.source.len and std.ascii.isWhitespace(self.source[self.pos])) {
+                self.pos += 1;
+            }
+            return Token.init(.whitespace, self.source[start..self.pos], start, self.pos);
+        }
 
         if (self.pos >= self.source.len) {
             return Token.init(.eof, "", self.pos, self.pos);
@@ -208,13 +215,6 @@ pub const Highlighter = struct {
         return Token.init(kind, self.source[start..self.pos], start, self.pos);
     }
 
-    /// Skip whitespace characters
-    fn skipWhitespace(self: *Self) void {
-        while (self.pos < self.source.len and std.ascii.isWhitespace(self.source[self.pos])) {
-            self.pos += 1;
-        }
-    }
-
     /// Peek at a character ahead without advancing
     fn peek(self: Self, offset: usize) u8 {
         const idx = self.pos + offset;
@@ -239,12 +239,16 @@ test "Highlighter basic tokenization" {
     const tokens = try highlighter.tokenizeAll(allocator);
     defer allocator.free(tokens);
 
-    try testing.expectEqual(@as(usize, 6), tokens.len); // const, x, =, 42, ;, eof
+    // const, ' ', x, ' ', =, ' ', 42, ;, eof
+    try testing.expectEqual(@as(usize, 9), tokens.len);
     try testing.expectEqual(TokenKind.keyword, tokens[0].kind);
     try testing.expectEqualStrings("const", tokens[0].text);
-    try testing.expectEqual(TokenKind.identifier, tokens[1].kind);
-    try testing.expectEqual(TokenKind.operator, tokens[2].kind);
-    try testing.expectEqual(TokenKind.number, tokens[3].kind);
+    try testing.expectEqual(TokenKind.whitespace, tokens[1].kind);
+    try testing.expectEqual(TokenKind.identifier, tokens[2].kind);
+    try testing.expectEqual(TokenKind.whitespace, tokens[3].kind);
+    try testing.expectEqual(TokenKind.operator, tokens[4].kind);
+    try testing.expectEqual(TokenKind.whitespace, tokens[5].kind);
+    try testing.expectEqual(TokenKind.number, tokens[6].kind);
 }
 
 test "Highlighter string literals" {

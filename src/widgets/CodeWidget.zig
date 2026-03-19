@@ -203,10 +203,13 @@ pub const CodeWidget = struct {
             const rgb = defaultColorToRgb(token_color);
             const style: tui.Style = if (rgb) |c| .{ .fg = c } else .{};
 
-            for (token.text) |c| {
+            var i: usize = 0;
+            while (i < token.text.len) {
+                const c = token.text[i];
                 if (c == '\n') {
                     row += 1;
                     col = x;
+                    i += 1;
                     continue;
                 }
 
@@ -215,13 +218,17 @@ pub const CodeWidget = struct {
                     col = x;
                 }
 
+                const seq_len = std.unicode.utf8ByteSequenceLength(c) catch 1;
+                const end = @min(i + seq_len, token.text.len);
+
                 if (col < ctx.win.width and row < ctx.win.height) {
                     ctx.win.writeCell(@intCast(col), @intCast(row), .{
-                        .char = .{ .grapheme = tui.Cell.grapheme(c) },
+                        .char = .{ .grapheme = token.text[i..end] },
                         .style = style,
                     });
                     col += 1;
                 }
+                i = end;
             }
         }
     }
@@ -232,10 +239,13 @@ pub const CodeWidget = struct {
         var row = y;
         var col = x;
 
-        for (self.code) |c| {
+        var i: usize = 0;
+        while (i < self.code.len) {
+            const c = self.code[i];
             if (c == '\n') {
                 row += 1;
                 col = x;
+                i += 1;
                 continue;
             }
 
@@ -244,13 +254,17 @@ pub const CodeWidget = struct {
                 col = x;
             }
 
+            const seq_len = std.unicode.utf8ByteSequenceLength(c) catch 1;
+            const end = @min(i + seq_len, self.code.len);
+
             if (col < ctx.win.width and row < ctx.win.height) {
                 ctx.win.writeCell(@intCast(col), @intCast(row), .{
-                    .char = .{ .grapheme = tui.Cell.grapheme(c) },
+                    .char = .{ .grapheme = self.code[i..end] },
                     .style = code_style,
                 });
                 col += 1;
             }
+            i = end;
         }
     }
 

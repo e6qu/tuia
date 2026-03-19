@@ -72,8 +72,7 @@ pub const HelpWidget = struct {
     }
 
     /// Draw the help overlay centered on screen
-    pub fn draw(self: Self, win: tui.Window, theme: Theme) void {
-        if (!self.visible) return;
+    pub fn draw(_: Self, win: tui.Window, theme: Theme) void {
 
         // Calculate dimensions
         var max_width: usize = 0;
