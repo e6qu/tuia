@@ -2,61 +2,55 @@
 
 > Terminal UI Application - A presenterm-compatible presentation tool in Zig
 
-**Version:** 1.0.0  
-**Status:** ✅ Complete  
-**Stack:** Zig 0.15+, libvaxis
+**Version:** pre-release
+**Status:** Functional — app starts, renders, navigates, exits cleanly
+**Stack:** Zig 0.15.2, custom POSIX TUI layer
 
 ---
 
-## Overview
+## Current Status: Phase 17 Complete
 
-TUIA is a fast, lightweight terminal presentation tool that:
-- Renders Markdown presentations with rich formatting
-- Supports images (Kitty/iTerm2/Sixel protocols)
-- Executes code snippets interactively
-- Exports to HTML
-- Provides smooth slide transitions
+The app works. `tuia examples/demo.md` starts, renders slides with visible text, responds to navigation input, and exits cleanly. All 120 unit/integration tests and 30 expect-based TUI tests pass.
 
 ---
 
-## Milestones (All Complete)
+## Completed Milestones
 
 | Milestone | Status | Key Deliverables |
 |-----------|--------|------------------|
-| M0: Specification | ✅ | Requirements, architecture, API design |
-| M1: Foundation | ✅ | Build system, CI/CD, testing framework |
-| M2: Core Presentation | ✅ | Parser, widgets, themes, navigation |
-| M3: Advanced Features | ✅ | Images, code execution, export, config |
-| M4: Polish & Release | ✅ | Documentation, v1.0.0 release |
-| Security Hardening | ✅ | Semgrep, ziglint, fuzzing, CI checks |
-| Bug Hunt Phases 1-12 | ✅ | 27 bugs fixed (17 critical, 10 high/med/low) |
-| Phases 13-16 | ✅ | 30 more bugs fixed, TUI layer, TUI tests, pre-commit |
+| M0: Specification | Done | Requirements, architecture, API design |
+| M1: Foundation | Done | Build system, CI/CD, testing framework |
+| M2: Core Presentation | Done | Parser, widgets, themes, navigation |
+| M3: Advanced Features | Done | Images, code execution, export, config |
+| M4: Polish & Release | Done | Documentation, v1.0.0 release |
+| Security Hardening | Done | Semgrep, ziglint, fuzzing, CI checks |
+| Bug Hunt Phases 1-16 | Done | 57 bugs fixed at component level |
+| **Phase 17: Make It Work** | **Done** | **App starts, text renders, navigation works, clean exit** |
 
 ---
 
-## Project Stats
+## Next Priorities
+
+See DO_NEXT.md for details.
+
+1. Fix remaining rendering issues (help overlay, code block spacing, tables)
+2. Fix transition animations (currently disabled due to off-by-one bug)
+3. Improve differential rendering (handle edge cases with style-only changes)
+4. Add more content validation in expect tests
+
+---
+
+## Metrics
 
 | Metric | Value |
 |--------|-------|
-| Version | 1.0.0 |
 | Lines of Code | ~20,000 |
-| Test Coverage | >80% |
-| Total Bugs Fixed | 57 |
-| Open Bugs | 0 |
-| Tests | 117 unit/integration + 25 TUI |
-| CI Checks | 30+ |
+| Unit/Integration Tests | 120 (passing) |
+| TUI Tests (real pty) | 30 (passing) |
+| App starts and renders | **Yes** |
+| User can present slides | **Yes** |
 
 ---
 
-## Documentation
-
-- **User Guide:** `docs/USER_GUIDE.md`
-- **API Reference:** `docs/API.md`
-- **Development:** `docs/DEVELOPMENT.md`
-- **Testing:** `docs/TESTING.md`
-- **Bug Tracking:** `BUGS.md`
-- **Architecture:** `specs/architecture/ARCHITECTURE.md`
-
----
-
-*See WHAT_WE_DID.md for detailed phase-by-phase completion history.*
+*See WHAT_WE_DID.md for phase-by-phase history.*
+*See DO_NEXT.md for what needs to happen next.*

@@ -134,7 +134,7 @@ pub const HelpWidget = struct {
                     .default;
 
                 win.writeCell(@intCast(c), @intCast(r), .{
-                    .char = .{ .grapheme = &[_]u8{char} },
+                    .char = .{ .grapheme = tui.Cell.grapheme(char) },
                     .style = .{
                         .fg = fg_color,
                     },

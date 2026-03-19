@@ -86,7 +86,7 @@ pub const StatusBar = struct {
         for (status, 0..) |char, col| {
             if (col >= win.width) break;
             win.writeCell(@intCast(col), @intCast(row), .{
-                .char = .{ .grapheme = &[_]u8{char} },
+                .char = .{ .grapheme = tui.Cell.grapheme(char) },
                 .style = .{
                     .fg = fg_color,
                     .bg = bg_color,

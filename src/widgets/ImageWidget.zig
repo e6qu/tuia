@@ -52,7 +52,7 @@ pub const ImageWidget = struct {
                 const col = text_x + i;
                 if (col >= ctx.win.width) break;
                 ctx.win.writeCell(@intCast(col), @intCast(y + 1), .{
-                    .char = .{ .grapheme = &[_]u8{char} },
+                    .char = .{ .grapheme = tui.Cell.grapheme(char) },
                     .style = image_style,
                 });
             }

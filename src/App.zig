@@ -167,9 +167,9 @@ pub const App = struct {
         try self.terminal.start();
 
         while (self.running) {
-            const event = self.terminal.nextEvent();
-            try self.handleEvent(event);
-            try self.render();
+            const event = self.terminal.nextEvent() orelse break;
+            self.handleEvent(event) catch {};
+            self.render() catch {};
         }
     }
 
@@ -194,6 +194,14 @@ pub const App = struct {
                 if (key.codepoint == 'q' and ce.input_mode == .navigate) {
                     self.show_config_editor = false;
                 }
+            }
+            return;
+        }
+
+        // No presentation loaded — only allow quit
+        if (self.navigation == null) {
+            if ((key.codepoint == 'c' and key.mods.ctrl) or key.codepoint == 'q') {
+                self.running = false;
             }
             return;
         }
