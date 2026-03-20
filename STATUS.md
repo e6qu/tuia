@@ -8,30 +8,28 @@
 
 ## Quick Status
 
-**Phase 23 complete.** Theme switching works (dark/light themes verified via ANSI captures). Renderer now responds to runtime theme changes. All libvaxis references removed. The TUI is fully functional.
+**Phase 25 complete.** Execution overlay is now slide-specific and properly cleans up. Transitions disabled by default (grapheme corruption). One known deferred bug.
 
 ---
 
 ## What Works
 
-- **TUI presentation mode** — start, render, navigate, quit cleanly
-- **Transitions** — smooth ~60fps animation, rapid navigation works
-- **Dark theme** — bright_white headings, cyan bullets, magenta keywords, green strings, dark code bg
-- **Light theme** — black headings, blue bullets, light code bg — switches correctly at runtime
-- **Code blocks** — syntax highlighting, indentation, single-spacing, Unicode box borders
+- **TUI presentation** — start, render, navigate, quit
+- **Code execution** — `e` executes code block, results shown on that slide only, `E` toggles panel
+- **Dark/Light themes** — theme-aware syntax colors, live switching with `t`
+- **Code blocks** — syntax highlighting, indentation, single-spacing, box borders
 - **Tables** — unified bordered rendering with header separator
-- **Lists** — nested indentation, ordered numbering (1-12), bullet styling
-- **Text rendering** — headings (h1-h6 styled), paragraphs, blockquotes (│ border)
-- **Inline formatting** — **bold**, *italic*, ***bold italic***, ~~strikethrough~~, `inline code`
-- **Thematic breaks** — *** and ___ render as horizontal rules, --- separates slides
-- **Wide characters** — CJK and emoji with proper 2-column width
-- **Help overlay** (`?`) — keyboard shortcuts
-- **Theme switching** (`t`) — dark/light picker, live rebuild of slide widgets
-- **Navigation** — j/k/arrows/space, g/G first/last, number+Enter jump
-- **Status bar** — slide counter left, title center, timed messages right
-- **Escape sequences** — `\*`, `\[`, etc. render as literal characters
+- **Lists** — nested indentation, ordered numbering, bullet styling
+- **Text rendering** — headings (h1-h6), paragraphs, blockquotes, thematic breaks
+- **Inline formatting** — bold, italic, bold+italic, strikethrough, inline code
+- **Wide characters** — CJK, emoji, dingbats, variation selectors
+- **Help overlay** (`?`), theme picker (`t`), navigation (j/k/g/G/number+Enter)
 - **Exporters** — HTML, Reveal.js, Beamer, PDF (CLI)
-- 126 unit/integration tests, 30 expect TUI tests (all passing)
+- 126 unit/integration tests passing
+
+## Known Issues
+
+- **Transitions disabled** — show garbled characters due to dangling grapheme pointers in cell buffers. Press `T` to enable (at your own risk). Needs deep-copy fix.
 
 ---
 
@@ -41,10 +39,9 @@
 |--------|-------|
 | Lines of Code | ~20,000 |
 | Unit/Integration Tests | 126 (passing) |
-| TUI Tests (real pty) | 30 (passing) |
-| Open Bugs | 0 |
-| Total Bugs Fixed | 74 |
+| Open Bugs | 1 (transitions, deferred) |
+| Total Bugs Fixed | 77 |
 
 ---
 
-*Last updated: 2026-03-20 (Phase 23)*
+*Last updated: 2026-03-20 (Phase 25)*

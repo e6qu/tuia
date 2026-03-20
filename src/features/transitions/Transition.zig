@@ -133,7 +133,10 @@ pub const TransitionConfig = struct {
     /// Default duration in milliseconds
     default_duration_ms: u32 = 300,
     /// Whether transitions are enabled
-    enabled: bool = true,
+    // Disabled by default: transition buffers hold Cell grapheme slices that can
+    // become dangling pointers when the screen is re-rendered. Needs deep-copy of
+    // grapheme data in CellBuffer.captureFromWindow() to work correctly.
+    enabled: bool = false,
 
     /// Parse from string (for config)
     pub fn parseType(self: TransitionConfig, name: []const u8) TransitionType {

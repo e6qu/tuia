@@ -25,7 +25,33 @@
 | Phase 20 | Post-release | Tables & Polish | TableWidget, styled headings/blockquotes, help box fix |
 | Phase 21 | Post-release | Bug Sweep | All 12 tmux-found bugs fixed (PR #59) |
 | Phase 22 | Post-release | Visual Debug | 4 more bugs found & fixed via tmux screenshots (PR #60) |
-| **Phase 23** | Post-release | **Visual Polish** | **Theme switching fix, libvaxis cleanup, ANSI verification** |
+| Phase 23 | Post-release | Visual Polish | Theme switching fix, libvaxis cleanup (PR #61) |
+| Phase 24 | Post-release | Continued Polish | Theme syntax, scanner fix, emoji width (PR #62) |
+| **Phase 25** | Post-release | **Execution Fixes** | **Slide-specific execution, char-by-char rendering, transitions disabled** |
+
+---
+
+## Phase 25: Execution & Transition Fixes
+
+### What we fixed
+
+**Execution panel persists on all slides (App.zig, ExecutionWidget.zig)**
+- Root cause: The execution widget had a single global `visible` flag. Once `e` executed code, `show_execution = true` and `visible = true` persisted across all slides.
+- Fix: Added `execution_slide: ?usize` to ExecutionWidget. The render pass checks `isVisibleForSlide(nav.current_slide)` — only shows the panel when on the slide where code was executed. Navigating away hides it; navigating back shows it.
+
+**Execution panel ghost rendering (ExecutionWidget.zig)**
+- Root cause: The draw() method wrote entire strings (like `" ✓ Execution Complete "`) as a single cell's grapheme. The terminal diff renderer only tracked 1 cell position per string, so when the screen was cleared, only 1 space was written where a 25-char string was displayed. The remaining characters persisted as visual ghosts.
+- Fix: Added `drawStringCharByChar()` helper. All text in the execution widget (title, output lines, status bar) is now written character by character to individual cells. The terminal diff can now properly detect and clear each cell position.
+
+**Transitions show garbled characters (Transition.zig)**
+- Root cause: CellBuffer.captureFromWindow() copies Cell structs containing `grapheme: []const u8` slices that point to widget/token memory. When the source is freed between capture and render, the pointers become dangling.
+- Fix (workaround): Disabled transitions by default (`TransitionConfig.enabled = false`). Users can press `T` to enable. Proper fix requires deep-copy of grapheme data in CellBuffer — documented in BUGS.md as known deferred issue.
+
+---
+
+## Phase 24: Continued Polish
+
+(see previous entries below)
 
 ---
 
