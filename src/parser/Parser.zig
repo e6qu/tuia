@@ -312,16 +312,16 @@ pub const Parser = struct {
             !isCodeBlockEnd(self.current.text))
         {
             if (self.current.type == .blank_line) {
-                // Blank lines in code blocks are just empty lines
+                // The \n at end of each code line becomes a blank_line token.
+                // Emit just '\n' — text tokens do NOT include their trailing newline.
                 try code_lines.append(self.allocator, '\n');
             } else {
                 // Prepend indentation that skipWhitespace() consumed
                 for (0..self.current.indent) |_| {
                     try code_lines.append(self.allocator, ' ');
                 }
-                // Append the line text
+                // Append the line text (no trailing \n — the blank_line token handles that)
                 try code_lines.appendSlice(self.allocator, self.current.text);
-                try code_lines.append(self.allocator, '\n');
             }
             self.advance();
         }
@@ -378,17 +378,28 @@ pub const Parser = struct {
         const item_token = if (ordered) Token.Type.ordered_list_item else Token.Type.list_item;
 
         // Consume list items at this indentation level
-        while (self.current.type == item_token and self.current.indent == base_indent) {
+        while (true) {
+            // Skip blank lines between list items
+            while (self.current.type == .blank_line) self.advance();
+
+            if (self.current.type != item_token or self.current.indent != base_indent) break;
+
             self.advance();
             var content: std.ArrayList(AST.Element) = .empty;
             defer content.deinit(self.allocator);
 
-            // Parse content until next item at same level, blank line, or lower indentation
+            // Parse content — list item text only (stop at blank lines,
+            // other block elements, or next list items)
             while (self.current.type != .eof and
                 self.current.type != .end_slide and
-                self.current.type != .blank_line)
+                self.current.type != .thematic_break and
+                self.current.type != .blank_line and
+                self.current.type != .heading and
+                self.current.type != .code_block and
+                self.current.type != .blockquote and
+                self.current.type != .table_row)
             {
-                // Check if we hit a list item at same or lower indentation
+                // Check if we hit a list item at same or lower indentation (next item)
                 if ((self.current.type == .list_item or self.current.type == .ordered_list_item) and
                     self.current.indent <= base_indent)
                 {
@@ -405,24 +416,18 @@ pub const Parser = struct {
                 const elem = try self.parseBlockElement();
                 if (elem) |e| {
                     try content.append(self.allocator, e);
-                } else if (self.current.type == .speaker_note) {
-                    self.advance(); // Skip speaker notes in list context
                 } else {
-                    // parseBlockElement returned null but didn't advance - advance to avoid infinite loop
-                    // Check if we're still in a valid state to continue parsing
-                    if (self.current.type != .eof and
-                        self.current.type != .end_slide and
-                        self.current.type != .blank_line)
-                    {
-                        // Check if we hit a list item
-                        if ((self.current.type == .list_item or self.current.type == .ordered_list_item)) {
-                            // Don't advance - let the outer logic handle the list item
-                        } else {
+                    // Avoid infinite loop on unexpected tokens
+                    if (self.current.type != .eof and self.current.type != .end_slide) {
+                        if (self.current.type != .list_item and self.current.type != .ordered_list_item) {
                             self.advance();
                         }
                     }
                 }
             }
+
+            // Skip blank lines before checking for nested list
+            while (self.current.type == .blank_line) self.advance();
 
             // Check for nested list
             var children: ?*AST.List = null;

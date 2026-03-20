@@ -3,14 +3,18 @@
 > Terminal UI Application - A presenterm-compatible presentation tool in Zig
 
 **Version:** pre-release
-**Status:** Functional with rendering fixes
+**Status:** Visual debugging and polish
 **Stack:** Zig 0.15.2, custom POSIX TUI layer
 
 ---
 
-## Current Status: Phase 18 Complete
+## Current Status: Phase 22 — Visual Debugging (Complete)
 
-The app works with proper rendering. Code blocks, help overlay, status bar, unicode, and emoji all render correctly. 120 unit/integration tests and 30 expect TUI tests pass.
+Phase 21 fixed 12 bugs. Phase 22 found and fixed 4 more via tmux screenshot debugging:
+- Code block double-spacing (blank_line token handling in parseCodeBlock)
+- Status bar duplicate (removed redundant showSlideStatus messages)
+- List parsing (blank_lines broke multi-item list loop)
+- Enter key (Ctrl+letter handler intercepted Enter before Enter handler in parseKey)
 
 ---
 
@@ -22,18 +26,11 @@ The app works with proper rendering. Code blocks, help overlay, status bar, unic
 | Security Hardening | Done | Semgrep, ziglint, fuzzing, CI checks |
 | Bug Hunt Phases 1-16 | Done | 57 bugs fixed at component level |
 | Phase 17: Make It Work | Done | App starts, renders, navigates, clean exit |
-| **Phase 18: Rendering** | **Done** | **Code blocks, help, status bar, unicode/emoji** |
-
----
-
-## Next Priorities
-
-See DO_NEXT.md for details.
-
-1. Fix code blocks in multi-slide presentations (layout/converter bug)
-2. Fix transition animations (render to separate buffer, not main screen)
-3. Implement table rendering widget
-4. Process inline formatting (bold, italic, strikethrough, code spans)
+| Phase 18: Rendering | Done | Code blocks, help overlay, status bar, unicode/emoji |
+| Phase 19: Formatting | Done | Inline styling, multi-slide code blocks, transitions, strikethrough |
+| Phase 20: Tables & Polish | Done | TableWidget, styled headings/blockquotes, help box fix |
+| Phase 21: Bug Sweep | Done | All 12 tmux-found bugs fixed (PR #59) |
+| **Phase 22: Visual Debug** | **Done** | **4 more bugs fixed via tmux screenshots** |
 
 ---
 
@@ -42,14 +39,13 @@ See DO_NEXT.md for details.
 | Metric | Value |
 |--------|-------|
 | Lines of Code | ~20,000 |
-| Unit/Integration Tests | 120 (passing) |
+| Unit/Integration Tests | 126 (passing) |
 | TUI Tests (real pty) | 30 (passing) |
-| App renders correctly | **Yes** |
-| Unicode/emoji support | **Yes** |
-| Help overlay | **Yes** |
-| Theme switching | **Yes** |
+| Open Bugs | 0 |
+| Total Bugs Fixed | 73 (57 + 12 + 4) |
 
 ---
 
+*See BUGS.md for bug history.*
 *See WHAT_WE_DID.md for phase-by-phase history.*
-*See DO_NEXT.md for what needs to happen next.*
+*See DO_NEXT.md for current task details.*
