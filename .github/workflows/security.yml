@@ -68,7 +68,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Zig
-        uses: goto-bus-stop/setup-zig@v2
+        uses: mlugg/setup-zig@v1
         with:
           version: ${{ env.ZIG_VERSION }}
 
@@ -91,7 +91,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Zig
-        uses: goto-bus-stop/setup-zig@v2
+        uses: mlugg/setup-zig@v1
         with:
           version: ${{ env.ZIG_VERSION }}
 
@@ -126,7 +126,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Zig
-        uses: goto-bus-stop/setup-zig@v2
+        uses: mlugg/setup-zig@v1
         with:
           version: ${{ env.ZIG_VERSION }}
 
@@ -186,7 +186,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Zig
-        uses: goto-bus-stop/setup-zig@v2
+        uses: mlugg/setup-zig@v1
         with:
           version: ${{ env.ZIG_VERSION }}
 
