@@ -3,18 +3,14 @@
 > Terminal UI Application - A presenterm-compatible presentation tool in Zig
 
 **Version:** pre-release
-**Status:** Visual debugging and polish
+**Status:** Functional and visually polished
 **Stack:** Zig 0.15.2, custom POSIX TUI layer
 
 ---
 
-## Current Status: Phase 22 — Visual Debugging (Complete)
+## Current Status: Phase 23 — Visual Polish (Complete)
 
-Phase 21 fixed 12 bugs. Phase 22 found and fixed 4 more via tmux screenshot debugging:
-- Code block double-spacing (blank_line token handling in parseCodeBlock)
-- Status bar duplicate (removed redundant showSlideStatus messages)
-- List parsing (blank_lines broke multi-item list loop)
-- Enter key (Ctrl+letter handler intercepted Enter before Enter handler in parseKey)
+Phase 23 verified dark and light themes via ANSI captures, fixed the Renderer to respond to runtime theme changes, and removed all libvaxis references from source and docs.
 
 ---
 
@@ -30,7 +26,8 @@ Phase 21 fixed 12 bugs. Phase 22 found and fixed 4 more via tmux screenshot debu
 | Phase 19: Formatting | Done | Inline styling, multi-slide code blocks, transitions, strikethrough |
 | Phase 20: Tables & Polish | Done | TableWidget, styled headings/blockquotes, help box fix |
 | Phase 21: Bug Sweep | Done | All 12 tmux-found bugs fixed (PR #59) |
-| **Phase 22: Visual Debug** | **Done** | **4 more bugs fixed via tmux screenshots** |
+| Phase 22: Visual Debug | Done | 4 more bugs fixed via tmux screenshots (PR #60) |
+| **Phase 23: Visual Polish** | **Done** | **Theme switching fix, libvaxis cleanup** |
 
 ---
 
@@ -42,10 +39,10 @@ Phase 21 fixed 12 bugs. Phase 22 found and fixed 4 more via tmux screenshot debu
 | Unit/Integration Tests | 126 (passing) |
 | TUI Tests (real pty) | 30 (passing) |
 | Open Bugs | 0 |
-| Total Bugs Fixed | 73 (57 + 12 + 4) |
+| Total Bugs Fixed | 74 |
 
 ---
 
 *See BUGS.md for bug history.*
 *See WHAT_WE_DID.md for phase-by-phase history.*
-*See DO_NEXT.md for current task details.*
+*See DO_NEXT.md for what needs to happen next.*

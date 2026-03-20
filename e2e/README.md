@@ -6,7 +6,7 @@ This directory contains end-to-end tests using Microsoft TUI Test and expect wit
 
 ### 1. Microsoft TUI Test (Experimental)
 
-Uses `@microsoft/tui-test` for terminal testing. Currently limited in CI due to PTY compatibility issues with libvaxis.
+Uses `@microsoft/tui-test` for terminal testing. Currently limited in CI due to PTY compatibility issues.
 
 **Status**: Basic smoke tests only - the terminal buffer remains empty in CI PTY environment.
 
@@ -76,5 +76,5 @@ The RC version has a limited API:
 - No `terminal.spawn()` per test - use `test.use()` at file level
 - Some methods like `terminal.waitForTimeout()` are not available
 
-### libvaxis TTY Requirements
-libvaxis (the TUI library used by TUIA) requires a real TTY/PTY to render correctly. The `script` command provides this in CI environments.
+### TTY Requirements
+TUIA's terminal layer requires a real TTY/PTY to render correctly. The `script` command provides this in CI environments.

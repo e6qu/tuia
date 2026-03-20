@@ -128,10 +128,19 @@ pub const Renderer = struct {
         help_widget: ?*HelpWidget,
         theme: Theme,
     ) !void {
-        _ = theme;
-
         // Guard against zero-size windows (e.g. expect pty, minimized terminal)
         if (win.width == 0 or win.height == 0) return;
+
+        // Update theme if it changed (forces slide widget rebuild)
+        const theme_changed = !std.mem.eql(u8, self.theme.name, theme.name);
+        if (theme_changed) {
+            self.theme = theme;
+            // Force rebuild of slide widget with new theme
+            if (self.current_slide_widget) |widget| {
+                widget.deinit();
+                self.current_slide_widget = null;
+            }
+        }
 
         win.clear();
 
