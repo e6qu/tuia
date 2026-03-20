@@ -162,8 +162,6 @@ pub const App = struct {
     /// Run the main event loop
     pub fn run(self: *Self) !void {
         try self.terminal.enterAltScreen();
-        self.terminal.queryTerminal();
-
         try self.terminal.start();
 
         while (self.running) {

@@ -8,12 +8,7 @@
 
 ## Quick Status
 
-**Planning stub completion (Phases 26-30).** Comprehensive audit found ~60 stubs, placeholder modules, dead functions, and unwired config fields. Plan:
-- Phase 26: Dead code cleanup (14 empty modules, 4 dead functions)
-- Phase 27: Config wiring (18+ config fields → runtime behavior)
-- Phase 28: Fix transitions (deep-copy grapheme data)
-- Phase 29: Slide overview mode (`o` key)
-- Phase 30: Minor stubs polish
+**Phase 26 complete.** Deleted 16 dead files, 4 dead functions (93 lines of dead code removed). All tests pass, no regressions. Next: Phase 27 (config wiring).
 
 ---
 
@@ -31,7 +26,8 @@
 
 ## Known Issues
 
-- Transitions disabled by default (dangling grapheme pointers — Phase 28 fix)
+- Transitions disabled by default (Phase 28)
+- 18+ config fields parsed but unwired (Phase 27)
 
 ---
 
@@ -42,8 +38,8 @@
 | Unit/Integration Tests | 126 (passing) |
 | Open Bugs | 1 (transitions) |
 | Total Bugs Fixed | 77 |
-| Stubs/Dead Code | ~60 items (Phase 26-30 plan) |
+| Dead Code Deleted | 16 files, 93 lines (Phase 26) |
 
 ---
 
-*Last updated: 2026-03-20*
+*Last updated: 2026-03-20 (Phase 26 complete)*

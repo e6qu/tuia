@@ -1,43 +1,40 @@
 # Do Next
 
-> Phase 26 — Dead Code Cleanup
+> Phase 27 — Config Wiring
 
 ---
 
 ## Context
 
-Comprehensive stub audit found ~60 stubs/placeholders. Phase 26 starts by deleting dead code: 14 empty placeholder modules never imported, 4 dead functions, and duplicate namespaces. This reduces noise before tackling real work in Phases 27-30.
+Phase 26 complete — deleted 16 dead files, 4 dead functions (93 lines). Phase 27 wires parsed config fields to runtime behavior.
 
-## Phase 26 Tasks
+## Phase 27 Tasks
 
-### Delete empty placeholder modules (never imported)
-- `src/render/Layout.zig`
-- `src/core/Engine.zig`
-- `src/config/Loader.zig`
-- `src/infra/Watcher.zig`
-- `src/infra/fs.zig`
-- `src/infra/logging.zig`
-- `src/features/highlighter/` (entire dir — duplicate of `src/highlight/`)
-- `src/features/images/Image.zig` (duplicate)
-- `src/features/images/Protocol.zig`
-- `src/features/export/Exporter.zig`
-- `src/features/export/HtmlExporter.zig` (duplicate of `src/export/`)
-- `src/features/export/root.zig`
-- `src/features/transitions/Fade.zig`
-- `src/parser/Command.zig`
+### Trivial (just read the field)
+- `presentation.loop` — wrap around at last slide
+- `presentation.show_slide_numbers` — conditionally hide "Slide N/M"
+- `presentation.show_total_slides` — show "Slide N" vs "Slide N/M"
+- `display.min_width/min_height` — show error if terminal too small
+- `export.output_dir` — pass to exporters
+- `executor.timeout_seconds` — pass to ExecutionConfig
 
-### Remove dead functions
-- `InputHandler.showSlideStatus()` — no callers
-- `Renderer.renderDebug()` — never called
-- `Renderer.initWithTheme()` — never called
-- `Terminal.queryTerminal()` — documented no-op
+### Small (a few lines of logic)
+- `keys.*` (KeyConfig) — apply user key overrides to KeyBindings at startup
+- `transitions.*` — pass enabled/type/duration to TransitionManager at startup
+- `executor.allowed_languages` — check before executing
+- `theme.use_terminal_background` — skip bg color in SGR
 
-### Update root.zig files referencing deleted modules
+### Skip for now (need new features)
+- `presentation.auto_advance_seconds` — needs timer
+- `presentation.aspect_ratio` — needs layout engine
+- `display.mouse` — needs mouse event parsing
+- `watch.*` — needs Watcher
+- `theme.custom_theme_path` — needs theme file parser
 
 ### Verify
-- `zig build unit_test` — all 126 tests pass
+- `zig build unit_test` — all tests pass
 - `zig build` — clean build
-- tmux screenshot — no regressions
+- tmux screenshots showing config effects (loop, slide numbers)
 
 ---
 

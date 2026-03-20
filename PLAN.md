@@ -18,35 +18,9 @@ A comprehensive audit found ~60 stubs, placeholders, and dead code items. They f
 
 ---
 
-## Phase 26: Dead Code Cleanup
+## Phase 26: Dead Code Cleanup ✅
 
-**Goal:** Remove all placeholder modules that are never imported, dead functions, and duplicate namespaces. Reduce codebase noise.
-
-**Delete these empty/unreferenced placeholder modules:**
-- `src/render/Layout.zig` — never imported
-- `src/core/Engine.zig` — never imported
-- `src/config/Loader.zig` — never imported
-- `src/infra/Watcher.zig` — never imported (WatchConfig stays in Config.zig)
-- `src/infra/fs.zig` — never imported
-- `src/infra/logging.zig` — never imported
-- `src/features/highlighter/` — entire directory (duplicate of `src/highlight/`)
-- `src/features/images/Image.zig` — duplicate of ImageLoader types
-- `src/features/images/Protocol.zig` — never imported
-- `src/features/export/Exporter.zig` — never imported
-- `src/features/export/HtmlExporter.zig` — duplicate of `src/export/HtmlExporter.zig`
-- `src/features/export/root.zig` — never imported
-- `src/features/transitions/Fade.zig` — never imported (logic is inline in Transition.zig)
-- `src/parser/Command.zig` — never imported
-
-**Remove dead functions:**
-- `InputHandler.showSlideStatus()` — no longer called since Phase 22
-- `Renderer.renderDebug()` — debug-only, never called
-- `Renderer.initWithTheme()` — never called
-- `Terminal.queryTerminal()` — documented no-op
-
-**Update root.zig files** that reference deleted modules.
-
-**Verification:** `zig build unit_test` + `zig build` must pass. tmux screenshot to confirm no regressions.
+Deleted 16 files (14 empty placeholder modules + 2 duplicate highlighter files), removed 4 dead functions (`showSlideStatus`, `renderDebug`, `initWithTheme`, `queryTerminal`). 93 lines removed. All 126 tests pass, tmux verified.
 
 ---
 

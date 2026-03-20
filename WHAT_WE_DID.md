@@ -28,6 +28,24 @@
 | Phase 23 | Post-release | Visual Polish | Theme switching fix, libvaxis cleanup (PR #61) |
 | Phase 24 | Post-release | Continued Polish | Theme syntax, scanner fix, emoji width (PR #62) |
 | Phase 25 | Post-release | Execution Fixes | Slide-specific execution, char-by-char rendering, transitions disabled (PR #63) |
+| **Phase 26** | Post-release | **Dead Code Cleanup** | **16 files deleted, 4 dead functions removed, 93 lines** |
+
+---
+
+## Phase 26: Dead Code Cleanup
+
+Deleted 16 dead files and 4 dead functions. 93 lines of dead code removed across 20 files.
+
+**Deleted placeholder modules (never imported):**
+`Layout.zig`, `Engine.zig`, `Loader.zig`, `Watcher.zig`, `fs.zig`, `logging.zig`, `features/highlighter/` (3 files), `features/images/Image.zig`, `features/images/Protocol.zig`, `features/export/Exporter.zig`, `features/export/HtmlExporter.zig`, `features/export/root.zig`, `features/transitions/Fade.zig`, `parser/Command.zig`
+
+**Removed dead functions:**
+- `InputHandler.showSlideStatus()` — no callers since Phase 22
+- `Renderer.renderDebug()` — debug-only, never called
+- `Renderer.initWithTheme()` — never called (test also removed)
+- `Terminal.queryTerminal()` — documented no-op, call in App.zig also removed
+
+All 126 tests pass, clean build, tmux screenshot verified no regressions.
 
 ---
 
