@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Zig
-        uses: mlugg/setup-zig@v1
+        uses: ./.github/actions/setup-zig
         with:
           version: ${{ env.ZIG_VERSION }}
 
@@ -101,7 +101,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Zig
-        uses: mlugg/setup-zig@v1
+        uses: ./.github/actions/setup-zig
         with:
           version: ${{ env.ZIG_VERSION }}
 

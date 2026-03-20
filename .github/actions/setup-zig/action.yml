@@ -1,0 +1,48 @@
+name: 'Setup Zig'
+description: 'Download and install Zig directly (no index.json dependency)'
+inputs:
+  version:
+    description: 'Zig version to install'
+    required: false
+    default: '0.14.0'
+runs:
+  using: 'composite'
+  steps:
+    - name: Determine platform
+      id: platform
+      shell: bash
+      run: |
+        case "${{ runner.os }}-${{ runner.arch }}" in
+          Linux-X64)   PLATFORM="x86_64-linux" ;;
+          Linux-ARM64) PLATFORM="aarch64-linux" ;;
+          macOS-X64)   PLATFORM="x86_64-macos" ;;
+          macOS-ARM64) PLATFORM="aarch64-macos" ;;
+          *) echo "::error::Unsupported platform: ${{ runner.os }}-${{ runner.arch }}"; exit 1 ;;
+        esac
+        echo "platform=$PLATFORM" >> "$GITHUB_OUTPUT"
+        echo "Installing Zig ${{ inputs.version }} for $PLATFORM"
+
+    - name: Cache Zig
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ~/zig
+        key: zig-${{ inputs.version }}-${{ steps.platform.outputs.platform }}
+
+    - name: Download Zig
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        VERSION="${{ inputs.version }}"
+        PLATFORM="${{ steps.platform.outputs.platform }}"
+        URL="https://ziglang.org/download/${VERSION}/zig-${PLATFORM}-${VERSION}.tar.xz"
+        echo "Downloading $URL"
+        mkdir -p ~/zig
+        curl -fSL "$URL" | tar xJ -C ~/zig --strip-components=1
+        ~/zig/zig version
+
+    - name: Add Zig to PATH
+      shell: bash
+      run: |
+        echo "$HOME/zig" >> "$GITHUB_PATH"
+        ~/zig/zig version
