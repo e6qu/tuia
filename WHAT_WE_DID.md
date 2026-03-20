@@ -27,7 +27,20 @@
 | Phase 22 | Post-release | Visual Debug | 4 more bugs found & fixed via tmux screenshots (PR #60) |
 | Phase 23 | Post-release | Visual Polish | Theme switching fix, libvaxis cleanup (PR #61) |
 | Phase 24 | Post-release | Continued Polish | Theme syntax, scanner fix, emoji width (PR #62) |
-| **Phase 25** | Post-release | **Execution Fixes** | **Slide-specific execution, char-by-char rendering, transitions disabled** |
+| Phase 25 | Post-release | Execution Fixes | Slide-specific execution, char-by-char rendering, transitions disabled (PR #63) |
+
+---
+
+## Stub Audit & Planning (between Phase 25 and 26)
+
+Comprehensive audit of entire `src/` found ~60 stubs:
+- 14 empty placeholder modules never imported by any code
+- 4 dead functions (no callers)
+- 18+ config fields parsed/editable but never applied at runtime
+- Feature stubs: image rendering (1x1 pixels), overview mode (no widget), media (no-op pause/volume)
+- Transition dangling pointer bug (known, disabled)
+
+Organized into Phases 26-30. See PLAN.md for full details.
 
 ---
 
