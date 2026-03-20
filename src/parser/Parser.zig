@@ -120,7 +120,7 @@ pub const Parser = struct {
         var speaker_notes: ?[]const u8 = null;
 
         while (self.current.type != .end_slide and
-            self.current.type != .thematic_break and
+            !(self.current.type == .thematic_break and isSlideSeparator(self.current.text)) and
             self.current.type != .eof)
         {
             // Handle speaker notes
@@ -151,8 +151,8 @@ pub const Parser = struct {
             }
         }
 
-        // Consume end_slide, thematic_break (slide separator), or eof
-        if (self.current.type == .end_slide or self.current.type == .thematic_break) {
+        // Consume end_slide, thematic_break slide separator (---), or eof
+        if (self.current.type == .end_slide or (self.current.type == .thematic_break and isSlideSeparator(self.current.text))) {
             self.advance();
         }
 
@@ -311,9 +311,18 @@ pub const Parser = struct {
             self.current.type != .end_slide and
             !isCodeBlockEnd(self.current.text))
         {
-            // Append the line text
-            try code_lines.appendSlice(self.allocator, self.current.text);
-            try code_lines.append(self.allocator, '\n');
+            if (self.current.type == .blank_line) {
+                // Blank lines in code blocks are just empty lines
+                try code_lines.append(self.allocator, '\n');
+            } else {
+                // Prepend indentation that skipWhitespace() consumed
+                for (0..self.current.indent) |_| {
+                    try code_lines.append(self.allocator, ' ');
+                }
+                // Append the line text
+                try code_lines.appendSlice(self.allocator, self.current.text);
+                try code_lines.append(self.allocator, '\n');
+            }
             self.advance();
         }
 
@@ -464,6 +473,9 @@ pub const Parser = struct {
         const headers = try parseTableRow(self.allocator, header_row);
         self.advance();
 
+        // Skip blank lines between header and separator
+        while (self.current.type == .blank_line) self.advance();
+
         // Parse alignment row (separator)
         var alignments: std.ArrayList(AST.Table.Alignment) = .empty;
         defer alignments.deinit(self.allocator);
@@ -472,6 +484,9 @@ pub const Parser = struct {
             alignments = try parseTableAlignments(self.allocator, self.current.text);
             self.advance();
         }
+
+        // Skip blank lines between separator and data rows
+        while (self.current.type == .blank_line) self.advance();
 
         // Parse data rows
         var rows: std.ArrayList([]AST.Table.TableCell) = .empty;
@@ -489,6 +504,8 @@ pub const Parser = struct {
             const cells = try parseTableCells(self.allocator, self.current.text);
             try rows.append(self.allocator, cells);
             self.advance();
+            // Skip blank lines between data rows
+            while (self.current.type == .blank_line) self.advance();
         }
 
         return .{ .table = .{
@@ -514,6 +531,16 @@ pub const Parser = struct {
         return self.peeked.?;
     }
 };
+
+/// Check if a thematic_break token is a slide separator (--- only, not *** or ___)
+fn isSlideSeparator(text: []const u8) bool {
+    for (text) |c| {
+        if (c == '-') return true;
+        if (c == '*' or c == '_') return false;
+        if (c != ' ' and c != '\t') continue;
+    }
+    return false;
+}
 
 fn countHeadingLevel(text: []const u8) u8 {
     var count: u8 = 0;
@@ -651,10 +678,23 @@ fn parseNextInlineElement(
 ) ParseError!?AST.Inline {
     const pos = i.*;
 
+    // Skip escaped characters — they should be treated as literal text
+    if (text[pos] == '\\' and pos + 1 < text.len) {
+        const next = text[pos + 1];
+        if (next == '\\' or next == '*' or next == '`' or next == '[' or next == ']' or
+            next == '(' or next == ')' or next == '#' or next == '+' or next == '-' or
+            next == '.' or next == '!' or next == '<' or next == '>' or next == '_' or next == '~')
+        {
+            i.* = pos + 2; // Skip both backslash and escaped char
+            return null;
+        }
+    }
+
     // Try each inline format handler in order of priority
     if (try parseInlineCode(allocator, text, i, text_start)) |elem| return elem;
     if (try parseLineBreak(allocator, text, i, text_start)) |elem| return elem;
     if (try parseStrikethrough(allocator, text, i, text_start)) |elem| return elem;
+    if (try parseBoldItalic(allocator, text, i, text_start)) |elem| return elem;
     if (try parseStrong(allocator, text, i, text_start)) |elem| return elem;
     if (try parseEmphasis(allocator, text, i, text_start)) |elem| return elem;
     if (try parseLinkOrImage(allocator, text, i, text_start)) |elem| return elem;
@@ -740,6 +780,49 @@ fn parseInlineCode(
     text_start.* = i.*;
 
     return .{ .code = code };
+}
+
+/// Parse bold+italic text: ***text***
+fn parseBoldItalic(
+    allocator: std.mem.Allocator,
+    text: []const u8,
+    i: *usize,
+    text_start: *usize,
+) ParseError!?AST.Inline {
+    const pos = i.*;
+    if (pos + 2 >= text.len or text[pos] != '*' or text[pos + 1] != '*' or text[pos + 2] != '*') return null;
+
+    // Flush pending text
+    if (pos > text_start.*) {
+        const txt = try allocator.dupe(u8, text[text_start.*..pos]);
+        text_start.* = pos;
+        return .{ .text = txt };
+    }
+
+    // Find closing ***
+    i.* = pos + 3;
+    const content_start = i.*;
+    while (i.* + 2 < text.len) {
+        if (text[i.*] == '*' and text[i.* + 1] == '*' and text[i.* + 2] == '*') {
+            break;
+        }
+        i.* += 1;
+    }
+
+    if (i.* + 2 < text.len) {
+        // Parse content recursively, wrap as strong(emphasis(content))
+        const inner_content = try parseInlineContent(allocator, text[content_start..i.*]);
+        const emphasis = try allocator.alloc(AST.Inline, 1);
+        emphasis[0] = .{ .emphasis = inner_content };
+        i.* += 3; // skip closing ***
+        text_start.* = i.*;
+        return .{ .strong = emphasis };
+    } else {
+        // No closing ***, treat as text
+        const txt = try allocator.dupe(u8, text[content_start - 3 .. i.*]);
+        text_start.* = i.*;
+        return .{ .text = txt };
+    }
 }
 
 /// Parse strong text: **text**
