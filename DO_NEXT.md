@@ -1,47 +1,39 @@
 # Do Next
 
-> Phase 19 — Fix remaining rendering and layout issues
+> Phase 22 — Visual debugging and polish
 
 ---
 
 ## Context
 
-Phase 18 fixed code block rendering, help overlay, status bar, and unicode/emoji support. The app is functional with good rendering quality for most content. Several issues remain.
+Phase 21 bug fixes merged (PR #59). Phase 22 debugging found and fixed 4 more issues:
+- Code block double-spacing (blank_line tokens after each text token)
+- Status bar duplicate (showSlideStatus redundantly set the same message)
+- List parsing (blank_lines broke list item loop, preventing nesting and multi-item lists)
+- Enter key parsed as Ctrl+M (Ctrl+letter handler fired before Enter handler in parseKey)
 
-## Priority Issues
+## Remaining Work
 
-### 1. Code blocks don't render in multi-slide presentations
-- Code blocks render correctly in single-slide files but disappear in multi-slide presentations
-- The parser extracts code correctly (HTML export works), so the issue is in the TUI layout
-- Likely in SlideWidget.draw() height/overflow calculations or Converter slide-splitting
-- This is the most impactful remaining bug
+### 1. Verify light theme visually
+- The light theme is defined with appropriate colors but hasn't been visually verified
+- Need to check contrast, readability on light background
+- tmux `capture-pane -p` strips colors — need to look at terminal directly or use `-e` flag
 
-### 2. Transition animations broken
-- Transitions are disabled by default (Phase 17)
-- The transition capture code in App.handleKey() renders to the main screen buffer BEFORE navigation
-- Fix: render the "from" slide to a separate capture buffer instead of the main screen
-- Then the transition manager can blend from/to slides independently
+### 2. Test transitions more thoroughly
+- Basic transition works (slide changes with animation)
+- Need to verify no visual artifacts during transition
+- Test rapid navigation (multiple j presses quickly)
 
-### 3. Inline formatting not processed
-- `~~Strikethrough~~` shows raw markers instead of struck-through text
-- `**Bold**` and `*italic*` markers may not be applying styles
-- The parser produces Inline nodes with formatting, but the widget may not apply styles
-- Check TextWidget and how it converts Inline nodes to styled text
-
-### 4. Table rendering not implemented
-- Tables show "[Table: render not yet implemented]" placeholder
-- Need a TableWidget that renders table cells with borders
-- The parser already produces table elements
-
-### 5. Help overlay box corners
-- The help overlay box corners show garbled characters (───╭ mismatch)
-- Likely a double-width character issue with box-drawing characters
+### 3. Check edge cases
+- Very long code blocks (scrolling/clipping)
+- Very long list items (wrapping)
+- Empty slides
+- Slides with only headings
 
 ## What Not To Do
 
-- Don't add new features until code blocks work in multi-slide presentations
-- Always verify changes visually with tmux screenshots
-- Don't "fix" things without running the app and checking the output
+- Don't break the 126 passing tests
+- Don't refactor unrelated code
 
 ---
 

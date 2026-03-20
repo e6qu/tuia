@@ -43,19 +43,15 @@ pub const InputHandler = struct {
         switch (action) {
             .next_slide => {
                 nav.nextSlide();
-                try self.showSlideStatus(nav, allocator);
             },
             .prev_slide => {
                 nav.prevSlide();
-                try self.showSlideStatus(nav, allocator);
             },
             .first_slide => {
                 nav.firstSlide();
-                try self.showSlideStatus(nav, allocator);
             },
             .last_slide => {
                 nav.lastSlide();
-                try self.showSlideStatus(nav, allocator);
             },
             .goto_slide => {
                 // Start jump mode with the digit pressed

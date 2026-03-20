@@ -446,27 +446,27 @@ pub const Terminal = struct {
             }
         }
 
-        // Ctrl+letter (0x01..0x1A)
-        if (b >= 1 and b <= 26) {
-            return .{
-                .key = .{ .codepoint = @as(u21, b) + 'a' - 1, .mods = .{ .ctrl = true } },
-                .len = 1,
-            };
-        }
-
         // Backspace
         if (b == 0x7F) {
             return .{ .key = .{ .codepoint = Key.backspace }, .len = 1 };
         }
 
-        // Tab
+        // Tab (0x09 = Ctrl+I, but we want it as Tab)
         if (b == 0x09) {
             return .{ .key = .{ .codepoint = Key.tab }, .len = 1 };
         }
 
-        // Enter / carriage return
+        // Enter / carriage return (0x0D = Ctrl+M, 0x0A = Ctrl+J, but we want Enter)
         if (b == 0x0D or b == 0x0A) {
             return .{ .key = .{ .codepoint = Key.enter }, .len = 1 };
+        }
+
+        // Ctrl+letter (0x01..0x1A), excluding Tab (0x09) and Enter (0x0D, 0x0A)
+        if (b >= 1 and b <= 26) {
+            return .{
+                .key = .{ .codepoint = @as(u21, b) + 'a' - 1, .mods = .{ .ctrl = true } },
+                .len = 1,
+            };
         }
 
         // Regular printable ASCII
