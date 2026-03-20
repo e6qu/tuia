@@ -1,39 +1,25 @@
 # Do Next
 
-> Phase 22 — Visual debugging and polish
+> Phase 23 complete — all visual polish done
 
 ---
 
 ## Context
 
-Phase 21 bug fixes merged (PR #59). Phase 22 debugging found and fixed 4 more issues:
-- Code block double-spacing (blank_line tokens after each text token)
-- Status bar duplicate (showSlideStatus redundantly set the same message)
-- List parsing (blank_lines broke list item loop, preventing nesting and multi-item lists)
-- Enter key parsed as Ctrl+M (Ctrl+letter handler fired before Enter handler in parseKey)
+Phase 23 verified both dark and light themes work correctly. Theme switching rebuilds slide widgets at runtime. All libvaxis references removed. The TUI is fully functional with 0 open bugs.
 
-## Remaining Work
+## Potential Future Work
 
-### 1. Verify light theme visually
-- The light theme is defined with appropriate colors but hasn't been visually verified
-- Need to check contrast, readability on light background
-- tmux `capture-pane -p` strips colors — need to look at terminal directly or use `-e` flag
-
-### 2. Test transitions more thoroughly
-- Basic transition works (slide changes with animation)
-- Need to verify no visual artifacts during transition
-- Test rapid navigation (multiple j presses quickly)
-
-### 3. Check edge cases
-- Very long code blocks (scrolling/clipping)
-- Very long list items (wrapping)
-- Empty slides
-- Slides with only headings
+- **Code block theme-aware syntax colors** — currently uses hardcoded default colors for syntax highlighting; could use `ctx.theme.getSyntaxColor()` for light-theme-optimized palette
+- **Inline formatting in lists** — list items currently show plain text (bold/italic markers stripped); could render InlineTextWidget per list item
+- **Slide overview mode** — `o` key is bound but overview grid not implemented
+- **Image rendering** — Kitty/sixel protocol support for inline images
+- **Config file** — `~/.config/tuia/config.toml` for persistent settings
 
 ## What Not To Do
 
 - Don't break the 126 passing tests
-- Don't refactor unrelated code
+- Don't refactor working code without a clear bug or feature request
 
 ---
 

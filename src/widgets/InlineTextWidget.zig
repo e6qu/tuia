@@ -203,7 +203,7 @@ pub const InlineTextWidget = struct {
 
         for (self.segments) |segment| {
             const seg_style = self.computeSegmentStyle(segment.style, ctx.theme);
-            const vaxis_style = toStyle(seg_style);
+            const tui_style = toStyle(seg_style);
 
             // Handle newlines
             if (std.mem.eql(u8, segment.text, "\n")) {
@@ -217,7 +217,7 @@ pub const InlineTextWidget = struct {
 
             // Draw the segment text
             const max_width = if (ctx.win.width > current_x) ctx.win.width - current_x else 0;
-            const lines_drawn = DrawUtils.drawTextWrapped(ctx.win, current_x, current_y, segment.text, vaxis_style, max_width);
+            const lines_drawn = DrawUtils.drawTextWrapped(ctx.win, current_x, current_y, segment.text, tui_style, max_width);
 
             // Draw left border on wrapped lines
             if (self.left_border != null and lines_drawn > 1) {

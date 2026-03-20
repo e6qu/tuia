@@ -89,19 +89,19 @@ pub const TextWidget = struct {
     /// Draw the text widget
     pub fn draw(self: *Self, ctx: DrawContext, x: usize, y: usize) void {
         const style = self.getStyle(ctx.theme);
-        const vaxis_style = toStyle(style);
+        const tui_style = toStyle(style);
 
         switch (self.text_type) {
             .thematic_break => {
-                self.drawThematicBreak(ctx, x, y, vaxis_style);
+                self.drawThematicBreak(ctx, x, y, tui_style);
             },
             .blockquote => {
-                self.drawBlockquote(ctx, x, y, vaxis_style);
+                self.drawBlockquote(ctx, x, y, tui_style);
             },
             else => {
                 // Heading or paragraph - just draw the text
                 const max_width = if (ctx.win.width > x) ctx.win.width - x else 0;
-                _ = DrawUtils.drawTextWrapped(ctx.win, x, y, self.text, vaxis_style, max_width);
+                _ = DrawUtils.drawTextWrapped(ctx.win, x, y, self.text, tui_style, max_width);
             },
         }
     }

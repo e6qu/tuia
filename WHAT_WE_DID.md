@@ -24,7 +24,29 @@
 | Phase 19 | Post-release | Formatting & Layout | Inline styling, multi-slide code blocks, transitions, strikethrough |
 | Phase 20 | Post-release | Tables & Polish | TableWidget, styled headings/blockquotes, help box fix |
 | Phase 21 | Post-release | Bug Sweep | All 12 tmux-found bugs fixed (PR #59) |
-| **Phase 22** | Post-release | **Visual Debug** | **4 more bugs found & fixed via tmux screenshots** |
+| Phase 22 | Post-release | Visual Debug | 4 more bugs found & fixed via tmux screenshots (PR #60) |
+| **Phase 23** | Post-release | **Visual Polish** | **Theme switching fix, libvaxis cleanup, ANSI verification** |
+
+---
+
+## Phase 23: Visual Polish
+
+### What we fixed
+
+**Theme switching had no effect at runtime (Renderer.zig)**
+- Root cause: `Renderer.render()` received the `theme` parameter but discarded it (`_ = theme`). The Renderer used its own `self.theme` field set at init and never updated.
+- Fix: Renderer now detects theme changes by comparing `self.theme.name` with the passed theme's name. On change, it updates `self.theme` and destroys the current slide widget to force a rebuild with the new theme's colors.
+
+**Removed all libvaxis references**
+- Source: renamed `vaxis_style` → `tui_style` in InlineTextWidget and TextWidget; updated comment in `tui/root.zig`
+- Docs: updated AGENTS.md, e2e/README.md
+- Examples: removed libvaxis mentions from feature-showcase.md
+
+### Verified via ANSI captures
+- Dark theme: h1 bright_white bold underline, h2 bright_white bold, h3 white bold, h4 white underline, h5 gray, bullets bright_cyan, code keywords magenta/green/yellow
+- Light theme: h1 black bold underline, h2 black bold, h3 gray bold, h4 gray underline, inline code light gray bg — all correctly different from dark
+- Theme picker: `t` → `j` → Enter cycles between dark/light with immediate visual effect
+- Transitions: rapid j/k navigation works smoothly, no blocking
 
 ---
 

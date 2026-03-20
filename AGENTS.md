@@ -2,12 +2,12 @@
 
 ## Project Overview
 
-TUIA is a terminal-based presentation tool built with Zig and libvaxis.
+TUIA is a terminal-based presentation tool built with Zig and a custom POSIX TUI layer.
 
 ## Key Technologies
 
 - **Language**: Zig 0.15.2
-- **TUI Framework**: libvaxis
+- **TUI Framework**: Custom POSIX terminal layer (raw mode, ANSI rendering, input parsing)
 - **Build System**: Zig build
 
 ## Important Rules

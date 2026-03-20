@@ -193,10 +193,9 @@ Press **'e'** to execute this code block!
 
 ## Reference Links
 
-Check out [Zig][zig-link] and [libvaxis][vaxis-link].
+Check out [Zig][zig-link] for more info.
 
 [zig-link]: https://ziglang.org/
-[vaxis-link]: https://github.com/rockorager/libvaxis
 
 <!-- Speaker note: Links may be displayed as text or clickable depending on terminal support. -->
 
@@ -229,7 +228,7 @@ ___
 
 **TUIA** — Terminal UI Application
 
-Built with ❤️ using [Zig](https://ziglang.org/) and [libvaxis](https://github.com/rockorager/libvaxis)
+Built with ❤️ using [Zig](https://ziglang.org/)
 
 ```
     _____ _   _ ___

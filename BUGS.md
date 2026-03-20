@@ -1,14 +1,22 @@
 # Bug Tracking
 
-**Status:** Phase 22 — Visual Debugging (complete)
+**Status:** Phase 23 — Visual Polish (complete)
 **Open Bugs:** 0
-**Total Fixed:** 73 (57 pre-Phase 21 + 12 in Phase 21 + 4 in Phase 22)
+**Total Fixed:** 74 (57 pre-Phase 21 + 12 in Phase 21 + 4 in Phase 22 + 1 in Phase 23)
 
 ---
 
 ## Open Bugs
 
 None.
+
+---
+
+## Fixed in Phase 23 (Visual Polish)
+
+| Bug | Severity | Fix |
+|-----|----------|-----|
+| Theme switching no-op | HIGH | Renderer now detects theme changes, updates `self.theme`, and rebuilds slide widgets |
 
 ---
 

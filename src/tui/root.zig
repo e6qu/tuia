@@ -1,4 +1,4 @@
-//! Minimal TUI library — replaces vaxis dependency
+//! Minimal TUI library — custom POSIX terminal layer
 //!
 //! Only lightweight types are exported here. Terminal (raw I/O, event loop,
 //! threading) is intentionally NOT re-exported to keep the compilation
