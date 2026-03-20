@@ -1,8 +1,8 @@
 # Bug Tracking
 
-**Status:** Phase 23 — Visual Polish (complete)
+**Status:** Phase 24 — Continued Polish (complete)
 **Open Bugs:** 0
-**Total Fixed:** 74 (57 pre-Phase 21 + 12 in Phase 21 + 4 in Phase 22 + 1 in Phase 23)
+**Total Fixed:** 77 (57 + 12 + 4 + 1 + 3)
 
 ---
 
@@ -11,6 +11,14 @@
 None.
 
 ---
+
+## Fixed in Phase 24 (Continued Polish)
+
+| Bug | Severity | Fix |
+|-----|----------|-----|
+| Code syntax ignores theme | MEDIUM | `drawHighlightedCode` now uses `ctx.theme.getSyntaxColor()` before falling back to defaults |
+| `_____` parsed as thematic break | MEDIUM | Scanner now checks rest-of-line is blank before emitting thematic_break; saves/restores pos on failure |
+| Inline text position drift | MEDIUM | InlineTextWidget uses `utf8VisualLen()` instead of byte `.len` for segment position tracking |
 
 ## Fixed in Phase 23 (Visual Polish)
 

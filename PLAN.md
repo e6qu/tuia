@@ -3,14 +3,14 @@
 > Terminal UI Application - A presenterm-compatible presentation tool in Zig
 
 **Version:** pre-release
-**Status:** Functional and visually polished
+**Status:** Fully functional, polished
 **Stack:** Zig 0.15.2, custom POSIX TUI layer
 
 ---
 
-## Current Status: Phase 23 — Visual Polish (Complete)
+## Current Status: Phase 24 — Continued Polish (Complete)
 
-Phase 23 verified dark and light themes via ANSI captures, fixed the Renderer to respond to runtime theme changes, and removed all libvaxis references from source and docs.
+Theme-aware syntax highlighting, thematic break scanner fix, and unicode position tracking.
 
 ---
 
@@ -26,8 +26,9 @@ Phase 23 verified dark and light themes via ANSI captures, fixed the Renderer to
 | Phase 19: Formatting | Done | Inline styling, multi-slide code blocks, transitions, strikethrough |
 | Phase 20: Tables & Polish | Done | TableWidget, styled headings/blockquotes, help box fix |
 | Phase 21: Bug Sweep | Done | All 12 tmux-found bugs fixed (PR #59) |
-| Phase 22: Visual Debug | Done | 4 more bugs fixed via tmux screenshots (PR #60) |
-| **Phase 23: Visual Polish** | **Done** | **Theme switching fix, libvaxis cleanup** |
+| Phase 22: Visual Debug | Done | 4 more bugs via tmux screenshots (PR #60) |
+| Phase 23: Visual Polish | Done | Theme switching fix, libvaxis cleanup (PR #61) |
+| **Phase 24: Continued Polish** | **Done** | **Theme syntax colors, scanner fix, emoji tracking** |
 
 ---
 
@@ -39,7 +40,7 @@ Phase 23 verified dark and light themes via ANSI captures, fixed the Renderer to
 | Unit/Integration Tests | 126 (passing) |
 | TUI Tests (real pty) | 30 (passing) |
 | Open Bugs | 0 |
-| Total Bugs Fixed | 74 |
+| Total Bugs Fixed | 77 |
 
 ---
 

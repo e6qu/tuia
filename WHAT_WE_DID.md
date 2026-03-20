@@ -25,7 +25,27 @@
 | Phase 20 | Post-release | Tables & Polish | TableWidget, styled headings/blockquotes, help box fix |
 | Phase 21 | Post-release | Bug Sweep | All 12 tmux-found bugs fixed (PR #59) |
 | Phase 22 | Post-release | Visual Debug | 4 more bugs found & fixed via tmux screenshots (PR #60) |
-| **Phase 23** | Post-release | **Visual Polish** | **Theme switching fix, libvaxis cleanup, ANSI verification** |
+| Phase 23 | Post-release | Visual Polish | Theme switching fix, libvaxis cleanup (PR #61) |
+| **Phase 24** | Post-release | **Continued Polish** | **Theme syntax colors, scanner fix, emoji width, position tracking** |
+
+---
+
+## Phase 24: Continued Polish
+
+### What we fixed
+
+**Code syntax highlighting ignores theme (CodeWidget.zig)**
+- Root cause: `drawHighlightedCode` used `token.kind.defaultColor()` — hardcoded colors regardless of theme. Light theme had dark-theme-optimized colors.
+- Fix: Now checks `ctx.theme.getSyntaxColor(token.kind)` first, falls back to defaults only if theme has no syntax color for that token kind. Light theme now shows purple keywords, dark green strings, maroon operators.
+
+**`_____` in code blocks parsed as thematic break (Scanner.zig)**
+- Root cause: Scanner checked `countPrefix('_') >= 2` but didn't verify the rest of the line was blank. `_____ _   _ ___` (ASCII art) matched as thematic break, splitting the line.
+- Fix: Added `isRestOfLineBlank()` check. If rest of line has non-whitespace, the scanner saves/restores position and falls through to regular text parsing.
+
+**Emoji/unicode position drift in inline text (InlineTextWidget.zig, Cell.zig)**
+- Root cause: `current_x += segment.text.len` used byte length, not visual columns. Multi-byte emoji like ❤️ (6 bytes) advanced 6 columns instead of 2, creating gaps before subsequent segments.
+- Fix: Changed to `current_x += DrawUtils.utf8VisualLen(segment.text)` which accounts for character display widths.
+- Also expanded `charWidth()` in Cell.zig with comprehensive emoji/dingbats ranges (U+2600-U+27BF, U+2B00-U+2B55, etc.) and zero-width characters (VS16, ZWJ, skin tone modifiers).
 
 ---
 

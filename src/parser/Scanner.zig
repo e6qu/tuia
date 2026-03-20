@@ -88,20 +88,18 @@ pub const Scanner = struct {
         }
 
         // Thematic break / Front matter (---, ***, ___)
-        if (c == '-') {
-            if (self.countPrefix('-') >= 2) {
+        // Must be 3+ of the same char with only whitespace to end of line
+        if (c == '-' or c == '*' or c == '_') {
+            const saved_pos = self.pos;
+            const saved_col = self.col;
+            const saved_line_num = self.line;
+            if (self.countPrefix(c) >= 2 and self.isRestOfLineBlank()) {
                 return self.makeToken(.thematic_break, start, line, col, indent);
             }
-        }
-        if (c == '*') {
-            if (self.countPrefix('*') >= 2) {
-                return self.makeToken(.thematic_break, start, line, col, indent);
-            }
-        }
-        if (c == '_') {
-            if (self.countPrefix('_') >= 2) {
-                return self.makeToken(.thematic_break, start, line, col, indent);
-            }
+            // Not a thematic break — restore position and fall through to text
+            self.pos = saved_pos;
+            self.col = saved_col;
+            self.line = saved_line_num;
         }
 
         // Code block — consume rest of line to capture language specifier
@@ -233,6 +231,16 @@ pub const Scanner = struct {
         while (!self.isAtEnd() and (self.peek() == ' ' or self.peek() == '\t')) {
             _ = self.advance();
         }
+    }
+
+    /// Check if the rest of the current line (from current pos) is blank/whitespace only
+    fn isRestOfLineBlank(self: *Self) bool {
+        var i = self.pos;
+        while (i < self.source.len and self.source[i] != '\n') {
+            if (self.source[i] != ' ' and self.source[i] != '\t') return false;
+            i += 1;
+        }
+        return true;
     }
 
     fn consumeUntil(self: *Self, delimiter: []const u8) []const u8 {
