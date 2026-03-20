@@ -95,11 +95,12 @@ pub const Widget = struct {
 /// Widget factory - creates widgets from elements
 pub const WidgetFactory = struct {
     allocator: std.mem.Allocator,
+    theme: Theme,
 
     const Self = @This();
 
-    pub fn init(allocator: std.mem.Allocator) Self {
-        return .{ .allocator = allocator };
+    pub fn init(allocator: std.mem.Allocator, theme: Theme) Self {
+        return .{ .allocator = allocator, .theme = theme };
     }
 
     /// Create a widget from an element
@@ -118,18 +119,20 @@ pub const WidgetFactory = struct {
     }
 
     fn createHeadingWidget(self: Self, heading: @import("../core/Element.zig").Heading) !Widget {
-        const TextWidget = @import("TextWidget.zig").TextWidget;
-        const text = try inlineToPlainText(self.allocator, heading.content);
-        defer self.allocator.free(text);
-        const widget = try TextWidget.initHeading(self.allocator, text, heading.level);
+        const InlineTextWidget = @import("InlineTextWidget.zig").InlineTextWidget;
+        const base_style = self.theme.getHeadingStyle(heading.level);
+        const widget = try InlineTextWidget.init(self.allocator, heading.content, base_style, null);
         return Widget.init(widget);
     }
 
     fn createParagraphWidget(self: Self, paragraph: @import("../core/Element.zig").Paragraph) !Widget {
-        const TextWidget = @import("TextWidget.zig").TextWidget;
-        const text = try inlineToPlainText(self.allocator, paragraph.content);
-        defer self.allocator.free(text);
-        const widget = try TextWidget.initParagraph(self.allocator, text);
+        const InlineTextWidget = @import("InlineTextWidget.zig").InlineTextWidget;
+        const widget = try InlineTextWidget.init(
+            self.allocator,
+            paragraph.content,
+            .{}, // default ElementStyle
+            null, // no link refs
+        );
         return Widget.init(widget);
     }
 
@@ -146,10 +149,10 @@ pub const WidgetFactory = struct {
     }
 
     fn createBlockquoteWidget(self: Self, blockquote: @import("../core/Element.zig").Blockquote) !Widget {
-        const TextWidget = @import("TextWidget.zig").TextWidget;
-        const text = try inlineToPlainText(self.allocator, blockquote.content);
-        defer self.allocator.free(text);
-        const widget = try TextWidget.initBlockquote(self.allocator, text);
+        const InlineTextWidget = @import("InlineTextWidget.zig").InlineTextWidget;
+        const widget = try InlineTextWidget.init(self.allocator, blockquote.content, self.theme.blockquote, null);
+        widget.left_border = "│ ";
+        widget.left_border_width = 2;
         return Widget.init(widget);
     }
 
@@ -166,10 +169,8 @@ pub const WidgetFactory = struct {
     }
 
     fn createTableWidget(self: Self, table: @import("../core/Element.zig").Table) !Widget {
-        // For now, render as text representation
-        _ = table;
-        const TextWidget = @import("TextWidget.zig").TextWidget;
-        const widget = try TextWidget.initParagraph(self.allocator, "[Table: render not yet implemented]");
+        const TableWidget = @import("TableWidget.zig").TableWidget;
+        const widget = try TableWidget.init(self.allocator, table);
         return Widget.init(widget);
     }
 
@@ -304,6 +305,18 @@ pub const DrawUtils = struct {
         return row - y;
     }
 
+    /// Calculate visual length of a UTF-8 string (number of codepoints)
+    pub fn utf8VisualLen(s: []const u8) usize {
+        var len: usize = 0;
+        var i: usize = 0;
+        while (i < s.len) {
+            const seq_len = std.unicode.utf8ByteSequenceLength(s[i]) catch 1;
+            i += seq_len;
+            len += 1;
+        }
+        return len;
+    }
+
     /// Calculate how many lines text will take when wrapped
     pub fn measureWrappedLines(text: []const u8, max_width: usize) usize {
         if (text.len == 0 or max_width == 0) return 1;
@@ -361,6 +374,7 @@ pub fn toStyle(element_style: @import("../render/Theme.zig").ElementStyle) tui.S
 
     style.bold = element_style.bold orelse false;
     style.italic = element_style.italic orelse false;
+    style.strikethrough = element_style.strikethrough orelse false;
     if (element_style.underline orelse false) {
         style.ul_style = .single;
     }

@@ -316,20 +316,10 @@ pub const App = struct {
         const will_change_slide = self.willChangeSlide(key, nav);
         const current_slide = nav.current_slide;
 
-        // Capture current slide for transition BEFORE navigation
+        // Capture current screen state for transition BEFORE navigation
         if (will_change_slide and self.transition_manager.config.enabled) {
             const win = self.terminal.window();
-            // Render current state to capture "from" slide
-            try self.renderer.render(
-                win,
-                self.presentation,
-                self.navigation,
-                null, // Don't capture execution widget
-                null, // Don't capture help widget
-                self.current_theme,
-            );
-
-            // Start transition
+            // Screen already has the correct "from" state from the last render cycle
             const next_slide = self.getNextSlideIndex(key, nav);
             try self.transition_manager.startTransition(current_slide, next_slide, win);
         }

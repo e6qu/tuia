@@ -18,6 +18,10 @@ fn convertInline(allocator: std.mem.Allocator, ast_inline: AST.Inline, link_refs
             const inner = try convertInlines(allocator, s, link_refs);
             return .{ .bold = inner };
         },
+        .strikethrough => |st| {
+            const inner = try convertInlines(allocator, st, link_refs);
+            return .{ .strikethrough = inner };
+        },
         .link => |l| {
             // Resolve reference-style links
             var url = l.url;
@@ -193,6 +197,13 @@ fn inlineToTextWithLinks(allocator: std.mem.Allocator, inlines: []AST.Inline, li
                 defer allocator.free(text);
                 try result.appendSlice(allocator, text);
                 try result.appendSlice(allocator, "**");
+            },
+            .strikethrough => |st| {
+                try result.appendSlice(allocator, "~~");
+                const text = try inlineToTextWithLinks(allocator, st, link_refs);
+                defer allocator.free(text);
+                try result.appendSlice(allocator, text);
+                try result.appendSlice(allocator, "~~");
             },
             .link => |l| {
                 // Resolve reference-style links

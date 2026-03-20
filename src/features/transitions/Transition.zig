@@ -133,7 +133,7 @@ pub const TransitionConfig = struct {
     /// Default duration in milliseconds
     default_duration_ms: u32 = 300,
     /// Whether transitions are enabled
-    enabled: bool = false,
+    enabled: bool = true,
 
     /// Parse from string (for config)
     pub fn parseType(self: TransitionConfig, name: []const u8) TransitionType {

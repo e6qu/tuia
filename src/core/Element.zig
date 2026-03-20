@@ -5,6 +5,7 @@ pub const Inline = union(enum) {
     text: []const u8,
     bold: []Inline,
     italic: []Inline,
+    strikethrough: []Inline,
     code: []const u8,
     link: Link,
     image: Image,
@@ -19,6 +20,10 @@ pub const Inline = union(enum) {
             .italic => |i| {
                 for (i) |*item| item.deinit(allocator);
                 allocator.free(i);
+            },
+            .strikethrough => |st| {
+                for (st) |*item| item.deinit(allocator);
+                allocator.free(st);
             },
             .code => |c| allocator.free(c),
             .link => |l| {
@@ -42,6 +47,7 @@ pub fn extractFirstText(inlines: []const Inline) ?[]const u8 {
             .text => |t| return t,
             .bold => |b| if (extractFirstText(b)) |t| return t,
             .italic => |i| if (extractFirstText(i)) |t| return t,
+            .strikethrough => |st| if (extractFirstText(st)) |t| return t,
             .link => |l| if (extractFirstText(l.content)) |t| return t,
             else => {},
         }
@@ -66,6 +72,11 @@ pub fn inlineToPlainText(allocator: std.mem.Allocator, inlines: []const Inline) 
             },
             .italic => |i| {
                 const text = try inlineToPlainText(allocator, i);
+                defer allocator.free(text);
+                try result.appendSlice(allocator, text);
+            },
+            .strikethrough => |st| {
+                const text = try inlineToPlainText(allocator, st);
                 defer allocator.free(text);
                 try result.appendSlice(allocator, text);
             },

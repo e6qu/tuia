@@ -2,6 +2,7 @@
 const std = @import("std");
 const tui = @import("../tui/root.zig");
 const Widget = @import("Widget.zig").Widget;
+const DrawUtils = @import("Widget.zig").DrawUtils;
 const Slide = @import("../core/Slide.zig").Slide;
 const Theme = @import("../render/Theme.zig").Theme;
 
@@ -80,7 +81,7 @@ pub const HelpWidget = struct {
         {
             var iter = std.mem.splitScalar(u8, HELP_TEXT, '\n');
             while (iter.next()) |line| {
-                max_width = @max(max_width, line.len);
+                max_width = @max(max_width, DrawUtils.utf8VisualLen(line));
                 line_count += 1;
             }
         }
@@ -120,24 +121,29 @@ pub const HelpWidget = struct {
             const r = start_row + row;
             if (r >= win.height) break;
 
-            for (line, 0..) |char, col| {
+            const fg_color = if (theme.code_block.fg) |color|
+                if (@import("../render/Theme.zig").Theme.toRgb(color)) |rgb|
+                    tui.Cell.Color{ .rgb = rgb }
+                else
+                    .default
+            else
+                .default;
+
+            var i: usize = 0;
+            var col: usize = 0;
+            while (i < line.len) {
                 const c = start_col + col;
                 if (c >= win.width) break;
-
-                const fg_color = if (theme.code_block.fg) |color|
-                    if (@import("../render/Theme.zig").Theme.toRgb(color)) |rgb|
-                        tui.Cell.Color{ .rgb = rgb }
-                    else
-                        .default
-                else
-                    .default;
-
+                const seq_len = std.unicode.utf8ByteSequenceLength(line[i]) catch 1;
+                const end = @min(i + seq_len, line.len);
                 win.writeCell(@intCast(c), @intCast(r), .{
-                    .char = .{ .grapheme = tui.Cell.grapheme(char) },
+                    .char = .{ .grapheme = line[i..end] },
                     .style = .{
                         .fg = fg_color,
                     },
                 });
+                col += 1;
+                i = end;
             }
         }
     }
@@ -157,7 +163,7 @@ pub const HelpWidget = struct {
         var max_width: usize = 0;
         var iter = std.mem.splitScalar(u8, HELP_TEXT, '\n');
         while (iter.next()) |line| {
-            max_width = @max(max_width, line.len);
+            max_width = @max(max_width, DrawUtils.utf8VisualLen(line));
         }
         return max_width;
     }

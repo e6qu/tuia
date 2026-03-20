@@ -317,6 +317,11 @@ pub const BeamerExporter = struct {
                     try self.writeInlines(writer, i);
                     try writer.writeAll("}");
                 },
+                .strikethrough => |st| {
+                    try writer.writeAll("\\sout{");
+                    try self.writeInlines(writer, st);
+                    try writer.writeAll("}");
+                },
                 .link => |l| {
                     try writer.writeAll("\\href{");
                     try writeEscapedLatex(writer, l.url);
