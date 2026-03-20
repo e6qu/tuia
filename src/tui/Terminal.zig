@@ -225,11 +225,18 @@ pub const Terminal = struct {
                     need_sgr_reset = false;
                 }
 
+                // Skip padding cells (width == 0, part of a wide char)
+                if (cell.char.width == 0) {
+                    last_row = r;
+                    last_col = c + 1;
+                    continue;
+                }
+
                 // Emit grapheme
                 self.appendBytes(cell.char.grapheme);
 
                 last_row = r;
-                last_col = c + 1;
+                last_col = c + @as(u16, cell.char.width);
             }
         }
 
@@ -349,6 +356,13 @@ pub const Terminal = struct {
             if (self.should_quit.load(.acquire)) return null;
             if (!self.readloop_alive.load(.acquire)) return null;
         }
+    }
+
+    /// Like nextEvent but returns null on timeout instead of blocking.
+    pub fn nextEventTimeout(self: *Terminal, timeout_ns: u64) ?Event {
+        if (self.queue.tryPopTimeout(timeout_ns)) |event| return event;
+        // Return null on timeout — caller should NOT treat this as quit
+        return null;
     }
 
     // ── background reader ───────────────────────────────────────────

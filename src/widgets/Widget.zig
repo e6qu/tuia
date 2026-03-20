@@ -206,8 +206,9 @@ pub const DrawUtils = struct {
         }
     }
 
-    /// Draw text at a position, wrapping if necessary. Handles UTF-8/emoji.
+    /// Draw text at a position, wrapping if necessary. Handles UTF-8/emoji/CJK.
     pub fn drawText(win: tui.Window, x: usize, y: usize, text: []const u8, style: tui.Style, max_width: usize) usize {
+        const Cell = @import("../tui/Cell.zig").Cell;
         var col = x;
         var row = y;
         var i: usize = 0;
@@ -221,23 +222,35 @@ pub const DrawUtils = struct {
                 continue;
             }
 
-            if (col >= x + max_width or col >= win.width) {
+            // Decode UTF-8 sequence and get display width
+            const seq_len = std.unicode.utf8ByteSequenceLength(byte) catch 1;
+            const end = @min(i + seq_len, text.len);
+            const cp = if (seq_len > 1 and end - i == seq_len)
+                std.unicode.utf8Decode(text[i..end]) catch 0xFFFD
+            else
+                @as(u21, byte);
+            const w = Cell.charWidth(cp);
+
+            if (col + w > x + max_width or col + w > win.width) {
                 row += 1;
                 col = x;
                 if (row >= win.height) break;
             }
 
-            // Decode UTF-8 sequence length
-            const seq_len = std.unicode.utf8ByteSequenceLength(byte) catch 1;
-            const end = @min(i + seq_len, text.len);
-
             if (col < win.width and row < win.height) {
                 const grapheme = text[i..end];
                 win.writeCell(@intCast(col), @intCast(row), .{
-                    .char = .{ .grapheme = grapheme },
+                    .char = .{ .grapheme = grapheme, .width = w },
                     .style = style,
                 });
-                col += 1;
+                // Write padding cell for wide characters
+                if (w > 1 and col + 1 < win.width) {
+                    win.writeCell(@intCast(col + 1), @intCast(row), .{
+                        .char = .{ .grapheme = " ", .width = 0 },
+                        .style = style,
+                    });
+                }
+                col += w;
             }
             i = end;
         }
@@ -245,8 +258,9 @@ pub const DrawUtils = struct {
         return row - y + 1; // Return number of lines used
     }
 
-    /// Draw text with word wrapping. Handles UTF-8/emoji.
+    /// Draw text with word wrapping. Handles UTF-8/emoji/CJK.
     pub fn drawTextWrapped(win: tui.Window, x: usize, y: usize, text: []const u8, style: tui.Style, max_width: usize) usize {
+        const Cell = @import("../tui/Cell.zig").Cell;
         var row: usize = y;
         var line_start: usize = 0;
 
@@ -264,8 +278,15 @@ pub const DrawUtils = struct {
                     break;
                 }
                 const seq_len = std.unicode.utf8ByteSequenceLength(text[line_end]) catch 1;
-                line_end += seq_len;
-                visual_len += 1;
+                const send = @min(line_end + seq_len, text.len);
+                const cp = if (seq_len > 1 and send - line_end == seq_len)
+                    std.unicode.utf8Decode(text[line_end..send]) catch 0xFFFD
+                else
+                    @as(u21, text[line_end]);
+                const w = Cell.charWidth(cp);
+                if (visual_len + w > max_width) break;
+                line_end = send;
+                visual_len += w;
             }
 
             // If we went past max_width, back up to last space
@@ -289,13 +310,24 @@ pub const DrawUtils = struct {
                     continue;
                 }
                 const slen = std.unicode.utf8ByteSequenceLength(b) catch 1;
-                const send = @min(j + slen, line.len);
+                const szend = @min(j + slen, line.len);
+                const lcp = if (slen > 1 and szend - j == slen)
+                    std.unicode.utf8Decode(line[j..szend]) catch 0xFFFD
+                else
+                    @as(u21, b);
+                const cw = Cell.charWidth(lcp);
                 win.writeCell(@intCast(x + col), @intCast(row), .{
-                    .char = .{ .grapheme = line[j..send] },
+                    .char = .{ .grapheme = line[j..szend], .width = cw },
                     .style = style,
                 });
-                col += 1;
-                j = send;
+                if (cw > 1 and x + col + 1 < win.width) {
+                    win.writeCell(@intCast(x + col + 1), @intCast(row), .{
+                        .char = .{ .grapheme = " ", .width = 0 },
+                        .style = style,
+                    });
+                }
+                col += cw;
+                j = szend;
             }
 
             line_start = line_end;
@@ -305,14 +337,20 @@ pub const DrawUtils = struct {
         return row - y;
     }
 
-    /// Calculate visual length of a UTF-8 string (number of codepoints)
+    /// Calculate visual length of a UTF-8 string (display columns, not codepoints)
     pub fn utf8VisualLen(s: []const u8) usize {
+        const Cell = @import("../tui/Cell.zig").Cell;
         var len: usize = 0;
         var i: usize = 0;
         while (i < s.len) {
             const seq_len = std.unicode.utf8ByteSequenceLength(s[i]) catch 1;
-            i += seq_len;
-            len += 1;
+            const end = @min(i + seq_len, s.len);
+            const cp = if (seq_len > 1 and end - i == seq_len)
+                std.unicode.utf8Decode(s[i..end]) catch 0xFFFD
+            else
+                @as(u21, s[i]);
+            len += Cell.charWidth(cp);
+            i = end;
         }
         return len;
     }

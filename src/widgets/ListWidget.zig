@@ -20,9 +20,13 @@ pub const ListWidget = struct {
     /// Internal item representation
     const Item = struct {
         text: []const u8,
+        children: ?*ListWidget = null,
 
         pub fn deinit(self: Item, allocator: std.mem.Allocator) void {
             allocator.free(self.text);
+            if (self.children) |child| {
+                child.deinit();
+            }
         }
     };
 
@@ -36,8 +40,16 @@ pub const ListWidget = struct {
         for (list.items, 0..) |list_item, i| {
             const text = try inlineToPlainText(allocator, list_item.content);
             errdefer allocator.free(text);
+
+            // Recursively create child list widget if nested list exists
+            const children: ?*ListWidget = if (list_item.children) |child_list|
+                try initFromElement(allocator, child_list.*)
+            else
+                null;
+
             items[i] = .{
                 .text = text,
+                .children = children,
             };
         }
 
@@ -66,6 +78,11 @@ pub const ListWidget = struct {
 
     /// Draw the list widget
     pub fn draw(self: *Self, ctx: DrawContext, x: usize, y: usize) void {
+        _ = self.drawAtDepth(ctx, x, y, 0);
+    }
+
+    /// Draw at a given nesting depth, returns rows used
+    fn drawAtDepth(self: *Self, ctx: DrawContext, x: usize, y: usize, depth: usize) usize {
         const bullet_style = toStyle(if (self.ordered)
             ctx.theme.list_number
         else
@@ -74,22 +91,31 @@ pub const ListWidget = struct {
         const text_style = toStyle(ctx.theme.paragraph);
 
         var row = y;
+        const depth_indent = depth * 3;
         const indent_size = self.getIndentSize();
 
         for (self.items, 0..) |item, i| {
             if (row >= ctx.win.height) break;
 
-            // Draw bullet/number
+            // Draw bullet/number char by char
             const marker = self.getMarker(i);
-            if (x < ctx.win.width) {
-                ctx.win.writeCell(@intCast(x), @intCast(row), .{
-                    .char = .{ .grapheme = marker },
+            const marker_x = x + depth_indent;
+            var mcol: usize = 0;
+            var mi: usize = 0;
+            while (mi < marker.len) {
+                if (marker_x + mcol >= ctx.win.width) break;
+                const slen = std.unicode.utf8ByteSequenceLength(marker[mi]) catch 1;
+                const mend = @min(mi + slen, marker.len);
+                ctx.win.writeCell(@intCast(marker_x + mcol), @intCast(row), .{
+                    .char = .{ .grapheme = marker[mi..mend] },
                     .style = bullet_style,
                 });
+                mcol += 1;
+                mi = mend;
             }
 
             // Draw item text with wrapping
-            const content_x = x + indent_size;
+            const content_x = x + depth_indent + indent_size;
             const max_width = if (ctx.win.width > content_x) ctx.win.width - content_x else 0;
 
             if (max_width > 0 and content_x < ctx.win.width) {
@@ -99,18 +125,32 @@ pub const ListWidget = struct {
                 row += 1;
             }
 
-            // Add spacing between items
+            // Draw nested children
+            if (item.children) |child| {
+                const child_rows = child.drawAtDepth(ctx, x, row, depth + 1);
+                row += child_rows;
+            }
+
+            // Add spacing between items (but not after last)
             if (i < self.items.len - 1) {
                 row += 1;
             }
         }
+
+        return row - y;
     }
 
     /// Get the size of the widget
     pub fn getSize(self: *Self, constraints: Constraints) Size {
+        return self.getSizeAtDepth(constraints, 0);
+    }
+
+    fn getSizeAtDepth(self: *Self, constraints: Constraints, depth: usize) Size {
+        const depth_indent = depth * 3;
         const indent_size = self.getIndentSize();
-        const content_width = if (constraints.max_width > indent_size)
-            constraints.max_width - indent_size
+        const total_indent = depth_indent + indent_size;
+        const content_width = if (constraints.max_width > total_indent)
+            constraints.max_width - total_indent
         else
             1;
 
@@ -120,11 +160,18 @@ pub const ListWidget = struct {
         for (self.items, 0..) |item, i| {
             // Calculate marker width
             const marker = self.getMarker(i);
-            max_content_width = @max(max_content_width, item.text.len + marker.len);
+            max_content_width = @max(max_content_width, item.text.len + marker.len + depth_indent);
 
             // Calculate wrapped lines for this item
             const lines = DrawUtils.measureWrappedLines(item.text, content_width);
             total_height += @max(1, lines);
+
+            // Add child size
+            if (item.children) |child| {
+                const child_size = child.getSizeAtDepth(constraints, depth + 1);
+                total_height += child_size.height;
+                max_content_width = @max(max_content_width, child_size.width);
+            }
 
             // Add spacing between items
             if (i < self.items.len - 1) {
@@ -152,13 +199,13 @@ pub const ListWidget = struct {
                 6 => "7. ",
                 7 => "8. ",
                 8 => "9. ",
-                9 => "10.",
-                10 => "11.",
-                11 => "12.",
-                else => "• ",
+                9 => "10. ",
+                10 => "11. ",
+                11 => "12. ",
+                else => "•  ",
             };
         } else {
-            return "• ";
+            return "•  ";
         }
     }
 
@@ -167,8 +214,8 @@ pub const ListWidget = struct {
         if (self.ordered) {
             // Find max marker width
             var max_marker_width: usize = 3; // "1. "
-            if (self.items.len > 9) max_marker_width = 4; // "10."
-            if (self.items.len > 99) max_marker_width = 5; // "100."
+            if (self.items.len > 9) max_marker_width = 4; // "10. "
+            if (self.items.len > 99) max_marker_width = 5; // "100. "
             return max_marker_width + 1;
         } else {
             return 3; // "• " + 1 space
@@ -282,8 +329,8 @@ test "ListWidget markers" {
         .items = &.{},
         .ordered = false,
     };
-    try testing.expectEqualStrings("• ", unordered_widget.getMarker(0));
-    try testing.expectEqualStrings("• ", unordered_widget.getMarker(99));
+    try testing.expectEqualStrings("•  ", unordered_widget.getMarker(0));
+    try testing.expectEqualStrings("•  ", unordered_widget.getMarker(99));
 
     // Test ordered markers
     const ordered_widget = ListWidget{
@@ -293,5 +340,5 @@ test "ListWidget markers" {
     };
     try testing.expectEqualStrings("1. ", ordered_widget.getMarker(0));
     try testing.expectEqualStrings("2. ", ordered_widget.getMarker(1));
-    try testing.expectEqualStrings("10.", ordered_widget.getMarker(9));
+    try testing.expectEqualStrings("10. ", ordered_widget.getMarker(9));
 }

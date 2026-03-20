@@ -192,6 +192,7 @@ pub const CodeWidget = struct {
 
     fn drawHighlightedCode(self: *Self, ctx: DrawContext, x: usize, y: usize, max_width: usize, tokens: []Token) void {
         _ = self;
+        const Cell = @import("../tui/Cell.zig").Cell;
 
         var row = y;
         var col = x;
@@ -213,20 +214,31 @@ pub const CodeWidget = struct {
                     continue;
                 }
 
-                if (col >= x + max_width) {
+                const seq_len = std.unicode.utf8ByteSequenceLength(c) catch 1;
+                const end = @min(i + seq_len, token.text.len);
+                const cp = if (seq_len > 1 and end - i == seq_len)
+                    std.unicode.utf8Decode(token.text[i..end]) catch 0xFFFD
+                else
+                    @as(u21, c);
+                const w = Cell.charWidth(cp);
+
+                if (col + w > x + max_width) {
                     row += 1;
                     col = x;
                 }
 
-                const seq_len = std.unicode.utf8ByteSequenceLength(c) catch 1;
-                const end = @min(i + seq_len, token.text.len);
-
                 if (col < ctx.win.width and row < ctx.win.height) {
                     ctx.win.writeCell(@intCast(col), @intCast(row), .{
-                        .char = .{ .grapheme = token.text[i..end] },
+                        .char = .{ .grapheme = token.text[i..end], .width = w },
                         .style = style,
                     });
-                    col += 1;
+                    if (w > 1 and col + 1 < ctx.win.width) {
+                        ctx.win.writeCell(@intCast(col + 1), @intCast(row), .{
+                            .char = .{ .grapheme = " ", .width = 0 },
+                            .style = style,
+                        });
+                    }
+                    col += w;
                 }
                 i = end;
             }
@@ -234,6 +246,7 @@ pub const CodeWidget = struct {
     }
 
     fn drawPlainCode(self: *Self, ctx: DrawContext, x: usize, y: usize, max_width: usize) void {
+        const Cell = @import("../tui/Cell.zig").Cell;
         const code_style = toStyle(ctx.theme.code_block);
 
         var row = y;
@@ -249,20 +262,31 @@ pub const CodeWidget = struct {
                 continue;
             }
 
-            if (col >= x + max_width) {
+            const seq_len = std.unicode.utf8ByteSequenceLength(c) catch 1;
+            const end = @min(i + seq_len, self.code.len);
+            const cp = if (seq_len > 1 and end - i == seq_len)
+                std.unicode.utf8Decode(self.code[i..end]) catch 0xFFFD
+            else
+                @as(u21, c);
+            const w = Cell.charWidth(cp);
+
+            if (col + w > x + max_width) {
                 row += 1;
                 col = x;
             }
 
-            const seq_len = std.unicode.utf8ByteSequenceLength(c) catch 1;
-            const end = @min(i + seq_len, self.code.len);
-
             if (col < ctx.win.width and row < ctx.win.height) {
                 ctx.win.writeCell(@intCast(col), @intCast(row), .{
-                    .char = .{ .grapheme = self.code[i..end] },
+                    .char = .{ .grapheme = self.code[i..end], .width = w },
                     .style = code_style,
                 });
-                col += 1;
+                if (w > 1 and col + 1 < ctx.win.width) {
+                    ctx.win.writeCell(@intCast(col + 1), @intCast(row), .{
+                        .char = .{ .grapheme = " ", .width = 0 },
+                        .style = code_style,
+                    });
+                }
+                col += w;
             }
             i = end;
         }

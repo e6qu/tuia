@@ -167,8 +167,17 @@ pub const App = struct {
         try self.terminal.start();
 
         while (self.running) {
-            const event = self.terminal.nextEvent() orelse break;
-            self.handleEvent(event) catch {};
+            // Use short timeout during transitions for smooth animation (~60fps)
+            const event = if (self.transition_manager.isTransitioning())
+                self.terminal.nextEventTimeout(16_000_000) // 16ms
+            else
+                self.terminal.nextEvent();
+
+            if (event) |ev| {
+                self.handleEvent(ev) catch {};
+            } else if (!self.transition_manager.isTransitioning()) {
+                break; // null from nextEvent means quit (not timeout)
+            }
             self.render() catch {};
         }
     }
@@ -460,6 +469,11 @@ pub const App = struct {
 
     /// Render the UI using the Renderer
     fn render(self: *Self) !void {
+        // Tick navigation to expire timed messages
+        if (self.navigation) |*nav| {
+            nav.tick(self.allocator);
+        }
+
         const win = self.terminal.window();
 
         // Update transition manager
