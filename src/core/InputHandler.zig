@@ -138,17 +138,6 @@ pub const InputHandler = struct {
         return try self.handleKey(key, nav, self.allocator);
     }
 
-    /// Show current slide status
-    fn showSlideStatus(self: *Self, nav: *Navigation, allocator: std.mem.Allocator) !void {
-        _ = self;
-        const msg = try std.fmt.allocPrint(allocator, "Slide {d}/{d}", .{
-            nav.currentSlideNumber(),
-            nav.total_slides,
-        });
-        defer allocator.free(msg);
-        try nav.setMessage(allocator, msg, 60); // 60 ticks (~2 seconds)
-    }
-
     /// Check if currently in jump mode
     pub fn isInJumpMode(self: Self) bool {
         return self.in_jump_mode;

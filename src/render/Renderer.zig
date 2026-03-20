@@ -72,16 +72,6 @@ pub const Renderer = struct {
         };
     }
 
-    /// Initialize with a specific theme
-    pub fn initWithTheme(allocator: std.mem.Allocator, theme: Theme) Self {
-        return .{
-            .allocator = allocator,
-            .theme = theme,
-            .layout = .{},
-            .current_slide_widget = null,
-        };
-    }
-
     /// Clean up resources
     pub fn deinit(self: *Self) void {
         if (self.current_slide_widget) |widget| {
@@ -353,31 +343,6 @@ pub const Renderer = struct {
     fn getCurrentSlideIndex(self: Self) ?usize {
         return self.current_slide_index;
     }
-
-    /// Render a simple text presentation (for testing/debugging)
-    pub fn renderDebug(self: Self, win: tui.Window, presentation: Presentation) void {
-        _ = self;
-        win.clear();
-
-        const title = presentation.metadata.title orelse "Untitled";
-        for (title, 0..) |ch, i| {
-            if (i >= win.width) break;
-            win.writeCell(@intCast(i), 0, .{
-                .char = .{ .grapheme = tui.Cell.grapheme(ch) },
-                .style = .{ .bold = true, .ul_style = .single },
-            });
-        }
-
-        var count_buf: [32]u8 = undefined;
-        const slide_count = std.fmt.bufPrint(&count_buf, "Slides: {d}", .{presentation.slideCount()}) catch return;
-
-        for (slide_count, 0..) |ch, i| {
-            if (i >= win.width) break;
-            win.writeCell(@intCast(i), 2, .{
-                .char = .{ .grapheme = tui.Cell.grapheme(ch) },
-            });
-        }
-    }
 };
 
 // Tests
@@ -390,15 +355,6 @@ test "Renderer initialization" {
 
     // Renderer should start with no slide widget
     try testing.expect(renderer.current_slide_widget == null);
-}
-
-test "Renderer with theme" {
-    const testing = std.testing;
-    const allocator = testing.allocator;
-
-    const theme = darkTheme();
-    var renderer = Renderer.initWithTheme(allocator, theme);
-    defer renderer.deinit();
 }
 
 // Note: LayoutConfig test removed as tui.Window cannot be easily mocked

@@ -148,11 +148,6 @@ pub const Terminal = struct {
         try file.writeAll("\x1b[?1049h\x1b[?25l");
     }
 
-    /// No-op — we don't query terminal capabilities in the minimal layer
-    pub fn queryTerminal(self: *Terminal) void {
-        _ = self;
-    }
-
     // ── screen access ───────────────────────────────────────────────
 
     pub fn window(self: *Terminal) Window {

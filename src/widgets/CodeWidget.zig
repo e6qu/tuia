@@ -200,9 +200,19 @@ pub const CodeWidget = struct {
         for (tokens) |token| {
             if (token.kind == .eof) break;
 
-            const token_color = token.kind.defaultColor();
-            const rgb = defaultColorToRgb(token_color);
-            const style: tui.Style = if (rgb) |c| .{ .fg = c } else .{};
+            // Use theme syntax colors if available, fall back to defaults
+            const Theme = @import("../render/Theme.zig").Theme;
+            const theme_color = ctx.theme.getSyntaxColor(token.kind);
+            const style: tui.Style = if (theme_color) |tc| blk: {
+                if (Theme.toRgb(tc)) |rgb_val| {
+                    break :blk .{ .fg = .{ .rgb = rgb_val } };
+                }
+                break :blk .{};
+            } else blk: {
+                const token_color = token.kind.defaultColor();
+                const rgb = defaultColorToRgb(token_color);
+                break :blk if (rgb) |c| .{ .fg = c } else .{};
+            };
 
             var i: usize = 0;
             while (i < token.text.len) {

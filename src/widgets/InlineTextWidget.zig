@@ -230,7 +230,7 @@ pub const InlineTextWidget = struct {
             if (lines_drawn > 1) {
                 current_y += lines_drawn - 1;
             }
-            current_x += segment.text.len;
+            current_x += DrawUtils.utf8VisualLen(segment.text);
             if (current_x >= ctx.win.width) {
                 current_y += 1;
                 current_x = content_x;
