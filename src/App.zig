@@ -442,9 +442,9 @@ pub const App = struct {
             return;
         }
 
-        // Show execution widget
+        // Show execution widget for this slide
         nav.showExecution();
-        try self.execution_widget.startExecution(lang_str, code_block.code);
+        try self.execution_widget.startExecution(lang_str, code_block.code, nav.current_slide);
 
         // Execute
         var exec = CodeExecutor.init(self.allocator, ExecutionConfig{});
@@ -523,7 +523,7 @@ pub const App = struct {
                 win,
                 self.presentation,
                 self.navigation,
-                if (self.navigation) |nav| if (nav.show_execution) &self.execution_widget else null else null,
+                if (self.navigation) |nav| if (nav.show_execution and self.execution_widget.isVisibleForSlide(nav.current_slide)) &self.execution_widget else null else null,
                 if (self.navigation) |nav| if (nav.show_help) &self.help_widget else null else null,
                 self.current_theme,
             );

@@ -19,6 +19,8 @@ pub const ExecutionWidget = struct {
     last_result: ?ExecutionResult = null,
     /// Whether widget is visible
     visible: bool = false,
+    /// Which slide the execution belongs to (null = none)
+    execution_slide: ?usize = null,
     /// Window height percentage (0-100)
     height_percent: u8 = 40,
 
@@ -61,8 +63,8 @@ pub const ExecutionWidget = struct {
         }
     }
 
-    /// Start executing code
-    pub fn startExecution(self: *Self, language: []const u8, code: []const u8) !void {
+    /// Start executing code on a specific slide
+    pub fn startExecution(self: *Self, language: []const u8, code: []const u8, slide_index: ?usize) !void {
         // Clean up previous
         if (self.language) |l| {
             self.allocator.free(l);
@@ -79,6 +81,7 @@ pub const ExecutionWidget = struct {
         self.code = try self.allocator.dupe(u8, code);
         self.state = .executing;
         self.visible = true;
+        self.execution_slide = slide_index;
         self.output_widget.clear();
     }
 
@@ -126,6 +129,11 @@ pub const ExecutionWidget = struct {
     /// Check if visible
     pub fn isVisible(self: Self) bool {
         return self.visible;
+    }
+
+    /// Check if visible for a specific slide
+    pub fn isVisibleForSlide(self: Self, slide_index: usize) bool {
+        return self.visible and self.execution_slide != null and self.execution_slide.? == slide_index;
     }
 
     /// Get state
@@ -188,16 +196,10 @@ pub const ExecutionWidget = struct {
         // Draw border
         const style = self.getStateStyle(theme);
 
-        // Title bar with state
+        // Title bar with state (char-by-char)
         const title = self.getTitle();
-        const title_style = style;
-
-        // Draw title at top
         var row: usize = 0;
-        win.writeCell(0, @intCast(row), .{
-            .char = .{ .grapheme = title },
-            .style = title_style,
-        });
+        drawStringCharByChar(win, 0, row, title, style);
         row += 1;
 
         // Draw separator line
@@ -209,17 +211,11 @@ pub const ExecutionWidget = struct {
         }
         row += 1;
 
-        // Draw output content
+        // Draw output content (char-by-char)
         const visible_lines = self.output_widget.getVisibleLines(win.height - row);
         for (visible_lines, 0..) |line, i| {
             const line_row = row + i;
             if (line_row >= win.height) break;
-
-            // Truncate content if too long
-            const content = if (line.content.len > win.width)
-                line.content[0..win.width]
-            else
-                line.content;
 
             // Use different color for stderr
             const line_style = if (line.stream == .stderr)
@@ -227,30 +223,45 @@ pub const ExecutionWidget = struct {
             else
                 elementStyleToVaxis(theme.paragraph);
 
-            win.writeCell(0, @intCast(line_row), .{
-                .char = .{ .grapheme = content },
-                .style = line_style,
-            });
+            drawStringCharByChar(win, 0, line_row, line.content, line_style);
         }
 
-        // Draw status bar at bottom
+        // Draw status bar at bottom (char-by-char)
         if (win.height > 2) {
             const status_row = win.height - 1;
             const status_owned: ?[]const u8 = self.getStatusText() catch null;
             const status = status_owned orelse "Error";
             defer if (status_owned) |s| self.allocator.free(s);
 
+            const status_bg: tui.Style = .{ .bg = .{ .rgb = .{ 40, 40, 40 } } };
             for (0..win.width) |col| {
                 win.writeCell(@intCast(col), @intCast(status_row), .{
                     .char = .{ .grapheme = " " },
-                    .style = .{ .bg = .{ .rgb = .{ 40, 40, 40 } } },
+                    .style = status_bg,
                 });
             }
+            drawStringCharByChar(win, 0, status_row, status, status_bg);
+        }
+    }
 
-            win.writeCell(0, @intCast(status_row), .{
-                .char = .{ .grapheme = status },
-                .style = .{ .bg = .{ .rgb = .{ 40, 40, 40 } } },
+    /// Draw a string character-by-character to individual cells
+    fn drawStringCharByChar(win: tui.Window, x: usize, y: usize, text: []const u8, style: tui.Style) void {
+        var col = x;
+        var i: usize = 0;
+        while (i < text.len and col < win.width) {
+            const byte = text[i];
+            if (byte == '\n' or byte == '\r') {
+                i += 1;
+                continue;
+            }
+            const seq_len = std.unicode.utf8ByteSequenceLength(byte) catch 1;
+            const end = @min(i + seq_len, text.len);
+            win.writeCell(@intCast(col), @intCast(y), .{
+                .char = .{ .grapheme = text[i..end] },
+                .style = style,
             });
+            col += 1;
+            i = end;
         }
     }
 
@@ -343,7 +354,7 @@ test "ExecutionWidget basic operations" {
     try testing.expect(widget.isVisible());
 
     // Test start execution
-    try widget.startExecution("bash", "echo hello");
+    try widget.startExecution("bash", "echo hello", 0);
     try testing.expect(widget.isVisible());
     try testing.expect(widget.isExecuting());
     try testing.expectEqual(ExecutionWidget.State.executing, widget.getState());

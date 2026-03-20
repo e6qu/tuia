@@ -241,7 +241,7 @@ test "TransitionManager init/deinit" {
     defer manager.deinit();
 
     try testing.expect(!manager.isTransitioning());
-    try testing.expect(manager.config.enabled);
+    try testing.expect(!manager.config.enabled); // disabled by default
 }
 
 test "TransitionManager buffer resize" {
@@ -274,5 +274,5 @@ test "TransitionManager config" {
     try testing.expectEqual(@as(u32, 500), manager.config.default_duration_ms);
 
     manager.toggleEnabled();
-    try testing.expect(!manager.config.enabled);
+    try testing.expect(manager.config.enabled); // toggled from false to true
 }
